@@ -21,6 +21,8 @@ jobs:
     steps:
       - run: |
           files=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')
+          # The files API reflects the current head; never post this result on an older commit.
+          [ "$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq .head.sha)" = "$SHA" ] || { echo "::error::PR head moved"; exit 1; }
           [ -n "$files" ] || { echo "::error::PR has no changed files"; exit 1; }
           printf '%s\n' "$files"
           # Docs-only = docs/** and README.md. AGENTS.md and CLAUDE.md are agent rules and go through the review gate.

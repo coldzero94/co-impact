@@ -22,14 +22,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           # Old and new path of every changed file (a rename lists both).
           files=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')
+          # The files API reflects the current head; fail if this run is for an older commit.
+          [ "$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq .head.sha)" = "$SHA" ] || { echo "::error::PR head moved"; exit 1; }
           [ -n "$files" ] || { echo "::error::PR has no changed files"; exit 1; }
           printf '%s\n' "$files"
-          # App code: everything except Markdown, agent/CI tooling, and .gitignore. grep exit 2 (error) fails the step.
+          # App code: everything except docs/, Markdown, agent/CI tooling, and .gitignore. grep exit 2 (error) fails the step.
           # shortcut: CI-only changes skip the ios job until Impact.xcodeproj exists (roadmap step 3); then stop excluding .github/workflows/ci.yml here.
-          app=$(printf '%s\n' "$files" | grep -vE '\.md$|^\.github/|^\.claude/|^\.agents/|^skills-lock\.json$|^\.gitignore$' || [ $? -eq 1 ])
+          app=$(printf '%s\n' "$files" | grep -vE '^docs/|\.md$|^\.github/|^\.claude/|^\.agents/|^skills-lock\.json$|^\.gitignore$' || [ $? -eq 1 ])
           echo "app=$([ -n "$app" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
   ios:
@@ -37,9 +40,6 @@ jobs:
     if: needs.changes.outputs.app != 'false'
     runs-on: xcode-27   # preview image (actions/runner-images#14404)
     timeout-minutes: 30
-    defaults:
-      run:
-        shell: bash   # adds -o pipefail
     steps:
       - uses: actions/checkout@v7
       - run: xcodebuild -version

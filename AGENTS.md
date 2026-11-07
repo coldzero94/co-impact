@@ -89,8 +89,8 @@ Add a skill only when its roadmap step starts, not ahead of time. Planned additi
 
 - **Docs-only PRs** change only `docs/**` and `README.md`. The `Review exemption` workflow posts both review statuses for them, so no `merge-gate` run is needed. It runs from `main`'s copy (`pull_request_target`), so a PR cannot widen its own exemption.
 - `AGENTS.md` and `CLAUDE.md` are agent rules, not docs: changing them needs the gate.
-- **App code** is everything except Markdown files, `.github/`, `.claude/`, `.agents/`, `skills-lock.json`, and `.gitignore`.
-- **Every other PR:** run the `merge-gate` skill in Claude Code. Order: `/ponytail-review` first (shape: what should not exist), then `/pr-review-toolkit:review-pr` (detail), then a review of any fix commits, then a `Merge verdict:` comment on the PR, then the statuses.
+- **App code** is everything except `docs/`, Markdown files, `.github/`, `.claude/`, `.agents/`, `skills-lock.json`, and `.gitignore`.
+- **Every other PR:** run the `merge-gate` skill in Claude Code before merging.
 - Statuses belong to one commit. Pushing again means running the gate again.
 - CI and the exemption run only for PRs into `main`. A PR retargeted to `main` gets no `changes`/`ios` run until its next push; close and reopen it to trigger one.
 - The review statuses are self-reported: the reviews run in a local Claude Code session, not in CI, and the ruleset accepts the `review/*` contexts from anyone with write access. The verdict comment is the audit trail.
