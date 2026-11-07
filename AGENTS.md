@@ -45,8 +45,8 @@ When a decision changes, update the doc that owns it in the same change. Decisio
 ## Environment
 
 - Xcode 27.0 (27A266a), iOS 27.0 SDK (verified 2026-11-07).
-- CI: GitHub Actions `xcode-27` runner (preview image, verified 2026-11-07 in actions/runner-images#14404). The default `macos-26` image only has Xcode up to 26.6.
-- Build and test: `xcodebuild test -project Impact.xcodeproj -scheme Impact -destination 'platform=iOS Simulator,name=<iPhone>'`. Step 3 must create exactly this project and scheme, with `ImpactKit` tests in the `Impact` scheme's test plan, so CI runs them.
+- CI: GitHub Actions `xcode-27` runner label (public preview, announced in actions/runner-images#14404, checked 2026-11-07; not yet exercised because there is no Xcode project). Its Xcode build may differ from the local one; the `ios` job logs `xcodebuild -version`. The GA `macos-26` image tops out at Xcode 26.6.
+- Build and test: `xcodebuild test -project Impact.xcodeproj -scheme Impact -destination 'platform=iOS Simulator,name=<iPhone>'`. Step 3 must create exactly this project and scheme, with `ImpactKit` tests in the `Impact` scheme's test plan, so CI runs them. CI hard-codes the project and scheme names in `.github/workflows/ci.yml`; change both together.
 
 ## Agent tooling
 
@@ -68,7 +68,7 @@ Skills (project scope, pinned in `skills-lock.json`, shared by Claude Code via `
 | `swift-testing` | dpearson2699/swift-ios-skills | Engine tests |
 | `apple-hig` | nexu-io/open-design | Design decisions against Apple HIG |
 
-Skill files are git-ignored (some upstream licenses are not open source). Restore them after cloning:
+Upstream skill files are git-ignored (some upstream licenses are not open source); project-owned skills such as `merge-gate` (`.claude/skills/merge-gate/`, Claude Code) are committed. Restore upstream skills after cloning:
 
 ```sh
 npx skills experimental_install
@@ -76,24 +76,25 @@ npx skills experimental_install
 
 Add a skill only when its roadmap step starts, not ahead of time. Planned additions are listed in the roadmap.
 
-Project-owned skill (committed, Claude Code): `merge-gate` in `.claude/skills/merge-gate/`.
-
 ## Merge policy
 
-`main` is protected by a GitHub ruleset: no direct pushes, no force pushes, changes land through a PR, and these checks must pass:
+`main` is protected by a GitHub ruleset ("main merge gate", no bypass actors): no direct or force pushes, no deletion, changes land through a PR, and these checks must pass:
 
 | Check | What it means | Set by |
 |-------|---------------|--------|
-| `changes` | Classifies the PR (docs-only / app code) | CI |
-| `ios` | Build and tests on the iOS Simulator (skipped when no app code changed) | CI, `xcode-27` runner |
-| `review/ponytail` | `/ponytail-review` ran on the head commit with no open **Must fix** | `merge-gate` skill |
-| `review/pr-review-toolkit` | `/pr-review-toolkit:review-pr` ran on the head commit with no open **Critical/Important** | `merge-gate` skill |
+| `changes` | Lists the PR's changed files (old and new paths) and decides whether app code changed | CI workflow (pinned to GitHub Actions) |
+| `ios` | Build and tests on the iOS Simulator; skipped when no app code changed | CI workflow, `xcode-27` runner (pinned to GitHub Actions) |
+| `review/ponytail` | `/ponytail-review` found no open **Must fix** on this commit | `merge-gate` skill; `Review exemption` workflow for docs-only PRs |
+| `review/pr-review-toolkit` | `/pr-review-toolkit:review-pr` found no open **Critical/Important** on this commit | Same as above |
 
-- **Docs-only PRs** (only `docs/**` and root `*.md` files) are exempt from the review gate: CI posts both review statuses automatically. Merge them freely.
-- **Every other PR:** run the `merge-gate` skill in Claude Code before merging. It runs both reviews, fixes or records blocking findings, comments the results on the PR, and posts the two statuses on the reviewed commit.
+- **Docs-only PRs** change only `docs/**` and `README.md`. The `Review exemption` workflow posts both review statuses for them, so no `merge-gate` run is needed. It runs from `main`'s copy (`pull_request_target`), so a PR cannot widen its own exemption.
+- `AGENTS.md` and `CLAUDE.md` are agent rules, not docs: changing them needs the gate.
+- **App code** is everything except Markdown files, `.github/`, `.claude/`, `.agents/`, `skills-lock.json`, and `.gitignore`.
+- **Every other PR:** run the `merge-gate` skill in Claude Code. Order: `/ponytail-review` first (shape: what should not exist), then `/pr-review-toolkit:review-pr` (detail), then a review of any fix commits, then a `Merge verdict:` comment on the PR, then the statuses.
 - Statuses belong to one commit. Pushing again means running the gate again.
-- The review statuses are self-reported by the agent (GitHub cannot run local Claude Code plugins). The PR comment written by `merge-gate` is the audit trail.
-- Never bypass the ruleset (`gh pr merge --admin`, editing the ruleset to merge).
+- CI and the exemption run only for PRs into `main`. A PR retargeted to `main` gets no `changes`/`ios` run until its next push; close and reopen it to trigger one.
+- The review statuses are self-reported: the reviews run in a local Claude Code session, not in CI, and the ruleset accepts the `review/*` contexts from anyone with write access. The verdict comment is the audit trail.
+- Never bypass the ruleset (`gh pr merge --admin`, or editing the ruleset to get a PR through).
 
 ## Roadmap
 
@@ -101,7 +102,7 @@ Project-owned skill (committed, Claude Code): `merge-gate` in `.claude/skills/me
 |---|------|--------|------------------------|
 | 1 | Check Xcode / iOS SDK / Foundation Models availability | Done (2026-11-07) | |
 | 2 | Product and UX docs | Done, open decisions pending | |
-| 3 | Create SwiftUI project (app + `ImpactKit` package); make CI `ios` green; add `.github/workflows/ci.yml` to CI's app filter | Next | |
+| 3 | Create SwiftUI project (app + `ImpactKit` package); make CI `ios` green; stop excluding `.github/workflows/ci.yml` from app code in CI's `changes` job | Next | |
 | 4 | Impact Engine data model + rules, with tests | | |
 | 5 | Home screen with mock calendar data | | |
 | 6 | Impact Card detail and actions | | |

@@ -1,0 +1,33 @@
+name: Review exemption
+
+# pull_request_target runs main's copy of this file, so a PR cannot change the rule that exempts it,
+# and fork PRs get a token that can post statuses. Never check out or run PR code in this workflow.
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  pull-requests: read
+  statuses: write
+
+jobs:
+  docs-only:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.pull_request.number }}
+      SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - run: |
+          files=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')
+          [ -n "$files" ] || { echo "::error::PR has no changed files"; exit 1; }
+          printf '%s\n' "$files"
+          # Docs-only = docs/** and README.md. AGENTS.md and CLAUDE.md are agent rules and go through the review gate.
+          non_docs=$(printf '%s\n' "$files" | grep -vE '^docs/|^README\.md$' || [ $? -eq 1 ])
+          if [ -n "$non_docs" ]; then echo "Not docs-only: the merge-gate review applies."; exit 0; fi
+          for ctx in review/ponytail review/pr-review-toolkit; do
+            gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=success -f context="$ctx" \
+              -f description="Docs-only change: review not required" \
+              -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          done

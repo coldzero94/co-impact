@@ -2,6 +2,7 @@ name: CI
 
 on:
   pull_request:
+    branches: [main]
 
 concurrency:
   group: ci-${{ github.event.pull_request.number }}
@@ -9,60 +10,43 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
-      docs_only: ${{ steps.diff.outputs.docs_only }}
-      app: ${{ steps.diff.outputs.app }}
+      app: ${{ steps.classify.outputs.app }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - id: diff
+      - id: classify
         env:
-          BASE: ${{ github.event.pull_request.base.sha }}
-          HEAD: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
-          files=$(git diff --name-only "$BASE...$HEAD")
-          echo "$files"
-          # Docs: anything under docs/ and Markdown files at the repo root.
-          non_docs=$(echo "$files" | grep -vE '^docs/|^[^/]+\.md$' || true)
-          # App: everything that is not docs or agent/CI tooling.
-          # shortcut: CI-file changes don't run the iOS build until the Xcode project exists (roadmap step 3); add .github/workflows/ci.yml here then.
-          app=$(echo "$non_docs" | grep -vE '^\.github/|^\.claude/|^\.agents/|^skills-lock\.json$|^\.gitignore$' || true)
-          echo "docs_only=$([ -z "$non_docs" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          # Old and new path of every changed file (a rename lists both).
+          files=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')
+          [ -n "$files" ] || { echo "::error::PR has no changed files"; exit 1; }
+          printf '%s\n' "$files"
+          # App code: everything except Markdown, agent/CI tooling, and .gitignore. grep exit 2 (error) fails the step.
+          # shortcut: CI-only changes skip the ios job until Impact.xcodeproj exists (roadmap step 3); then stop excluding .github/workflows/ci.yml here.
+          app=$(printf '%s\n' "$files" | grep -vE '\.md$|^\.github/|^\.claude/|^\.agents/|^skills-lock\.json$|^\.gitignore$' || [ $? -eq 1 ])
           echo "app=$([ -n "$app" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-
-  # Docs-only PRs skip the agent review gate (AGENTS.md → Merge policy).
-  docs-review-exempt:
-    needs: changes
-    if: needs.changes.outputs.docs_only == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      statuses: write
-    env:
-      GH_TOKEN: ${{ github.token }}
-      SHA: ${{ github.event.pull_request.head.sha }}
-    steps:
-      - run: |
-          for ctx in review/ponytail review/pr-review-toolkit; do
-            gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
-              -f state=success -f context="$ctx" -f description="Docs-only change: review not required"
-          done
 
   ios:
     needs: changes
-    if: needs.changes.outputs.app == 'true'
+    if: needs.changes.outputs.app != 'false'
     runs-on: xcode-27   # preview image (actions/runner-images#14404)
     timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash   # adds -o pipefail
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: xcodebuild -version
       - name: Build and test
         run: |
           udid=$(xcrun simctl list devices available -j | jq -r '[.devices | to_entries[] | select(.key | test("iOS")) | .value[] | select(.name | startswith("iPhone"))][0].udid')
+          [[ "$udid" =~ ^[0-9A-F-]{36}$ ]] || { echo "::error::No available iPhone simulator"; exit 1; }
           xcodebuild test \
             -project Impact.xcodeproj \
             -scheme Impact \

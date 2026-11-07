@@ -28,7 +28,7 @@ Claude Code offers to install the project plugins (ponytail, pr-review-toolkit) 
 
 ## Contributing
 
-`main` accepts changes only through PRs that pass CI and the agent review gate. Docs-only PRs skip the review gate. Details: [AGENTS.md → Merge policy](AGENTS.md#merge-policy).
+`main` accepts changes only through PRs that pass CI and the agent review gate. Docs-only PRs (`docs/**`, `README.md`) skip the review gate. Details: [AGENTS.md → Merge policy](AGENTS.md#merge-policy).
 
 ## License
 
