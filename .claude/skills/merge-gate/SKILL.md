@@ -22,16 +22,16 @@ Run in one Bash call, with `<SHA>` replaced. The listing is the same as in both 
 ```sh
 files=$(gh api "repos/{owner}/{repo}/compare/main...<SHA>" --jq 'if (.files | length) >= 300 then "(300+ files: treated as code)" else (.files[] | .filename, (.previous_filename // empty) | gsub("\n"; "\\n")) end') && [ -n "$files" ] || exit 2
 n=$(printf '%s\n' "$files" | LC_ALL=C grep -avE '^docs/|^README\.md$'); nd=$?
-a=$(printf '%s\n' "$files" | LC_ALL=C grep -aiE '(^|/)(AGENTS|AGENTS\.override|CLAUDE|CLAUDE\.local)\.md$|(^|/)\.(claude|agents)(/|$)|^skills-lock\.json$|^\(300\+ files|[^ -~]'); ag=$?
-echo "non-docs exit: $nd, agent exit: $ag"; printf '%s\n' "$a"
+a=$(printf '%s\n' "$files" | LC_ALL=C grep -aiE '(^|/)(AGENTS|AGENTS\.override|CLAUDE|CLAUDE\.local)\.md$|(^|/)\.(claude|agents)(/|$)'); ag=$?
+o=$(printf '%s\n' "$files" | LC_ALL=C grep -aE '^skills-lock\.json$|^\(300\+ files|[^ -~]'); og=$?
+echo "non-docs exit: $nd, agent exit: $ag, other exit: $og"; printf '%s\n' "$a" "$o"
 ```
 
-Decide only from the first line:
+Decide only from the first line. `agent exit` uses exactly the `Review exemption` workflow's pattern; `other exit` covers `skills-lock.json`, non-ASCII names (which a case-insensitive disk can resolve to agent files), and 300+ files (which hide the rest).
 
-- `agent exit: 0`: agent instruction files, `skills-lock.json`, non-ASCII names (which a case-insensitive disk can resolve to agent files), or 300+ files are involved. The lines after it are the matched paths; if the output was cut off, read the saved file. Get the user's approval for them and list them in the verdict comment.
-- `agent exit: 1`: none.
-- `non-docs exit: 1`, with `agent exit: 1` or the matched paths approved: the PR is docs-only.
-- Any other value, or a first line not in this form (an API failure, empty list, or shell error): stop.
+- `agent exit: 0` or `other exit: 0`: the lines after the first are the matched paths; if the output was cut off, read the saved file. Get the user's approval for them and list them in the verdict comment.
+- `non-docs exit: 1, agent exit: 1`: the PR is docs-only (with `other exit: 0`, only after approval). Anything else is not docs-only.
+- Each value is 0 or 1. Any other value, or a first line not in this form (an API failure, empty list, or shell error), means stop.
 
 ## Steps
 
@@ -44,7 +44,7 @@ Decide only from the first line:
 4. **pr-review-toolkit second.** `/pr-review-toolkit:review-pr code comments errors tests types`, instructing it to review `origin/main...HEAD` (not uncommitted changes), to pass that range to every agent, and to have each agent state the range and files it reviewed. Drop aspects with nothing of that kind in the diff. Never pass `simplify` or `all`: ponytail already covers simplification.
 5. **Resolve Critical and Important** findings. Commit and push fixes.
 6. **Re-review the fixes.** For each review whose last-reviewed SHA is not `HEAD`, run it again (ponytail first) on `<SHA it last ran on>..HEAD`; use `origin/main...HEAD` if the branch was rebased or main was merged in. A review whose `git diff <SHA it last ran on> HEAD` is empty counts as having run on `HEAD`. Repeat until both have run on `HEAD` with no blocking findings and nothing was pushed. The reviewed SHA is then `HEAD`.
-7. **Verdict.** Mergeable only if no blocking finding is open. Check that the PR head still equals the reviewed SHA, and run the file check again with the reviewed SHA; paths not approved yet need approval now. Then write one `gh pr comment` starting with `Merge verdict: Mergeable` or `Merge verdict: Not mergeable`, followed by: the reviewed SHA, each review's verdict, each blocking finding with its fix commit or decline evidence, non-blocking findings left open, approved agent-file paths, and ponytail's `Not checked:` line if any. Keep the comment URL that `gh pr comment` prints.
+7. **Verdict.** Mergeable only if no blocking finding is open. Check that the PR head still equals the reviewed SHA, and run the file check again with the reviewed SHA. If it matches any paths, show them to the user with what the reviews said about them and get approval again, including for paths approved in step 1. Then write one `gh pr comment` starting with `Merge verdict: Mergeable` or `Merge verdict: Not mergeable`, followed by: the reviewed SHA, each review's verdict, each blocking finding with its fix commit or decline evidence, non-blocking findings left open, approved agent-file paths, and ponytail's `Not checked:` line if any. Keep the comment URL that `gh pr comment` prints.
 8. **Statuses** on the reviewed SHA (full 40 characters), in one Bash call:
    ```sh
    set -e
@@ -54,11 +54,11 @@ Decide only from the first line:
    gh api "repos/{owner}/{repo}/statuses/$SHA" -f state=success -f context=review/pr-review-toolkit -f description='Blocking open: 0' -f target_url="$URL"
    ```
    Not mergeable: same guard, then `state=failure` with a reason of at most 140 characters on each context that has open blocking findings, and stop.
-9. **Merge** when every required check has passed (`ios` shows as skipped when no app code changed). First confirm the review results are real statuses, with `<head SHA>` and `<owner>` (the repo owner's login) filled in:
+9. **Merge** when every required check has passed (`ios` shows as skipped when no app code changed). `<head SHA>` is the reviewed SHA, or `headRefOid` from step 1 for a docs-only PR; `<owner>` is the repo owner's login. First confirm the review results are real statuses:
    - `gh api --paginate "repos/{owner}/{repo}/commits/<head SHA>/check-runs" --jq '.check_runs[].name | ascii_downcase | select(startswith("review/"))'` prints nothing;
    - `gh api --paginate "repos/{owner}/{repo}/commits/<head SHA>/statuses" --jq '.[] | select(.creator.login != "<owner>") | "\(.context) \(.creator.login)"'` prints nothing, or, for a docs-only PR only, only `github-actions[bot]` lines. Any workflow can post as that bot, and status contexts are case-insensitive, so this lists every non-owner status rather than filtering by context.
 
-   Then `gh pr merge <N> --squash --delete-branch`. Ask the user first unless they already asked for the merge.
+   Then `gh pr merge <N> --squash --delete-branch --match-head-commit <head SHA>`, so GitHub refuses the merge if the head moved after these checks. Ask the user first unless they already asked for the merge.
 
 ## Resolving findings
 
