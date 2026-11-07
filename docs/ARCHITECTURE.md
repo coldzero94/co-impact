@@ -28,7 +28,7 @@ CalendarSource ──▶ [CalendarEvent] ──▶ Rules ──▶ [ImpactCard] 
                                                      Surfaces: Home, widgets, notifications, Live Activity
 ```
 
-1. **Fetch**: events in the horizon (next 24 h) from a `CalendarSource`.
+1. **Fetch**: events in the horizon (today, plus tomorrow morning; PRODUCT.md → Horizon) from a `CalendarSource`.
 2. **Normalize** into `CalendarEvent` (source-independent).
 3. **Select** with deterministic rules (PRODUCT.md, event selection rules). Output: cards with confirmed facts and catalog actions.
 4. **Compute**: travel time / leave-by (MapKit) for in-person cards.
@@ -53,6 +53,12 @@ struct CalendarEvent: Sendable, Hashable {
     let participation: Participation   // accepted, declined, tentative, unknown
 }
 
+struct Place: Sendable, Hashable {
+    let title: String
+    let address: String?
+    let latitude: Double?, longitude: Double?   // from structuredLocation or geocoding
+}
+
 enum Provenance: Sendable, Hashable {
     case calendar(field: String)     // read directly from the event
     case computed(by: String)        // e.g. "MapKit ETA"
@@ -63,10 +69,9 @@ struct Fact: Sendable, Hashable { let label: String; let value: String; let prov
 
 enum ActionKind: Sendable, Hashable {   // the closed catalog, see PRODUCT.md
     case joinMeeting(URL)
-    case directions(to: String)
-    case call(String), message(String)
-    case emailOrganizer(String)
-    case remind(at: Date)
+    case directions(to: Place)
+    case openLink(URL)                  // non-meeting URL from notes, e.g. a Figma or Docs link
+    case call(String)
 }
 
 struct ImpactAction: Sendable, Hashable, Identifiable {
@@ -76,18 +81,26 @@ struct ImpactAction: Sendable, Hashable, Identifiable {
     var state: ActionState              // pending, done
 }
 
-enum CardKind: Sendable { case onlineMeeting, inPerson }
+enum CardKind: Sendable { case onlineMeeting, inPerson, hybrid }
+
+enum CardPhase: Sendable { case upcoming, soon, now, done, expired }   // PRODUCT.md → Card timeline
+
+struct NextStep: Sendable, Hashable {  // AI output, PRODUCT.md → AI scope
+    let text: String
+    let quote: String                   // must be a verbatim substring of the event notes
+}
 
 struct ImpactCard: Sendable, Identifiable {
     let id: String                      // derived from event id
     let eventID: String
     let kind: CardKind
-    let reason: String                  // one line, from confirmed data
-    let relevantAt: Date                // when the primary action matters (start, or leave-by)
+    let answer: String                  // answers the card type's question, confirmed or computed data only
+    let anchor: Date                    // event start, or leave-by time for in-person cards
     var facts: [Fact]
     var actions: [ImpactAction]         // first = primary
-    var suggestions: [Fact]             // always .inferred
-    var state: CardState                // upcoming, done, dismissed, expired
+    var nextSteps: [NextStep]           // AI, at most 2
+    var phase: CardPhase
+    var isDismissed: Bool
 }
 ```
 
@@ -148,3 +161,6 @@ To verify before relying on it:
 - Whether Google Meet links from Google accounts synced via iOS Settings appear in EventKit (`url`, `location`, or `notes`). Check with a real account.
 - Current Live Activity duration limits and scheduled-start behavior on device.
 - Foundation Models availability in the Simulator on this Mac.
+- MapKit routing and ETA in South Korea (driving and transit). Leave-by times depend on it; see PRODUCT.md D15.
+- Whether the `alertConfiguration` of a scheduled Live Activity alerts the user when it starts (PRODUCT.md → Interruptions relies on it).
+- Geocoding quality for Korean addresses and place names (selection rule for physical places).
