@@ -21,7 +21,7 @@ jobs:
     steps:
       - run: |
           # Files of exactly this commit, old and new path for renames. The compare API lists at most 300 files: treat more as code.
-          files=$(gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$SHA" --jq 'if (.files | length) >= 300 then "(300+ files: treated as code)" else (.files[] | .filename, (.previous_filename // empty)) end')
+          files=$(gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$SHA" --jq 'if (.files | length) >= 300 then "(300+ files: treated as code)" else (.files[] | .filename, (.previous_filename // empty) | gsub("\n"; "\\n")) end')
           [ -n "$files" ] || { echo "::error::PR has no changed files"; exit 1; }
           printf '%s\n' "$files"
           # Docs-only = docs/** and README.md. AGENTS.md and CLAUDE.md are agent rules and go through the review gate.
