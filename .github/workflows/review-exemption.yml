@@ -12,21 +12,25 @@ permissions:
   statuses: write
 
 jobs:
-  docs-only:
+  classify:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
-      BASE: ${{ github.event.pull_request.base.sha }}
+      BASE: ${{ github.event.pull_request.base.ref }}
       SHA: ${{ github.event.pull_request.head.sha }}
     steps:
-      - run: |
-          # Files of exactly this commit, old and new path for renames. The compare API lists at most 300 files: treat more as code.
+      - name: Post review statuses if docs-only
+        run: |
+          # PR files at exactly this head SHA (merge base with current main...SHA), old and new path for renames.
+          # Newlines in names are escaped so one name can't split into several lines. The compare API lists at most
+          # 300 files: 300 or more are never treated as docs or tooling. Same listing in ci.yml and review-exemption.yml; change both together.
           files=$(gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$SHA" --jq 'if (.files | length) >= 300 then "(300+ files: treated as code)" else (.files[] | .filename, (.previous_filename // empty) | gsub("\n"; "\\n")) end')
           [ -n "$files" ] || { echo "::error::PR has no changed files"; exit 1; }
-          printf '%s\n' "$files"
-          # Docs-only = docs/** and README.md. AGENTS.md and CLAUDE.md are agent rules and go through the review gate.
-          non_docs=$(printf '%s\n' "$files" | grep -vE '^docs/|^README\.md$' || [ $? -eq 1 ])
-          if [ -n "$non_docs" ]; then echo "Not docs-only: the merge-gate review applies."; exit 0; fi
+          printf '%s\n' "$files" | sed 's/^/  /'
+          # Docs-only = docs/** and README.md, with no agent instruction file at any depth (those load as agent rules).
+          non_docs=$(printf '%s\n' "$files" | grep -avE '^docs/|^README\.md$' || [ $? -eq 1 ])
+          agent=$(printf '%s\n' "$files" | grep -aE '(^|/)(AGENTS|CLAUDE|CLAUDE\.local)\.md$|(^|/)\.(claude|agents)/' || [ $? -eq 1 ])
+          if [ -n "$non_docs$agent" ]; then echo "::notice::Not docs-only: the merge-gate review applies."; exit 0; fi
           for ctx in review/ponytail review/pr-review-toolkit; do
             gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=success -f context="$ctx" \
               -f description="Docs-only change: review not required" \

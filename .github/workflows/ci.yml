@@ -17,19 +17,23 @@ jobs:
     outputs:
       app: ${{ steps.classify.outputs.app }}
     steps:
-      - id: classify
+      - name: List changed files and classify
+        id: classify
         env:
           GH_TOKEN: ${{ github.token }}
-          BASE: ${{ github.event.pull_request.base.sha }}
+          BASE: ${{ github.event.pull_request.base.ref }}
           SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          # Files of exactly this commit, old and new path for renames. The compare API lists at most 300 files: treat more as code.
+          # PR files at exactly this head SHA (merge base with current main...SHA), old and new path for renames.
+          # Newlines in names are escaped so one name can't split into several lines. The compare API lists at most
+          # 300 files: 300 or more are never treated as docs or tooling. Same listing in ci.yml and review-exemption.yml; change both together.
           files=$(gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$SHA" --jq 'if (.files | length) >= 300 then "(300+ files: treated as code)" else (.files[] | .filename, (.previous_filename // empty) | gsub("\n"; "\\n")) end')
           [ -n "$files" ] || { echo "::error::PR has no changed files"; exit 1; }
-          printf '%s\n' "$files"
-          # App code: everything except docs/, Markdown, agent/CI tooling, and .gitignore. grep exit 2 (error) fails the step.
-          # shortcut: CI-only changes skip the ios job until Impact.xcodeproj exists (roadmap step 3); then stop excluding .github/workflows/ci.yml here.
-          app=$(printf '%s\n' "$files" | grep -vE '^docs/|\.md$|^\.github/|^\.claude/|^\.agents/|^skills-lock\.json$|^\.gitignore$' || [ $? -eq 1 ])
+          printf '%s\n' "$files" | sed 's/^/  /'
+          # App code: everything except docs/, root-level Markdown, agent/CI tooling, and .gitignore. grep exit 2 (error) fails the step.
+          # shortcut: ci.yml changes skip the ios job until Impact.xcodeproj exists (roadmap step 3). Then count ci.yml as app code:
+          # ^\.github/ below excludes it, so add it back with a separate grep.
+          app=$(printf '%s\n' "$files" | grep -avE '^docs/|^[^/]+\.md$|^\.github/|^\.claude/|^\.agents/|^skills-lock\.json$|^\.gitignore$' || [ $? -eq 1 ])
           echo "app=$([ -n "$app" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
   ios:

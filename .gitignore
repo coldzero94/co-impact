@@ -16,7 +16,7 @@ Package.resolved
 
 # Agent skills are restored from skills-lock.json (`npx skills experimental_install`),
 # not vendored: some upstream skills are not under an open-source license.
-# Exception: project-owned skills (not in skills-lock.json) are committed.
+# Exception: project-owned skills are committed; un-ignore each by name (one !.claude/skills/<name>/ line per skill).
 .agents/skills/
 .claude/skills/*
 !.claude/skills/merge-gate/
