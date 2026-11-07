@@ -85,7 +85,7 @@ Add a skill only when its roadmap step starts, not ahead of time. Planned additi
 | `changes` | Lists the PR's changed files (old and new paths) and decides whether app code changed | CI workflow |
 | `ios` | Build and tests on the iOS Simulator; skipped when no app code changed | CI workflow, `xcode-27` runner |
 | `review/ponytail` | `/ponytail-review` found no open **Must fix** on this commit | `merge-gate` skill; `Review exemption` workflow for docs-only PRs |
-| `review/pr-review-toolkit` | `/pr-review-toolkit:review-pr` found no open **Critical/Important** on this commit | Same as above |
+| `review/pr-review-toolkit` | `/pr-review-toolkit:review-pr` found no open blocking finding on this commit (Critical/Important; see `merge-gate` for the mapping) | Same as above |
 
 - **Docs-only PRs** change only `docs/**` and `README.md`, and no agent instruction file (`AGENTS.md`, `AGENTS.override.md`, `CLAUDE.md`, `CLAUDE.local.md`, and anything named or under `.claude` or `.agents`, whether a directory, symlink, or submodule) at any depth or letter case, because those load as agent rules. The `Review exemption` workflow posts both review statuses for them; no `merge-gate` run is needed. It runs from `main`'s copy (`pull_request_target`), so a PR cannot widen its own exemption.
 - **Every other PR** (app code, CI, tooling, agent instruction files, any other Markdown): run the `merge-gate` skill in Claude Code before merging, in a new session that started on an up-to-date `main` and has not checked out any PR (so main's copy of the skill and of AGENTS.md is loaded, not the PR's); otherwise stop and start a new session.
