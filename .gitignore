@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Agent skills are restored from skills-lock.json (`npx skills experimental_install`),
+# not vendored: some upstream skills are not under an open-source license.
+.agents/skills/
+.claude/skills/
+
+# Personal agent settings
+.claude/settings.local.json
+
+# Secrets (OAuth client configs, API keys)
+*.xcconfig.local
+Secrets.xcconfig
+GoogleService-Info.plist

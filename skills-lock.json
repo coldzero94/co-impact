@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "apple-hig": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "skillPath": "skills/apple-hig/SKILL.md",
+      "computedHash": "afaaff1d44af251fbae66771d634e9ce6c41e00dc22932d1aae81c9447b5ac70"
+    },
+    "swift-concurrency": {
+      "source": "avdlee/swift-concurrency-agent-skill",
+      "sourceType": "github",
+      "skillPath": "skills/swift-concurrency/SKILL.md",
+      "computedHash": "d23059e1032d850abb86af0343326e4e96810cdb4d3dd6237558e638f84be16c"
+    },
+    "swift-testing": {
+      "source": "dpearson2699/swift-ios-skills",
+      "sourceType": "github",
+      "skillPath": "skills/swift-testing/SKILL.md",
+      "computedHash": "a8cf4e7e76a04e41a361d342924c4d60674b64cebe5c85b752d67a447e443048"
+    },
+    "swiftui-pro": {
+      "source": "twostraws/swiftui-agent-skill",
+      "sourceType": "github",
+      "skillPath": "swiftui-pro/SKILL.md",
+      "computedHash": "88fefb2239299c8815366b89737ba15e91358ab3e9a6fb69af2436ed4a704299"
+    }
+  }
+}
