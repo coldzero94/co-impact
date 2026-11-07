@@ -29,7 +29,7 @@ jobs:
           printf '%s\n' "$files"
           # Docs-only = docs/** and README.md, with no agent instruction file at any depth or letter case (those load as agent rules).
           non_docs=$(printf '%s\n' "$files" | grep -avE '^docs/|^README\.md$' || [ $? -eq 1 ])
-          agent=$(printf '%s\n' "$files" | grep -aiE '(^|/)(AGENTS|AGENTS\.override|CLAUDE|CLAUDE\.local)\.md$|(^|/)\.(claude|agents)/' || [ $? -eq 1 ])
+          agent=$(printf '%s\n' "$files" | grep -aiE '(^|/)(AGENTS|AGENTS\.override|CLAUDE|CLAUDE\.local)\.md$|(^|/)\.(claude|agents)(/|$)' || [ $? -eq 1 ])
           if [ -n "$non_docs$agent" ]; then echo "::notice::Not docs-only: the merge-gate review applies."; exit 0; fi
           for ctx in review/ponytail review/pr-review-toolkit; do
             gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=success -f context="$ctx" \
