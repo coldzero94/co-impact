@@ -15,6 +15,7 @@ Status: **pre-code**. No Xcode project yet. See [Roadmap](#roadmap).
 | [docs/PRODUCT.md](docs/PRODUCT.md) | Vision, principles, MVP scope, action catalog, open product decisions |
 | [docs/UX.md](docs/UX.md) | Screens, card anatomy, states, system surfaces (widgets, Live Activities, Siri) |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Modules, data model, Impact Engine pipeline, platform constraints, verified SDK facts |
+| [docs/research/](docs/research/) | Evidence behind decisions (e.g. award-winning app study → design principles P1–P8) |
 
 When a decision changes, update the doc that owns it in the same change. Decisions marked **Proposed** are not final; do not treat them as settled without the owner's confirmation.
 

@@ -2,91 +2,105 @@
 
 Goal: within 5 seconds of opening the app, the user knows what to do next, and can do it in one or two taps.
 
-Follows Apple Human Interface Guidelines. Supports light and dark mode, Dynamic Type, and VoiceOver from the first screen.
+Follows Apple Human Interface Guidelines and the design principles P1–P8 in [PRODUCT.md](PRODUCT.md#design-principles-from-award-winning-apps). Supports light and dark mode, Dynamic Type, and VoiceOver from the first screen.
 
 ## Screens
 
 ### 1. Onboarding (first launch only)
 
-- One screen: what Impact does, in one sentence, plus a **Connect Calendar** button.
-- Request full calendar access (iOS 17+ `requestFullAccessToEvents`). The usage string explains that events are analyzed on device only.
-- If denied: explain what the app needs and link to Settings. No fake or demo data in release builds (mock data is for previews and debug only).
-- Notification permission is **not** asked here. Ask in context, the first time a card has a time-bound action (e.g. "Remind me to leave").
+- One screen (P5): what Impact does, in one sentence, plus a **Connect Calendar** button.
+- Request full calendar access. The usage string says events are analyzed on device only.
+- If denied: explain what the app needs and link to Settings. No demo data in release builds (mock data is for previews and debug only).
+- No other permission here. Notifications and location are asked in context (PRODUCT.md → Permissions).
 
-### 2. Home (Today)
+### 2. Home
 
 ```
-┌───────────────────────────────┐
-│ Saturday, Nov 7               │
-│ 2 things need you today       │  ← one-line summary
-│                               │
-│ ┌───────────────────────────┐ │
-│ │ IN 25 MIN · 10:00         │ │  ← Next up: large card
-│ │ Design review             │ │
-│ │ Zoom link ready           │ │  ← why this card exists
-│ │ [ Join meeting ]          │ │  ← primary action, one tap
-│ └───────────────────────────┘ │
-│                               │
-│ LATER TODAY                   │
-│ 14:30 Dentist · Leave 14:05 ›│  ← compact rows
-└───────────────────────────────┘
+┌─────────────────────────────────┐
+│ Saturday, Nov 7                 │
+│ 2 of 6 events need you          │  ← summary: shows the app checked everything
+│                                 │
+│ ┌─────────────────────────────┐ │
+│ │ IN 12 MIN · 10:00           │ │  ← Next up: the earliest card in Soon/Now
+│ │ Design review               │ │
+│ │ Zoom link ready             │ │  ← the answer to the card's question (P1)
+│ │ [ Join meeting ]            │ │  ← primary action, one tap
+│ └─────────────────────────────┘ │
+│                                 │
+│ LATER TODAY                     │
+│ 14:30  Dentist      Leave 14:05 │  ← departure-board rows (P2)
+│ 17:00  Town hall    Teams       │
+│                                 │
+│ TOMORROW MORNING                │  ← from 18:00 only
+│ 08:30  Client visit Leave 07:40 │
+└─────────────────────────────────┘
 ```
 
-- **Next up** is the most urgent card, shown large with its primary action button.
-- **Later today** shows remaining cards as compact rows. At most 3 cards on Home in total; the rest are under "More".
-- No tabs, no settings in the main view (settings behind a toolbar button).
-- Events that need no preparation are not shown. Home is not a calendar view.
+- **Summary line** counts all of today's events and how many need the user. It tells the user the app looked at everything, so a short list feels trustworthy rather than incomplete.
+- **Next up** is the earliest card in its Soon or Now phase, shown large with its primary action. If no card is Soon yet, the first row is promoted with its time.
+- **Later today** uses one line per card, like a departure board: time, title, and the one key fact (leave-by time or meeting provider). Tapping a row opens the card.
+- **Tomorrow morning** appears from 18:00, or once today has no cards left (PRODUCT.md → Horizon).
+- No tabs. Settings behind a toolbar button. Events that need nothing are counted but not listed; Home is not a calendar.
 
 ### 3. Empty state
 
-The most frequent state on many days. It must feel like a result, not an error.
+Often the most common state. It must feel like a result, not an error (P7).
 
-- "Nothing needs you right now."
-- Below it, the next event that will need preparation, if any: "Next: Mon 10:00 · Design review".
+- "Nothing needs you today." with the summary line still showing ("0 of 4 events need you").
+- Below it, the next event that will need the user, if any: "Next: Mon 10:00 · Design review".
 
 ### 4. Card detail
 
-Opened by tapping a card.
-
 | Section | Content | Provenance |
 |---------|---------|------------|
-| Header | Title, time, relative time ("in 25 min") | Calendar |
+| Header | Title, time, relative time ("in 12 min") | Calendar |
+| Answer | The card's question answered: "Leave by 14:05 · 18 min by car" or "Starts 10:00 · Zoom" | Calendar or computed |
 | Actions | Catalog actions, primary first, each one tap | Calendar or computed |
-| Facts | Location, link, organizer, attendees, notes excerpt | Calendar |
-| Computed | Travel time, leave-by time | Computed (MapKit) |
-| Suggestions | e.g. "Review last week's notes" | Inferred, visually distinct |
+| Details | Place, organizer, attendees, notes excerpt | Calendar |
+| Suggested | Up to two AI next steps, each with its source quote from the notes | Inferred |
 
 Executing an action marks it done in place (checkmark, subdued). No confirmation dialogs.
 
 ## Card anatomy
 
-- Time chip: relative time when under 1 hour, otherwise clock time.
-- Title: event title, unchanged.
-- Reason line: why this card exists, from confirmed data ("Zoom link ready", "18 min drive").
-- Primary action button.
+- **Time chip:** relative time under 1 hour ("in 12 min"), otherwise clock time.
+- **Title:** event title, unchanged.
+- **Answer line:** the answer to the card's question, from confirmed or computed data only.
+- **Primary action button.**
+- Done state: checkmark, secondary text color, primary button replaced by "Joined" / "Directions opened".
 
 ## Confirmed vs. inferred
 
 - Calendar facts and computed values: plain text.
-- Inferred content (rules or AI): marked with the `sparkles` SF Symbol and the label "Suggested", grouped in its own section, never mixed into the facts list.
-- Do not rely on color alone; the icon and label carry the meaning for VoiceOver and color-blind users.
+- AI next steps: `sparkles` symbol and the label "Suggested", in their own section, never mixed into facts. Each shows the quoted line from the notes it came from, so the user can see why.
+- Color is never the only signal; the symbol and label carry the meaning for VoiceOver and Differentiate Without Color.
 
 ## Dismissing
 
-- Swipe a card → **Not needed**. The card disappears with no confirmation.
-- Optional follow-up in the same gesture menu: **Don't suggest for events like this**, stored as a local rule.
+- Swipe a card or row → **Not needed**. It disappears with no confirmation.
+- Same menu: **Don't suggest for events like this** (mutes the recurring series, or the same title on the same calendar).
 
 ## System surfaces
 
-| Surface | Use | Not for |
-|---------|-----|---------|
-| Live Activity / Dynamic Island | One active, time-bound activity: "Design review starts in 10 min → Join", "Leave by 14:05 → Directions" | Lists, summaries, anything not time-bound |
-| Home Screen widget (small) | Next action with its button | |
-| Home Screen widget (medium) | Next two cards | |
-| Lock Screen widget | Next time-bound item ("Leave 14:05") | |
+Each surface shows the card's current phase (PRODUCT.md → Card timeline).
+
+| Surface | Shows | Not for |
+|---------|-------|---------|
+| Live Activity / Dynamic Island | Now phase only. Compact: countdown + symbol (video / car). Expanded: title, answer line, primary action button | Lists, summaries, anything not in its Now phase |
+| Home Screen widget, small | Next up: time chip, title, primary action | |
+| Home Screen widget, medium | Next up plus the next row | |
+| Lock Screen widget | Next time-bound fact ("Leave 14:05", "Zoom 10:00") | |
 | Siri / Shortcuts | "What's next in Impact", "Join my next meeting" | Open-ended chat |
-| Local notifications | Leave-by and meeting-start nudges, only for cards with time-bound actions | Daily digests |
+| Notifications | One alert per card at its Now phase, plus "Changed" (PRODUCT.md → Interruptions) | Digests, reminders to open the app |
+
+## Accessibility (MVP requirements, P8)
+
+- All text uses Dynamic Type text styles; layouts reflow at accessibility sizes (rows wrap, Next up stacks vertically).
+- Every action has a VoiceOver label that includes the event ("Join Design review").
+- Reduce Motion: no animated countdowns; values update without motion.
+- Differentiate Without Color: status uses symbols and text, not color alone.
+- Minimum tap target 44×44 pt.
 
 ## Copy tone
 
-Short, calm, specific. Say what is true ("Zoom link ready"), not how the app feels ("Great news!"). Never claim certainty for inferred content.
+Short, calm, specific. State what is true ("Zoom link ready", "Leave by 14:05"), not how the app feels ("Great news!"). Never claim certainty for suggestions. Never scold (P7): no "You missed", "Overdue", or streak language.
