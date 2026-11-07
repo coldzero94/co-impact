@@ -88,7 +88,7 @@ Add a skill only when its roadmap step starts, not ahead of time. Planned additi
 | `review/pr-review-toolkit` | `/pr-review-toolkit:review-pr` found no open **Critical/Important** on this commit | Same as above |
 
 - **Docs-only PRs** change only `docs/**` and `README.md`, and no agent instruction file (`AGENTS.md`, `AGENTS.override.md`, `CLAUDE.md`, `CLAUDE.local.md`, `.claude/`, `.agents/`) at any depth or letter case, because those load as agent rules. The `Review exemption` workflow posts both review statuses for them; no `merge-gate` run is needed. It runs from `main`'s copy (`pull_request_target`), so a PR cannot widen its own exemption.
-- **Every other PR** (app code, CI, tooling, agent instruction files, any other Markdown): run the `merge-gate` skill in Claude Code before merging, in a new session that started on an up-to-date `main` and has not checked out another PR (so main's copy of the skill and of AGENTS.md is loaded, not the PR's); the skill stops otherwise.
+- **Every other PR** (app code, CI, tooling, agent instruction files, any other Markdown): run the `merge-gate` skill in Claude Code before merging, in a new session that started on an up-to-date `main` and has not checked out any PR (so main's copy of the skill and of AGENTS.md is loaded, not the PR's); otherwise stop and start a new session.
 - **App code** (decides whether `ios` runs) is everything except `docs/`, root-level Markdown, `.github/`, `.claude/`, `.agents/`, `skills-lock.json`, and `.gitignore`.
 - Statuses belong to one commit. Pushing again means running the gate again.
 - CI and the exemption run only for PRs into `main`. A PR retargeted to `main` gets no `changes`/`ios` run until its next push; close and reopen it to trigger one.
