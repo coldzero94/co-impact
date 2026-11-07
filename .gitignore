@@ -17,7 +17,8 @@ Package.resolved
 # Agent skills are restored from skills-lock.json (`npx skills experimental_install`),
 # not vendored: some upstream skills are not under an open-source license.
 .agents/skills/
-.claude/skills/
+.claude/skills/*
+!.claude/skills/merge-gate/
 
 # Personal agent settings
 .claude/settings.local.json

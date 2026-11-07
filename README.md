@@ -26,6 +26,10 @@ npx skills experimental_install   # restore project skills from skills-lock.json
 
 Claude Code offers to install the project plugins (ponytail, pr-review-toolkit) when you trust the folder. See [AGENTS.md](AGENTS.md#agent-tooling) for Codex.
 
+## Contributing
+
+`main` accepts changes only through PRs that pass CI and the agent review gate. Docs-only PRs skip the review gate. Details: [AGENTS.md → Merge policy](AGENTS.md#merge-policy).
+
 ## License
 
 Not chosen yet. Until a license is added, all rights are reserved.

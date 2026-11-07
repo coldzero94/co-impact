@@ -45,7 +45,8 @@ When a decision changes, update the doc that owns it in the same change. Decisio
 ## Environment
 
 - Xcode 27.0 (27A266a), iOS 27.0 SDK (verified 2026-11-07).
-- Build and test commands: TBD when the Xcode project is created (roadmap step 3).
+- CI: GitHub Actions `xcode-27` runner (preview image, verified 2026-11-07 in actions/runner-images#14404). The default `macos-26` image only has Xcode up to 26.6.
+- Build and test: `xcodebuild test -project Impact.xcodeproj -scheme Impact -destination 'platform=iOS Simulator,name=<iPhone>'`. Step 3 must create exactly this project and scheme, with `ImpactKit` tests in the `Impact` scheme's test plan, so CI runs them.
 
 ## Agent tooling
 
@@ -75,13 +76,32 @@ npx skills experimental_install
 
 Add a skill only when its roadmap step starts, not ahead of time. Planned additions are listed in the roadmap.
 
+Project-owned skill (committed, Claude Code): `merge-gate` in `.claude/skills/merge-gate/`.
+
+## Merge policy
+
+`main` is protected by a GitHub ruleset: no direct pushes, no force pushes, changes land through a PR, and these checks must pass:
+
+| Check | What it means | Set by |
+|-------|---------------|--------|
+| `changes` | Classifies the PR (docs-only / app code) | CI |
+| `ios` | Build and tests on the iOS Simulator (skipped when no app code changed) | CI, `xcode-27` runner |
+| `review/ponytail` | `/ponytail-review` ran on the head commit with no open **Must fix** | `merge-gate` skill |
+| `review/pr-review-toolkit` | `/pr-review-toolkit:review-pr` ran on the head commit with no open **Critical/Important** | `merge-gate` skill |
+
+- **Docs-only PRs** (only `docs/**` and root `*.md` files) are exempt from the review gate: CI posts both review statuses automatically. Merge them freely.
+- **Every other PR:** run the `merge-gate` skill in Claude Code before merging. It runs both reviews, fixes or records blocking findings, comments the results on the PR, and posts the two statuses on the reviewed commit.
+- Statuses belong to one commit. Pushing again means running the gate again.
+- The review statuses are self-reported by the agent (GitHub cannot run local Claude Code plugins). The PR comment written by `merge-gate` is the audit trail.
+- Never bypass the ruleset (`gh pr merge --admin`, editing the ruleset to merge).
+
 ## Roadmap
 
 | # | Step | Status | Skills to add at start |
 |---|------|--------|------------------------|
 | 1 | Check Xcode / iOS SDK / Foundation Models availability | Done (2026-11-07) | |
 | 2 | Product and UX docs | Done, open decisions pending | |
-| 3 | Create SwiftUI project (app + `ImpactKit` package) | Next | |
+| 3 | Create SwiftUI project (app + `ImpactKit` package); make CI `ios` green; add `.github/workflows/ci.yml` to CI's app filter | Next | |
 | 4 | Impact Engine data model + rules, with tests | | |
 | 5 | Home screen with mock calendar data | | |
 | 6 | Impact Card detail and actions | | |
