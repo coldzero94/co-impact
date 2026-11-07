@@ -26,7 +26,7 @@ jobs:
         run: |
           # PR files at exactly this head SHA (merge base with current main...SHA), old and new path for renames.
           # Newlines in names are escaped so one name can't split into several lines. The compare API lists at most
-          # 300 files: 300 or more are never treated as docs or tooling. Same listing in ci.yml and review-exemption.yml; change both together.
+          # 300 files: 300 or more are never treated as docs or tooling. Same listing in ci.yml, review-exemption.yml, and the merge-gate skill; change all together.
           files=$(gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$SHA" --jq 'if (.files | length) >= 300 then "(300+ files: treated as code)" else (.files[] | .filename, (.previous_filename // empty) | gsub("\n"; "\\n")) end')
           [ -n "$files" ] || { echo "::error::PR has no changed files"; exit 1; }
           printf '%s\n' "$files"
