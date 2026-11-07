@@ -10,7 +10,6 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: read
 
 jobs:
   changes:
@@ -21,13 +20,11 @@ jobs:
       - id: classify
         env:
           GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.pull_request.number }}
+          BASE: ${{ github.event.pull_request.base.sha }}
           SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          # Old and new path of every changed file (a rename lists both).
-          files=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')
-          # The files API reflects the current head; fail if this run is for an older commit.
-          [ "$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq .head.sha)" = "$SHA" ] || { echo "::error::PR head moved"; exit 1; }
+          # Files of exactly this commit, old and new path for renames. The compare API lists at most 300 files: treat more as code.
+          files=$(gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$SHA" --jq 'if (.files | length) >= 300 then "(300+ files: treated as code)" else (.files[] | .filename, (.previous_filename // empty)) end')
           [ -n "$files" ] || { echo "::error::PR has no changed files"; exit 1; }
           printf '%s\n' "$files"
           # App code: everything except docs/, Markdown, agent/CI tooling, and .gitignore. grep exit 2 (error) fails the step.

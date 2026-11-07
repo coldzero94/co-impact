@@ -8,7 +8,7 @@ on:
     types: [opened, synchronize, reopened, edited]
 
 permissions:
-  pull-requests: read
+  contents: read
   statuses: write
 
 jobs:
@@ -16,13 +16,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
-      PR: ${{ github.event.pull_request.number }}
+      BASE: ${{ github.event.pull_request.base.sha }}
       SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - run: |
-          files=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')
-          # The files API reflects the current head; never post this result on an older commit.
-          [ "$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq .head.sha)" = "$SHA" ] || { echo "::error::PR head moved"; exit 1; }
+          # Files of exactly this commit, old and new path for renames. The compare API lists at most 300 files: treat more as code.
+          files=$(gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$SHA" --jq 'if (.files | length) >= 300 then "(300+ files: treated as code)" else (.files[] | .filename, (.previous_filename // empty)) end')
           [ -n "$files" ] || { echo "::error::PR has no changed files"; exit 1; }
           printf '%s\n' "$files"
           # Docs-only = docs/** and README.md. AGENTS.md and CLAUDE.md are agent rules and go through the review gate.
