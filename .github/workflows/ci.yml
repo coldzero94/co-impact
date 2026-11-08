@@ -44,6 +44,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: xcodebuild -version
+      - name: Every ImpactKit test target is in the Impact scheme
+        shell: bash   # adds -o pipefail
+        run: |
+          # xcodebuild runs only the scheme's Testables; a test target missing there would never run.
+          want=$(swift package --package-path ImpactKit dump-package | jq -r '.targets[] | select(.type == "test") | .name' | sort)
+          xml=$(xmllint --xpath '//TestAction//TestableReference[@skipped="NO"]/BuildableReference[@ReferencedContainer="container:ImpactKit"]/@BlueprintName' Impact.xcodeproj/xcshareddata/xcschemes/Impact.xcscheme 2>/dev/null || [ $? -eq 10 ])
+          have=$(printf '%s\n' "$xml" | grep -oE 'BlueprintName="[^"]*"' | cut -d'"' -f2 | sort || [ $? -eq 1 ])
+          [ -n "$want" ] && [ "$want" = "$have" ] || { echo "::error::ImpactKit test targets [$(echo $want)] != Impact.xcscheme Testables [$(echo $have)]; add or re-enable them in the scheme"; exit 1; }
       - name: Build and test
         run: |
           udid=$(xcrun simctl list devices available -j | jq -r '[.devices | to_entries[] | select(.key | test("iOS")) | .value[] | select(.name | startswith("iPhone"))][0].udid')

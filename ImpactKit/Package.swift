@@ -15,7 +15,7 @@ let package = Package(
     platforms: [.iOS(.v26), .macOS(.v26)],
     products: [
         // Umbrella product: the app links only this, so a new module needs no pbxproj edit.
-        // Add its test target to Impact.xcscheme → Testables, or CI skips it.
+        // Add its test target to Impact.xcscheme → Testables; CI fails until you do.
         .library(name: "ImpactKit", targets: ["ImpactEngine"]),
     ],
     targets: [
