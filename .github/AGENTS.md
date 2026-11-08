@@ -7,6 +7,7 @@ Rules for `.github/` and for how changes reach `main`. The review-and-merge proc
 - `workflows/ci.yml` runs only for PRs into `main`. `changes` lists the PR's files (old and new paths) and decides whether app code changed; `ios` then checks that every `ImpactKit` test target is in the scheme (ImpactKit/AGENTS.md → Tests) and builds and tests on the iOS Simulator.
 - Runner: the `xcode-27` label (public preview, actions/runner-images#14404; first green on PR #4 with Xcode 27.1, 27A9275). The GA `macos-26` image tops out at Xcode 26.6 (as of 2026-11-07).
 - The changed-file listing is shared by `ci.yml`, `review-exemption.yml`, and the merge-gate skill; change all three together.
+- CI hard-codes the project and scheme names. Renaming either, update every hit in the same PR: project `git grep -n '<old>\.xcodeproj'`; scheme `git grep -n -e '<old>\.xcscheme' -e '-scheme <old>'`. Not a bare `git grep <old>`: the name is also the app target, folder, and brand.
 
 ## Merge policy
 

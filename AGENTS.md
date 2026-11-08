@@ -44,7 +44,6 @@ Decisions marked **Proposed** are not final; do not treat them as settled withou
   - Fast loop, no simulator: `swift test --package-path ImpactKit`
   - App build: `xcodebuild -project Impact.xcodeproj -scheme Impact -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO`
   - Full tests as CI runs them (needs a simulator runtime, `xcodebuild -downloadPlatform iOS`): `xcodebuild test -project Impact.xcodeproj -scheme Impact -destination 'platform=iOS Simulator,name=<iPhone>' CODE_SIGNING_ALLOWED=NO`
-  - Renaming the project or scheme, update every hit in the same PR: project `git grep -n '<old>\.xcodeproj'`; scheme `git grep -n -e '<old>\.xcscheme' -e '-scheme <old>'`. Not a bare `git grep <old>`: the name is also the app target, folder, and brand.
 - **Every change lands through a PR** ([.github/AGENTS.md](.github/AGENTS.md)). Never bypass the `main` ruleset (`gh pr merge --admin`, or editing the ruleset to get a PR through) or post `review/*` statuses outside the `merge-gate` skill.
 - **Tooling** (run commands from the repo root):
   - Claude Code plugins are declared in `.claude/settings.json` (ponytail, pr-review-toolkit). Codex: install ponytail once per machine with `codex plugin marketplace add DietrichGebert/ponytail && codex plugin add ponytail@ponytail`, then trust its hooks in `/hooks`.
