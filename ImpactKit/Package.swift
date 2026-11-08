@@ -14,7 +14,8 @@ let package = Package(
     // macOS lets `swift test` run the engine tests without an iOS simulator.
     platforms: [.iOS(.v26), .macOS(.v26)],
     products: [
-        .library(name: "ImpactEngine", targets: ["ImpactEngine"]),
+        // Umbrella product: the app links only this, so adding a module needs no project edit.
+        .library(name: "ImpactKit", targets: ["ImpactEngine"]),
     ],
     targets: [
         .target(name: "ImpactEngine", swiftSettings: swiftSettings),

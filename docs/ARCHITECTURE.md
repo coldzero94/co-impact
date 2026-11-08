@@ -10,7 +10,7 @@ Follows Apple's local-package guidance and the thin-app-target pattern used by I
 Impact.xcodeproj               Thin app shell, Xcode 16+ synchronized folders
 Impact/                        App target: @main entry point and Assets.xcassets only
 ImpactKit/                     Local Swift package: all logic and, later, UI features
-├── Package.swift
+├── Package.swift              One umbrella product, `ImpactKit`, linked by the app
 ├── Sources/ImpactEngine/      Pure Swift: model, rules, ranking (no UI, no EventKit)
 └── Tests/ImpactEngineTests/   Swift Testing
 ```
@@ -18,11 +18,11 @@ ImpactKit/                     Local Swift package: all logic and, later, UI fea
 Rules:
 
 - **New code goes into `ImpactKit`**, not the app target. The app target stays an entry point plus wiring.
-- **One module per area, added when its roadmap step starts.** Planned (Proposed): `ImpactEngine` (step 4), `DesignSystem` and `HomeFeature` (steps 5–6), `CalendarSources` (step 7), `ImpactIntelligence` (step 8). Each module depends only on what it uses; `ImpactEngine` imports no UI or EventKit.
-- **The package also builds for macOS**, so pure modules are tested with `swift test` without a simulator. Code that needs iOS-only frameworks (ActivityKit, WidgetKit) goes in iOS-only targets or the app/extension.
+- **One module per area, added when its roadmap step starts.** Add it to the `ImpactKit` umbrella product's target list in `Package.swift` (the app links only that product, so no project edit is needed), and add its test target to `Impact.xcscheme` → Testables so CI runs it. Planned (Proposed): `ImpactEngine` (step 4), `DesignSystem` and `HomeFeature` (steps 5–6), `CalendarSources` (step 7), `ImpactIntelligence` (step 8). Each module depends only on what it uses; `ImpactEngine` imports no UI or EventKit.
+- **The package also builds for macOS**, so `swift test` runs without a simulator. It compiles every package target for macOS, so iOS-only API inside the package goes in `#if os(iOS)` blocks; ActivityKit code goes in the app or the extension.
 - **Files need no project edits.** The app folder is a synchronized folder, and package targets pick up files by directory.
 - **The `.xcodeproj` is committed.** XcodeGen was used once to scaffold it and is not a dependency. Project-level changes (the widget extension in step 9, capabilities, signing) are made in Xcode or in `project.pbxproj`; revisit a generator (XcodeGen, Tuist) if they become frequent.
-- **Build settings** follow Xcode 27's app template (Approachable Concurrency, `MainActor` default isolation in the app target, member import visibility, user script sandboxing), except Swift 6 language mode (AGENTS.md conventions). The package enables the same upcoming features without default `MainActor` isolation.
+- **Build settings** follow Xcode 27's app template (Approachable Concurrency, `MainActor` default isolation in the app target, member import visibility, user script sandboxing, String Catalogs, gnu17/gnu++20, upgrade check 2700), except Swift 6 language mode (AGENTS.md conventions). The package enables the same upcoming features without default `MainActor` isolation.
 - **App identity:** bundle ID `io.github.coldzero94.impact` (placeholder until App Store registration), iPhone only, no development team set; set `DEVELOPMENT_TEAM` locally for device builds (step 10).
 
 Minimum deployment target: iOS 26.0 (PRODUCT.md D8).
