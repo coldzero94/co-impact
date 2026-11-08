@@ -23,6 +23,8 @@ Restore the project skills with the command in [AGENTS.md → Working here](AGEN
 
 Claude Code offers to install the project plugins (ponytail, pr-review-toolkit) when you trust the folder. See [AGENTS.md](AGENTS.md#working-here) for Codex.
 
+Review commands for each agent: [merge-gate → Review routes](.claude/skills/merge-gate/SKILL.md#review-routes).
+
 ## Contributing
 
 `main` accepts changes only through PRs that pass CI and the agent review gate. Docs-only PRs skip the review gate. Details: [.github/AGENTS.md → Merge policy](.github/AGENTS.md#merge-policy).
