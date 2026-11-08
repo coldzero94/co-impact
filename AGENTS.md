@@ -45,7 +45,8 @@ When a decision changes, update the doc that owns it in the same change. Decisio
 ## Environment
 
 - Xcode 27.0 (27A266a), iOS 27.0 SDK (verified 2026-11-07).
-- Build and test commands: TBD when the Xcode project is created (roadmap step 3).
+- CI: GitHub Actions `xcode-27` runner label (public preview, announced in actions/runner-images#14404, checked 2026-11-07; first exercised in roadmap step 3, update this line then). Its Xcode build may differ from the local one; the `ios` job logs `xcodebuild -version`. The GA `macos-26` image tops out at Xcode 26.6 (as of 2026-11-07).
+- Build and test: `xcodebuild test -project Impact.xcodeproj -scheme Impact -destination 'platform=iOS Simulator,name=<iPhone>'`. Step 3 must create exactly this project and scheme, with `ImpactKit` tests in the `Impact` scheme's test plan, so CI runs them. If you rename the project or scheme, update this line and `.github/workflows/ci.yml` in the same change.
 
 ## Agent tooling
 
@@ -67,7 +68,7 @@ Skills (project scope, pinned in `skills-lock.json`, shared by Claude Code via `
 | `swift-testing` | dpearson2699/swift-ios-skills | Engine tests |
 | `apple-hig` | nexu-io/open-design | Design decisions against Apple HIG |
 
-Skill files are git-ignored (some upstream licenses are not open source). Restore them after cloning:
+Upstream skill files are git-ignored (some upstream licenses are not open source); project-owned skills are committed, today only `merge-gate` (`.claude/skills/merge-gate/`, Claude Code). A new one needs its own `!.claude/skills/<name>/` line in `.gitignore`. Restore upstream skills after cloning:
 
 ```sh
 npx skills experimental_install
@@ -75,13 +76,32 @@ npx skills experimental_install
 
 Add a skill only when its roadmap step starts, not ahead of time. Planned additions are listed in the roadmap.
 
+## Merge policy
+
+`main` is protected by a GitHub ruleset ("main merge gate", no bypass actors): no direct or force pushes, no deletion, changes land through a PR, and these checks must pass:
+
+| Check | What it means | Set by |
+|-------|---------------|--------|
+| `changes` | Lists the PR's changed files (old and new paths) and decides whether app code changed | CI workflow |
+| `ios` | Build and tests on the iOS Simulator; skipped when no app code changed | CI workflow, `xcode-27` runner |
+| `review/ponytail` | `/ponytail:ponytail-review` found no open **Must fix** on this commit | `merge-gate` skill; `Review exemption` workflow for docs-only PRs |
+| `review/pr-review-toolkit` | `/pr-review-toolkit:review-pr` found no open blocking finding on this commit (Critical/Important; see `merge-gate` for the mapping) | Same as above |
+
+- **Docs-only PRs** change only `docs/**` and `README.md`, and no agent instruction file (`AGENTS.md`, `AGENTS.override.md`, `CLAUDE.md`, `CLAUDE.local.md`, and anything named or under `.claude` or `.agents`, whether a directory, symlink, or submodule) at any depth or letter case, because those load as agent rules. The `Review exemption` workflow posts both review statuses for them; no `merge-gate` run is needed. It runs from `main`'s copy (`pull_request_target`), so a PR cannot widen its own exemption.
+- **Every other PR** (app code, CI, tooling, agent instruction files, any other Markdown): run the `merge-gate` skill in Claude Code before merging, in a new session that started on an up-to-date `main` and has not checked out any PR (so main's copy of the skill and of AGENTS.md is loaded, not the PR's); otherwise stop and start a new session.
+- **App code** (decides whether `ios` runs) is everything except `docs/`, root-level Markdown, `.github/`, `.claude/`, `.agents/`, `skills-lock.json`, and `.gitignore`.
+- Statuses belong to one commit. Pushing again means running the gate again.
+- CI and the exemption run only for PRs into `main`. A PR retargeted to `main` gets no `changes`/`ios` run until its next push; close and reopen it to trigger one.
+- **Trust model.** `changes` and `ios` are pinned to the GitHub Actions app, but a PR's own copy of `ci.yml` reports them, and a PR's own workflow could report `review/*` as check runs. So `.github/` changes always need the gate, a fork PR's own workflow code (`pull_request` runs) runs only after the owner approves it (the exemption's `pull_request_target` run always runs, but it uses main's code), and `merge-gate` confirms before merging that every `review/*` result is a status created by the owner (or by `github-actions[bot]` only on a docs-only PR, since any workflow can post as that bot). The review statuses are self-reported by the agent; the verdict comment is the audit trail.
+- Never bypass the ruleset (`gh pr merge --admin`, or editing the ruleset to get a PR through).
+
 ## Roadmap
 
 | # | Step | Status | Skills to add at start |
 |---|------|--------|------------------------|
 | 1 | Check Xcode / iOS SDK / Foundation Models availability | Done (2026-11-07) | |
 | 2 | Product and UX docs | Done, open decisions pending | |
-| 3 | Create SwiftUI project (app + `ImpactKit` package) | Next | |
+| 3 | Create SwiftUI project (app + `ImpactKit` package); make CI `ios` green; stop excluding `.github/workflows/ci.yml` from app code in CI's `changes` job | Next | |
 | 4 | Impact Engine data model + rules, with tests | | |
 | 5 | Home screen with mock calendar data | | |
 | 6 | Impact Card detail and actions | | |

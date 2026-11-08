@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.classify.outputs.app }}
+    steps:
+      - name: List changed files and classify
+        id: classify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ github.event.pull_request.base.ref }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # PR files at exactly this head SHA (merge base with current main...SHA), old and new path for renames.
+          # Newlines in names are escaped so one name can't split into several lines. The compare API lists at most
+          # 300 files: 300 or more are never treated as docs or tooling. Same listing in ci.yml, review-exemption.yml, and the merge-gate skill; change all together.
+          files=$(gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$SHA" --jq 'if (.files | length) >= 300 then "(300+ files: treated as code)" else (.files[] | .filename, (.previous_filename // empty) | gsub("\n"; "\\n")) end')
+          [ -n "$files" ] || { echo "::error::PR has no changed files"; exit 1; }
+          printf '%s\n' "$files"
+          # App code: everything except docs/, root-level Markdown, agent/CI tooling, and .gitignore. grep exit 2 (error) fails the step.
+          # shortcut: ci.yml changes skip the ios job until Impact.xcodeproj exists (roadmap step 3). Then count ci.yml as app code:
+          # ^\.github/ below excludes it, so add it back with a separate grep.
+          app=$(printf '%s\n' "$files" | grep -avE '^docs/|^[^/]+\.md$|^\.github/|^\.claude/|^\.agents/|^skills-lock\.json$|^\.gitignore$' || [ $? -eq 1 ])
+          echo "app=$([ -n "$app" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  ios:
+    needs: changes
+    if: needs.changes.outputs.app != 'false'
+    runs-on: xcode-27   # preview image (actions/runner-images#14404)
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - run: xcodebuild -version
+      - name: Build and test
+        run: |
+          udid=$(xcrun simctl list devices available -j | jq -r '[.devices | to_entries[] | select(.key | test("iOS")) | .value[] | select(.name | startswith("iPhone"))][0].udid')
+          [[ "$udid" =~ ^[0-9A-F-]{36}$ ]] || { echo "::error::No available iPhone simulator"; exit 1; }
+          xcodebuild test \
+            -project Impact.xcodeproj \
+            -scheme Impact \
+            -destination "id=$udid" \
+            CODE_SIGNING_ALLOWED=NO

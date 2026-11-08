@@ -21,10 +21,14 @@ No to-do lists, no daily planning, no AI chat. Local-first and private: no backe
 ## Agent setup
 
 ```sh
-npx skills experimental_install   # restore project skills from skills-lock.json
+npx skills experimental_install   # restore upstream skills from skills-lock.json
 ```
 
 Claude Code offers to install the project plugins (ponytail, pr-review-toolkit) when you trust the folder. See [AGENTS.md](AGENTS.md#agent-tooling) for Codex.
+
+## Contributing
+
+`main` accepts changes only through PRs that pass CI and the agent review gate. Docs-only PRs skip the review gate (definition in AGENTS.md). Details: [AGENTS.md → Merge policy](AGENTS.md#merge-policy).
 
 ## License
 
