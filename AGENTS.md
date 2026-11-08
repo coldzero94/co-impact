@@ -47,7 +47,10 @@ When a decision changes, update the doc that owns it in the same change. Decisio
 
 - Xcode 27.0 (27A266a), iOS 27.0 SDK (verified 2026-11-07).
 - CI: GitHub Actions `xcode-27` runner label (public preview, announced in actions/runner-images#14404, checked 2026-11-07; first exercised in roadmap step 3, update this line then). Its Xcode build may differ from the local one; the `ios` job logs `xcodebuild -version`. The GA `macos-26` image tops out at Xcode 26.6 (as of 2026-11-07).
-- Build and test: `xcodebuild test -project Impact.xcodeproj -scheme Impact -destination 'platform=iOS Simulator,name=<iPhone>'`. Step 3 must create exactly this project and scheme, with `ImpactKit` tests in the `Impact` scheme's test plan, so CI runs them. If you rename the project or scheme, update this line and `.github/workflows/ci.yml` in the same change.
+- Fast loop, no simulator needed: `swift test --package-path ImpactKit`.
+- App build: `xcodebuild -project Impact.xcodeproj -scheme Impact -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO`.
+- Full tests, as CI runs them (needs an iOS simulator runtime; install with `xcodebuild -downloadPlatform iOS`): `xcodebuild test -project Impact.xcodeproj -scheme Impact -destination 'platform=iOS Simulator,name=<iPhone>' CODE_SIGNING_ALLOWED=NO`. The `Impact` scheme's test action runs the `ImpactKit` tests. If you rename the project, scheme, or test targets, update this line and `.github/workflows/ci.yml` in the same change.
+- Where code goes: docs/ARCHITECTURE.md → Project structure.
 
 ## Agent tooling
 
@@ -103,8 +106,8 @@ Add a skill only when its roadmap step starts, not ahead of time. Planned additi
 |---|------|--------|------------------------|
 | 1 | Check Xcode / iOS SDK / Foundation Models availability | Done (2026-11-07) | |
 | 2 | Product and UX docs | Done, open decisions pending | |
-| 3 | Create SwiftUI project (app + `ImpactKit` package); make CI `ios` green; stop excluding `.github/workflows/ci.yml` from app code in CI's `changes` job | Next | |
-| 4 | Impact Engine data model + rules, with tests | | |
+| 3 | Create SwiftUI project (app + `ImpactKit` package); make CI `ios` green; stop excluding `.github/workflows/ci.yml` from app code in CI's `changes` job | Done (2026-11-08) | |
+| 4 | Impact Engine data model + rules, with tests | Next | |
 | 5 | Home screen with mock calendar data | | |
 | 6 | Impact Card detail and actions | | |
 | 7 | EventKit integration | | `eventkit` |
