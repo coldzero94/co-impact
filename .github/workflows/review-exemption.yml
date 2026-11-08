@@ -27,10 +27,12 @@ jobs:
           files=$(gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$SHA" --jq 'if (.files | length) >= 300 then "(300+ files: treated as code)" else (.files[] | .filename, (.previous_filename // empty) | gsub("\n"; "\\n")) end')
           [ -n "$files" ] || { echo "::error::PR has no changed files"; exit 1; }
           printf '%s\n' "$files"
-          # Docs-only = docs/** and README.md, with no agent instruction file at any depth or letter case (those load as agent rules).
+          # Docs-only = docs/** and README.md, with no agent instruction file at any depth or letter case (those load as agent rules)
+          # and no non-ASCII name (a case-insensitive disk can resolve one to an agent file).
           non_docs=$(printf '%s\n' "$files" | grep -avE '^docs/|^README\.md$' || [ $? -eq 1 ])
           agent=$(printf '%s\n' "$files" | grep -aiE '(^|/)(AGENTS|AGENTS\.override|CLAUDE|CLAUDE\.local)\.md$|(^|/)\.(claude|agents)(/|$)' || [ $? -eq 1 ])
-          if [ -n "$non_docs$agent" ]; then echo "::notice::Not docs-only: the merge-gate review applies."; exit 0; fi
+          odd=$(printf '%s\n' "$files" | LC_ALL=C grep -a '[^ -~]' || [ $? -eq 1 ])
+          if [ -n "$non_docs$agent$odd" ]; then echo "::notice::Not docs-only: the merge-gate review applies."; exit 0; fi
           for ctx in review/ponytail review/pr-review-toolkit; do
             gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=success -f context="$ctx" \
               -f description="Docs-only change: review not required" \
