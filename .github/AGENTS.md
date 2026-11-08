@@ -24,7 +24,6 @@ Rules for `.github/` and for how changes reach `main`. The review-and-merge proc
 - **Trusted PRs** are branches in this repo, opened by the owner, with fewer than 100 commits, only the owner's commits, and no `Built on` in the body (the skill checks this with one command). Any session that never checked out or fetched an untrusted PR may gate a trusted PR, including the session that wrote it; no session builds or runs an untrusted PR's code. An untrusted PR needs a new session started on an up-to-date `main`, and if it touches sensitive paths (agent instruction files, `.github/`, `skills-lock.json`, non-ASCII paths, or 300+ files), the gate never merges it: the owner reviews it, posts the statuses (any description except the gate's `Must fix open: 0` / `Blocking open: 0`, e.g. `Owner reviewed`), and merges it, or closes it.
 - **App code** (decides whether `ios` runs) is everything except `docs/`, root-level Markdown, `.github/` (but `.github/workflows/ci.yml` counts), `.claude/`, `.agents/`, `skills-lock.json`, and `.gitignore`.
 - Statuses belong to one commit; pushing again means running the gate again. A PR retargeted to `main` gets no `changes`/`ios` run until its next push; close and reopen it to trigger one.
-- Never bypass the ruleset (`gh pr merge --admin`, or editing the ruleset to get a PR through).
 
 ## Trust model
 
