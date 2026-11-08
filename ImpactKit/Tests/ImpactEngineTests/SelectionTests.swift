@@ -174,7 +174,9 @@ private let productExamples: [Example] = [
         #expect(engine.card(for: event { $0.location = location; $0.geocodedPlace = place }, now: now) == nil)
     }
 
-    @Test("Unresolved locations do not create cards", arguments: ["Café Onion Seongsu", "서울 중구 세종대로 110"])
+    @Test("Unresolved locations do not create cards", arguments: [
+        "Café Onion Seongsu", "서울 중구 세종대로 110", "1100 F Street NW",
+    ])
     func unresolvedPlace(_ location: String) {
         #expect(engine.canGeocode(location))
         #expect(engine.card(for: event { $0.location = location }, now: now) == nil)

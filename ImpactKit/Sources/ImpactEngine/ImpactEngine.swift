@@ -82,7 +82,7 @@ public struct ImpactEngine: Sendable {
         guard let location = location?.trimmingCharacters(in: .whitespacesAndNewlines),
               !location.isEmpty, !location.contains("://"),
               matches(in: location).allSatisfy({ $0.url == nil }),
-              location.range(of: #"회의실|\b(?:room|conf(?:erence)?)\b|\b(?:\d+\s*f|f\s*\d+|\d+\s*(?:st|nd|rd|th)?\s*floor)\b|\d+\s*층"#,
+              location.range(of: #"회의실|\b(?:room|conf(?:erence)?)\b|\b(?:\d+f|f\s*\d+|\d+\s*(?:st|nd|rd|th)?\s*floor)\b|\d+\s*층"#,
                              options: [.regularExpression, .caseInsensitive]) == nil else { return false }
         return true
     }
