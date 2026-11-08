@@ -4,8 +4,6 @@ A native iOS app that reads your calendar, finds the events that actually need p
 
 No to-do lists, no daily planning, no AI chat. Local-first and private: no backend, and calendar data is processed on device (Apple Foundation Models where available).
 
-**Status:** app shell and `ImpactKit` package in place; the Impact Engine is next.
-
 ## Docs
 
 - [Product](docs/PRODUCT.md): vision, MVP scope, action catalog, open decisions
