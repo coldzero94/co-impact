@@ -18,12 +18,12 @@ ImpactKit/                     Local Swift package: all logic and, later, UI fea
 Decisions:
 
 - **New code goes into `ImpactKit`**; the app target stays an entry point plus wiring. Working rules for the package (adding modules, platforms, tests): [ImpactKit/AGENTS.md](../ImpactKit/AGENTS.md).
-- **Modules are added one per area as their roadmap step starts.** Planned (Proposed): `ImpactEngine` (exists as a placeholder; filled in step 4), `DesignSystem` and `HomeFeature` (steps 5–6), `CalendarSources` (step 7), `ImpactIntelligence` (step 8).
+- **Modules are added one per area as their roadmap step starts.** Planned (Proposed): `DesignSystem` and `HomeFeature` (steps 5–6), `CalendarSources` (step 7), `ImpactIntelligence` (step 8).
 - **The package also builds for macOS**, so `swift test` runs without a simulator.
 - **Files need no project edits.** The app folder is a synchronized folder, package targets pick up files by directory, and the app links one umbrella product.
 - **The `.xcodeproj` is committed.** XcodeGen was used once to scaffold it and is not a dependency. Project-level changes (the widget extension in step 9, capabilities, signing) are made in Xcode or in `project.pbxproj`; revisit a generator (XcodeGen, Tuist) if they become frequent.
 - **Build settings** follow Xcode 27's app template (Approachable Concurrency, `MainActor` default isolation in the app target, member import visibility, user script sandboxing, String Catalogs, gnu17/gnu++20, upgrade check 2700), except Swift 6 language mode. The package enables the same upcoming features without default `MainActor` isolation.
-- **App identity:** bundle ID `io.github.coldzero94.impact` (placeholder until App Store registration), iPhone only, no development team set; device builds (step 10) pass `DEVELOPMENT_TEAM` on the `xcodebuild` command line so it stays out of the tracked project.
+- **App identity:** bundle ID `io.github.coldzero94.impact` (placeholder until App Store registration), iPhone only, no development team set; set `DEVELOPMENT_TEAM` locally for device builds (step 10).
 
 Minimum deployment target: iOS 26.0 (PRODUCT.md D8).
 

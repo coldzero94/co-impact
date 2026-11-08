@@ -19,10 +19,7 @@ No to-do lists, no daily planning, no AI chat. Local-first and private: no backe
 
 ## Agent setup
 
-```sh
-npx skills experimental_install   # restore upstream skills from skills-lock.json (Codex)
-for s in .agents/skills/*; do ln -sfn "../../$s" .claude/skills/; done   # link them for Claude Code
-```
+Restore the project skills with the command in [AGENTS.md → Working here](AGENTS.md#working-here).
 
 Claude Code offers to install the project plugins (ponytail, pr-review-toolkit) when you trust the folder. See [AGENTS.md](AGENTS.md#working-here) for Codex.
 
