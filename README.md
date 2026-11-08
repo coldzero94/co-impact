@@ -11,7 +11,8 @@ No to-do lists, no daily planning, no AI chat. Local-first and private: no backe
 - [Product](docs/PRODUCT.md): vision, MVP scope, action catalog, open decisions
 - [UX](docs/UX.md): screens, card anatomy, system surfaces
 - [Architecture](docs/ARCHITECTURE.md): modules, data model, platform constraints
-- [AGENTS.md](AGENTS.md): working rules and roadmap for coding agents
+- [Roadmap](docs/ROADMAP.md): steps and status
+- [AGENTS.md](AGENTS.md): working rules for coding agents
 
 ## Requirements
 
@@ -24,11 +25,11 @@ No to-do lists, no daily planning, no AI chat. Local-first and private: no backe
 npx skills experimental_install   # restore upstream skills from skills-lock.json
 ```
 
-Claude Code offers to install the project plugins (ponytail, pr-review-toolkit) when you trust the folder. See [AGENTS.md](AGENTS.md#agent-tooling) for Codex.
+Claude Code offers to install the project plugins (ponytail, pr-review-toolkit) when you trust the folder. See [AGENTS.md](AGENTS.md#working-here) for Codex.
 
 ## Contributing
 
-`main` accepts changes only through PRs that pass CI and the agent review gate. Docs-only PRs skip the review gate (definition in AGENTS.md). Details: [AGENTS.md → Merge policy](AGENTS.md#merge-policy).
+`main` accepts changes only through PRs that pass CI and the agent review gate. Docs-only PRs skip the review gate. Details: [.github/AGENTS.md → Merge policy](.github/AGENTS.md#merge-policy).
 
 ## License
 
