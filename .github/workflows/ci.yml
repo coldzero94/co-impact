@@ -52,8 +52,8 @@ jobs:
           scheme=Impact.xcodeproj/xcshareddata/xcschemes/Impact.xcscheme
           plans=$(xmllint --xpath 'count(//TestAction/TestPlans)' "$scheme")
           [ "$plans" = 0 ] || { echo "::error::Impact.xcscheme uses a test plan, which replaces Testables; update this check to read the .xctestplan"; exit 1; }
-          shape=$(xmllint --xpath 'count(//TestAction) = 1 and count(//Testables) = 1 and count(//TestableReference) = count(/Scheme/TestAction/Testables/TestableReference)' "$scheme")
-          [ "$shape" = true ] || { echo "::error::Impact.xcscheme needs one TestAction with one Testables directly holding every TestableReference; xcodebuild ignores any other"; exit 1; }
+          shape=$(xmllint --xpath 'count(//TestAction) = 1 and count(//Testables) = 1 and count(//TestableReference) = count(/Scheme/TestAction/Testables/TestableReference) and not(//TestableReference[count(BuildableReference) != 1])' "$scheme")
+          [ "$shape" = true ] || { echo "::error::Impact.xcscheme needs one TestAction with one Testables directly holding every TestableReference, each with one BuildableReference; xcodebuild ignores any other"; exit 1; }
           want=$(swift package --package-path ImpactKit dump-package | jq -r '.targets[] | select(.type == "test") | .name' | sort)
           # xmllint exits 10 (11 in newer libxml2) when nothing matches.
           xml=$(xmllint --xpath '/Scheme/TestAction/Testables/TestableReference[@skipped="NO"]/BuildableReference[@ReferencedContainer="container:ImpactKit"]/@BlueprintIdentifier' "$scheme" || { rc=$?; [ $rc -eq 10 ] || [ $rc -eq 11 ]; })
