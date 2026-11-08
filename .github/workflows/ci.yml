@@ -44,6 +44,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: xcodebuild -version
+      - name: Swift package tests (macOS, no simulator)
+        run: swift test --package-path ImpactKit
       - name: Every ImpactKit test target is in the Impact scheme
         shell: bash   # adds -o pipefail
         run: |

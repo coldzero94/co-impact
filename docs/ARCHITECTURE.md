@@ -1,6 +1,6 @@
 # Architecture
 
-The project structure below is implemented (roadmap step 3). Everything else is **Proposed** until it has been exercised in code; update this file when that happens.
+The project structure and engine selection model below are implemented (roadmap steps 3–4). The remaining pipeline, enrichment, storage, and system surfaces are **Proposed** until exercised in code. Product decisions remain tracked in PRODUCT.md.
 
 ## Project structure
 
@@ -44,73 +44,28 @@ CalendarSource ──▶ [CalendarEvent] ──▶ Rules ──▶ [ImpactCard] 
 6. **Store** card and action state; merge with previous state so completed or dismissed cards stay that way.
 7. **Schedule surfaces**: local notifications, widget timeline reload, scheduled Live Activity.
 
-## Data model (draft)
+## Engine model and selection
 
-```swift
-struct CalendarEvent: Sendable, Hashable {
-    let id: String              // EventKit identifier + occurrence start date (recurrences share an identifier)
-    let title: String
-    let start: Date, end: Date
-    let isAllDay: Bool
-    let location: String?
-    let url: URL?
-    let notes: String?
-    let organizer: Person?
-    let attendees: [Person]
-    let isRecurring: Bool
-    let participation: Participation   // accepted, declined, tentative, unknown
-}
+The source of truth for the implemented types is [ImpactKit/Sources/ImpactEngine/](../ImpactKit/Sources/ImpactEngine/). The engine imports Foundation only: no UI, EventKit, MapKit, AI, persistence, or network calls.
 
-struct Place: Sendable, Hashable {
-    let title: String
-    let address: String?
-    let latitude: Double?, longitude: Double?   // from structuredLocation or geocoding
-}
+| Type | Responsibility |
+|------|----------------|
+| `CalendarEvent` | Source-independent occurrence, calendar ID/type, dates, cancellation, participation, user membership, optional series ID, raw URL/location/notes, and resolved places |
+| `Place` | Title, optional address, and a required coordinate pair; invalid coordinates are rejected during selection |
+| `SuppressionRule` | Same recurring series on one calendar, or exact title on one calendar |
+| `Provenance`, `Fact` | Calendar field, computation, or inference attached to each displayed fact |
+| `ActionKind`, `ImpactAction` | Closed catalog from PRODUCT.md, with provenance; action identity is its kind and payload within a card |
+| `ImpactCard` | Event occurrence ID, title, dates, kind, facts, and ordered actions (first is primary) |
 
-enum Provenance: Sendable, Hashable {
-    case calendar(field: String)     // read directly from the event
-    case computed(by: String)        // e.g. "MapKit ETA"
-    case inferred(by: Inferrer)      // .rules or .foundationModel
-}
+`CalendarEvent.id` must identify an occurrence, not just a recurring series. The future calendar adapter supplies this ID and the self-organizer/self-attendee flags; unknown membership on an event with attendees is excluded. `seriesID` is separate and supports muting all occurrences. Re-enabling a subscription or Birthdays calendar through `includedCalendarIDs` removes only the calendar-type exclusion, not declined/foreign-event or other exclusions.
 
-struct Fact: Sendable, Hashable { let label: String; let value: String; let provenance: Provenance }
+`try ImpactEngine()` constructs Foundation's link/phone detector and propagates initialization errors. `card(for:now:suppressionRules:includedCalendarIDs:)` returns one card or `nil`. It implements [PRODUCT.md → Event selection rules v1](PRODUCT.md#event-selection-rules-v1), including all 13 examples. Selection uses an explicit clock; events ending exactly at `now` and invalid date intervals are excluded. The caller fetches the horizon; this single-event selector does not rank or limit tomorrow's cards.
 
-enum ActionKind: Sendable, Hashable {   // the closed catalog, see PRODUCT.md
-    case joinMeeting(URL)
-    case directions(to: Place)
-    case openLink(URL)                  // non-meeting URL from notes, e.g. a Figma or Docs link
-    case call(String)
-}
+Meeting URLs are checked against one host/path allowlist. Text detection uses the original matched substring and requires explicit HTTP(S) URLs without credentials; it does not turn a detector-supplied scheme into a calendar fact. If several meeting links exist, the first wins in `url`, then `location`, then `notes` order. Non-meeting HTTP(S) links from notes become document actions, deduplicated by URL. Phone matches become Call actions for in-person cards only, deduplicated by number, with location taking precedence over notes.
 
-struct ImpactAction: Sendable, Hashable, Identifiable {
-    let id: String
-    let kind: ActionKind
-    let provenance: Provenance
-    var state: ActionState              // pending, done
-}
+Physical selection first uses valid `structuredPlace` coordinates (calendar provenance). Otherwise `canGeocode(_:)` rejects empty, URL, room, and floor labels before the caller requests a lookup. `geocodedPlace` must be the successful address/POI result for that event's location; the engine checks the candidate again and marks its result computed. Failed or missing lookups produce no physical signal. No place or travel time is invented: the Dentist example currently produces Directions without a leave-by time, as PRODUCT.md specifies when no route is available.
 
-enum CardKind: Sendable { case onlineMeeting, inPerson, hybrid }
-
-enum CardPhase: Sendable { case upcoming, soon, now, done, expired }   // PRODUCT.md → Card timeline
-
-struct NextStep: Sendable, Hashable {  // AI output, PRODUCT.md → AI scope
-    let text: String
-    let quote: String                   // must be a verbatim substring of the event notes
-}
-
-struct ImpactCard: Sendable, Identifiable {
-    let id: String                      // derived from event id
-    let eventID: String
-    let kind: CardKind
-    let answer: String                  // answers the card type's question, confirmed or computed data only
-    let anchor: Date                    // event start, or leave-by time for in-person cards
-    var facts: [Fact]
-    var actions: [ImpactAction]         // first = primary
-    var nextSteps: [NextStep]           // AI, at most 2
-    var phase: CardPhase
-    var isDismissed: Bool
-}
-```
+The model deliberately omits the earlier draft's unused answer string, anchor, phase, action-completion state, suggestions, and dismissal state. Presentation, routing/ETA, lifecycle/state merging, and AI grounding belong to their later roadmap steps. Product proposals are not approved by this implementation.
 
 ## Refresh and platform constraints
 
@@ -163,6 +118,7 @@ Verified facts only. Add the date and how each was verified.
 | `SystemLanguageModel` unavailability reasons: `deviceNotEligible`, `appleIntelligenceNotEnabled`, `modelNotReady`; `contextSize` and `supportedLanguages` exist | 2026-11-07 | FoundationModels `.swiftinterface` |
 | `Activity.request(attributes:content:pushType:style:alertConfiguration:start:)` exists, iOS 26.0+ | 2026-11-07 | ActivityKit `.swiftinterface` |
 | Xcode MCP bridge available at `xcrun mcpbridge` (not configured) | 2026-11-07 | `xcrun --find mcpbridge` |
+| `NSDataDetector` finds links and phone numbers in natural-language text; results expose `url` and `phoneNumber` | 2026-11-08 | [Apple documentation](https://developer.apple.com/documentation/foundation/nsdatadetector), iOS 27 Foundation headers, and engine tests on macOS; URLs are validated separately |
 
 To verify before relying on it:
 
