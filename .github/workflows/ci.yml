@@ -30,11 +30,11 @@ jobs:
           files=$(gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$SHA" --jq 'if (.files | length) >= 300 then "(300+ files: treated as code)" else (.files[] | .filename, (.previous_filename // empty) | gsub("\n"; "\\n")) end')
           [ -n "$files" ] || { echo "::error::PR has no changed files"; exit 1; }
           printf '%s\n' "$files"
-          # App code: everything except docs/, root-level Markdown, agent/CI tooling, and .gitignore. grep exit 2 (error) fails the step.
-          # shortcut: ci.yml changes skip the ios job until Impact.xcodeproj exists (roadmap step 3). Then count ci.yml as app code:
-          # ^\.github/ below excludes it, so add it back with a separate grep.
+          # App code: everything except docs/, root-level Markdown, agent/CI tooling, and .gitignore; ci.yml itself counts,
+          # so changes to this build are build-tested. grep exit 2 (error) fails the step.
           app=$(printf '%s\n' "$files" | grep -avE '^docs/|^[^/]+\.md$|^\.github/|^\.claude/|^\.agents/|^skills-lock\.json$|^\.gitignore$' || [ $? -eq 1 ])
-          echo "app=$([ -n "$app" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          ci=$(printf '%s\n' "$files" | grep -axF '.github/workflows/ci.yml' || [ $? -eq 1 ])
+          echo "app=$([ -n "$app$ci" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
   ios:
     needs: changes
@@ -44,6 +44,21 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: xcodebuild -version
+      - name: Every ImpactKit test target is in the Impact scheme
+        shell: bash   # adds -o pipefail
+        run: |
+          # xcodebuild runs the scheme's Testables (or a test plan, which this check rejects), finding each package
+          # target by BlueprintIdentifier; a test target missing there would never run.
+          scheme=Impact.xcodeproj/xcshareddata/xcschemes/Impact.xcscheme
+          plans=$(xmllint --xpath 'count(//TestAction/TestPlans)' "$scheme")
+          [ "$plans" = 0 ] || { echo "::error::Impact.xcscheme uses a test plan, which replaces Testables; update this check to read the .xctestplan"; exit 1; }
+          shape=$(xmllint --xpath 'count(//TestAction) = 1 and count(//Testables) = 1 and count(//TestableReference) = count(/Scheme/TestAction/Testables/TestableReference) and not(//TestableReference[count(BuildableReference) != 1])' "$scheme")
+          [ "$shape" = true ] || { echo "::error::Impact.xcscheme needs one TestAction with one Testables directly holding every TestableReference, each with one BuildableReference; xcodebuild ignores any other"; exit 1; }
+          want=$(swift package --package-path ImpactKit dump-package | jq -r '.targets[] | select(.type == "test") | .name' | sort)
+          # xmllint exits 10 (11 in newer libxml2) when nothing matches.
+          xml=$(xmllint --xpath '/Scheme/TestAction/Testables/TestableReference[@skipped="NO"]/BuildableReference[@ReferencedContainer="container:ImpactKit"]/@BlueprintIdentifier' "$scheme" || { rc=$?; [ $rc -eq 10 ] || [ $rc -eq 11 ]; })
+          have=$(printf '%s\n' "$xml" | grep -oE 'BlueprintIdentifier="[^"]*"' | cut -d'"' -f2 | sort || [ $? -eq 1 ])
+          [ -n "$want" ] && [ "$want" = "$have" ] || { echo "::error::ImpactKit test targets [$(echo $want)] != Impact.xcscheme Testables [$(echo $have)]; make the scheme's Testables match Package.swift"; exit 1; }
       - name: Build and test
         run: |
           udid=$(xcrun simctl list devices available -j | jq -r '[.devices | to_entries[] | select(.key | test("iOS")) | .value[] | select(.name | startswith("iPhone"))][0].udid')
