@@ -31,3 +31,7 @@ Rules for `.github/` and for how changes reach `main`. The review-and-merge proc
 `changes` and `ios` are pinned to the GitHub Actions app, but a PR's own copy of `ci.yml` reports them, and a PR's own workflow could report `review/*` as check runs. So `.github/` changes always need the gate and are owner-only for untrusted PRs, a fork PR's own workflow code (`pull_request` runs) runs only after the owner approves it (the exemption's `pull_request_target` run always runs, but it uses main's code), and `merge-gate` confirms before merging that every `review/*` result is a status created by the owner (or by `github-actions[bot]` only on a docs-only PR, since any workflow can post as that bot).
 
 The review statuses are self-reported by the agent, and the gate merges without human approval. The owner acts only on untrusted PRs: approving a fork's workflow run so `changes` and `ios` can report, and reviewing and posting the statuses when it has sensitive paths. Outside content inside an owner's PR is flagged only through the commit-author check and the `Built on` marker (AGENTS.md hard rule 9). Commit authors are matched by email, which any author can set, so that check catches only honest outside commits; the marker is written by the authoring agent and cannot be verified. The verdict comment is the audit trail.
+
+## Gotchas
+
+- Headless Claude reviews need `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0` to avoid killing background reviewers after ten minutes; omit co-author trailers because the trust check includes every GitHub author.
