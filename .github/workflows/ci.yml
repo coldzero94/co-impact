@@ -50,7 +50,8 @@ jobs:
           # xcodebuild runs the scheme's Testables (or a test plan, which this check rejects), finding each package
           # target by BlueprintIdentifier; a test target missing there would never run.
           scheme=Impact.xcodeproj/xcshareddata/xcschemes/Impact.xcscheme
-          [ "$(xmllint --xpath 'count(//TestAction/TestPlans)' "$scheme")" = 0 ] || { echo "::error::Impact.xcscheme uses a test plan, which replaces Testables; update this check to read the .xctestplan"; exit 1; }
+          plans=$(xmllint --xpath 'count(//TestAction/TestPlans)' "$scheme")
+          [ "$plans" = 0 ] || { echo "::error::Impact.xcscheme uses a test plan, which replaces Testables; update this check to read the .xctestplan"; exit 1; }
           want=$(swift package --package-path ImpactKit dump-package | jq -r '.targets[] | select(.type == "test") | .name' | sort)
           # xmllint exits 10 (11 in newer libxml2) when nothing matches.
           xml=$(xmllint --xpath '//TestAction//TestableReference[@skipped="NO"]/BuildableReference[@ReferencedContainer="container:ImpactKit"]/@BlueprintIdentifier' "$scheme" || { rc=$?; [ $rc -eq 10 ] || [ $rc -eq 11 ]; })
