@@ -20,6 +20,7 @@ public struct HomeView: View {
                 if let next = snapshot.nextUp {
                     NextUpCard(card: next, now: now)
                 } else {
+                    // shortcut: no "Next:" line until events past the horizon arrive (roadmap step 7).
                     Text("Nothing needs you today.")
                         .font(.title3.weight(.semibold))
                         .padding(20)

@@ -7,7 +7,7 @@ public struct HomeFixture: Sendable {
     public let now: Date
 }
 
-/// Synthetic events for previews and debug builds; never real calendar data (AGENTS.md → Public repo).
+/// Synthetic events for previews and debug builds; never real calendar data (AGENTS.md hard rule 7).
 public enum HomeFixtures {
     /// A sample day seen at `hour` (09:48 by default: two Impacts made, three cards to go).
     public static func sample(at hour: Double = 9.8, calendar: Calendar = .current, today: Date = .now) throws -> HomeFixture {

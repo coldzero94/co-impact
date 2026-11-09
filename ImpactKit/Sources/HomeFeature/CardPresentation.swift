@@ -2,7 +2,7 @@ import Foundation
 import ImpactEngine
 
 /// Display text for a card (UX.md → Card anatomy). It reads the card's actions; the engine creates
-/// only calendar or computed ones, and inferred actions must never reach these (hard rule 2).
+/// only calendar or computed ones, so inferred actions must never feed this text (hard rule 2).
 extension ImpactCard {
     var meetingURL: URL? {
         actions.lazy.compactMap { if case .joinMeeting(let url) = $0.kind { url } else { nil } }.first
@@ -15,7 +15,7 @@ extension ImpactCard {
     var provider: String? { meetingURL.flatMap(ImpactEngine.meetingProvider) }
 
     /// The answer to the card's question (P1).
-    /// shortcut: in-person cards show the place until routing exists; then "Leave by HH:mm" (UX.md → Card detail).
+    /// shortcut: in-person answers and row facts show the place until routing exists; then the leave-by time (UX.md → Home, Card detail).
     var answer: String {
         let link = "\(provider ?? "Meeting") link ready"
         return switch kind {

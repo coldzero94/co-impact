@@ -39,5 +39,5 @@ struct ImpactRing: View {
 }
 
 #if DEBUG
-#Preview("Busy day") { ImpactRing(filled: 6, segments: 14).frame(width: 46, height: 46).padding() }
+#Preview("Busy day") { ImpactRing(filled: 6, segments: 20).frame(width: 46, height: 46).padding() }
 #endif

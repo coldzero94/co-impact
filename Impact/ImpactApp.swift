@@ -6,8 +6,7 @@ struct ImpactApp: App {
     var body: some Scene {
         WindowGroup {
             #if DEBUG
-            // shortcut: synthetic data with the clock read once at launch; EventKit and a ticking clock
-            // arrive in roadmap step 7.
+            // shortcut: a sample day frozen at -fixtureHour; real events replace it in roadmap step 7.
             switch Result(catching: { try HomeFixtures.sample(at: Self.fixtureHour) }) {
             case .success(let fixture):
                 HomeView(snapshot: fixture.snapshot, now: fixture.now)
