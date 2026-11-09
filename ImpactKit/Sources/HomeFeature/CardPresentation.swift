@@ -1,8 +1,9 @@
 import Foundation
 import ImpactEngine
 
-/// Display text for a card (UX.md → Card anatomy). It reads the card's actions; the engine creates
-/// only calendar or computed ones, so inferred actions must never feed this text (hard rule 2).
+/// Display text for a card (UX.md → Card anatomy). It reads the card's actions without checking provenance,
+/// which is safe only while the engine creates calendar or computed actions alone; filter out inferred
+/// ones here before any exist (hard rule 2).
 extension ImpactCard {
     var meetingURL: URL? {
         actions.lazy.compactMap { if case .joinMeeting(let url) = $0.kind { url } else { nil } }.first
@@ -15,7 +16,7 @@ extension ImpactCard {
     var provider: String? { meetingURL.flatMap(ImpactEngine.meetingProvider) }
 
     /// The answer to the card's question (P1).
-    /// shortcut: in-person answers and row facts show the place until routing exists; then the leave-by time (UX.md → Home, Card detail).
+    /// shortcut: in-person answers show the place until routing exists; then the leave-by time (UX.md → Card detail).
     var answer: String {
         let link = "\(provider ?? "Meeting") link ready"
         return switch kind {
@@ -26,6 +27,7 @@ extension ImpactCard {
     }
 
     /// The one key fact on a row and on Next up's top line.
+    /// shortcut: in-person cards show the place until routing exists; then the leave-by time (UX.md → Home).
     var keyFact: String {
         switch kind {
         case .onlineMeeting, .hybrid: provider ?? "Online"

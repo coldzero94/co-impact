@@ -8,6 +8,8 @@ public struct HomeView: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @ScaledMetric(relativeTo: .title) private var ringSize = 46.0
 
+    /// shortcut: `now` is fixed, so the countdown does not move; re-render with a fresh time (e.g. a
+    /// TimelineView) once live data arrives (roadmap step 7).
     public init(snapshot: HomeSnapshot, now: Date) {
         self.snapshot = snapshot
         self.now = now

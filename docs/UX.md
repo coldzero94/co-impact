@@ -60,7 +60,7 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 - **Goal-time card** sits below the time-bound cards, one at a time. **Block time** shows "Blocked · Undo" for 5 seconds; swiping offers **Not now**.
 - **Tomorrow morning** follows PRODUCT.md → Horizon.
 - Events that need nothing are counted but not listed; Home is not a calendar.
-- Step 5 draws event cards only: goal-time and focus cards (steps 11–12) and taps on rows and the ring (step 6 onward) come later. Within event cards, not drawn yet: leave-by times (rows and answers show the place until routing exists) and the empty state's "Next:" line (it needs events past the horizon, step 7).
+- Not built yet (step 5 draws event cards only): goal-time and focus cards (steps 11–12). Nothing on Home responds to touch: the Next up button, row taps, and swipes come in step 6 onward, and the ring tap with the daily review in step 13. Leave-by times are not drawn (rows and answers show the place until routing exists), nor is the empty state's "Next:" line (it needs events past the horizon, step 7).
 
 ### 3. Empty state
 

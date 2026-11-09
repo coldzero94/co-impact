@@ -1,6 +1,6 @@
 # Architecture
 
-The project structure, engine selection model, Home snapshot, and the Home screen's event-card layout ([UX.md → Home](UX.md#2-home)) are implemented (roadmap steps 3–5). The remaining pipeline, enrichment, storage, and system surfaces are **Proposed** (how they settle: AGENTS.md).
+The project structure, engine selection model, Home snapshot, and the Home screen as far as [UX.md → Home](UX.md#2-home) says (its last bullet lists what is not built) are implemented (roadmap steps 3–5). The remaining pipeline, enrichment, storage, and system surfaces are **Proposed** (how they settle: AGENTS.md).
 
 ## Project structure
 
