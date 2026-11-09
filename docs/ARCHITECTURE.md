@@ -144,3 +144,4 @@ To verify before relying on it:
 - Geocoding quality for Korean addresses and place names (selection rule for physical places).
 - How Impact recognizes the focus blocks it created after a sync changes `calendarItemIdentifier` (PRODUCT.md → Block time), on Google and Exchange accounts.
 - Journaling Suggestions: required entitlement, availability, and what the picker returns (PRODUCT.md → Daily log).
+- Whether `OpenURLAction` reports a `tel:` URL as accepted before the user confirms the call prompt; if so, a cancelled call still shows "Call opened" (UX.md → Card detail). Check on a device (step 10).

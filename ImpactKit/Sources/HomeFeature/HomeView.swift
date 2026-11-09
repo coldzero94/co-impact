@@ -10,7 +10,7 @@ public struct HomeView: View {
     @State private var failed: ActionKind?
     /// Card frames by card ID in the content's coordinate space: where a moment starts.
     @State private var frames: [String: CGRect] = [:]
-    /// Where a moment lands.
+    /// The ring's frame in the same space: where a moment lands; nil skips the flight.
     @State private var ringFrame: CGRect?
     /// An Impact recorded when its action ran; it plays once Home is in front again with no sheet open.
     @State private var pending: Moment?
@@ -35,10 +35,10 @@ public struct HomeView: View {
                 header(snapshot)
                 if let next = snapshot.nextUp {
                     NextUpCard(card: next, now: model.now, details: { selected = next }, primary: { action in
-                        // Within a second of an Impact, Next up already shows the next card, so a tap is the
-                        // second half of a double tap. A later one first plays a moment still queued because
-                        // the app never left (see playPending).
-                        if let pending, Date.now.timeIntervalSince(pending.recorded) < 1 { return }
+                        // Within a second of an Impact, Next up already shows the next card, so a tap is
+                        // treated as the second half of a double tap and ignored. A later one first plays a
+                        // moment still queued because the app never left (see playPending).
+                        if let pending, ProcessInfo.processInfo.systemUptime - pending.recorded < 1 { return }
                         playPending()
                         run(action, on: next) { failed = $0 }
                     })
@@ -125,8 +125,8 @@ public struct HomeView: View {
         }
     }
 
-    /// Every catalog action leaves the app, so the moment waits until Home is in front again
-    /// (UX.md → The Impact moment).
+    /// Catalog actions leave the app on iPhone, so the moment waits until Home is in front again with no
+    /// sheet open (UX.md → The Impact moment). If an action never left, the next Next up tap plays it.
     private func playPending() {
         guard scenePhase == .active, selected == nil, flying == nil, let moment = pending else { return }
         if reduceMotion || moment.from == nil || ringFrame == nil {
@@ -141,7 +141,7 @@ public struct HomeView: View {
     private func land() {
         withAnimation(reduceMotion ? .easeInOut(duration: 0.3) : .spring(duration: 0.4)) {
             // A token landing keeps an Impact recorded during its flight queued; playPending below plays
-            // it now if Home is in front, otherwise on return.
+            // it now if Home is in front with no sheet open, otherwise at its next trigger.
             if flying == nil { pending = nil }
             flying = nil
         }

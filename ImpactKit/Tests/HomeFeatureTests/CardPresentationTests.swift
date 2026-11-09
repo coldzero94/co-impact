@@ -109,9 +109,10 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         #expect(!model.snapshot.doneCardIDs.contains("Town hall"))
     }
 
-    @Test("Open link is labeled by host (PRODUCT.md → Action catalog)")
+    @Test("Open link and its failure alert name the host, decoded and without www in any case")
     func linkLabel() throws {
         let figma = ActionKind.openLink(try #require(URL(string: "https://WWW.figma.com/file/x")))
         #expect(figma.label == "Open figma.com" && figma.failureTitle == "figma.com didn't open")
+        #expect(try #require(URL(string: "https://www./doc")).shortHost == nil)
     }
 }

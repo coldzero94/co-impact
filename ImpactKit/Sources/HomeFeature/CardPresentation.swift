@@ -84,8 +84,13 @@ extension ActionKind {
 }
 
 extension URL {
-    /// The host without a leading "www.", as links are labeled (PRODUCT.md → Action catalog).
-    var shortHost: String? { host()?.replacing(/^www\./.ignoresCase(), with: "") }
+    /// The host to label a link by (PRODUCT.md → Action catalog): decoded, without a leading "www." in any
+    /// case; nil when nothing is left.
+    var shortHost: String? {
+        guard let host = host()?.removingPercentEncoding?.replacing(/^www\./.ignoresCase(), with: ""),
+              !host.isEmpty else { return nil }
+        return host
+    }
 }
 
 /// Next up's large time (UX.md → Home): minutes under an hour, the clock time from an hour out, Now from the start.
