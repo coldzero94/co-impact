@@ -253,12 +253,13 @@ private let productExamples: [Example] = [
     /// Notes text through the real detector, and the number Call dials (nil: no Call action).
     @Test("Call actions dial what the detector found, without extensions", arguments: [
         ("Reception 02-555-0100 내선 3", "tel:025550100"), ("Desk (555) 010-0199 ext. 23", "tel:5550100199"),
-        ("Order at 1-800-FLOWERS", nil),
+        ("Call 1-800-FLOWERS now", nil), ("Call +1 (202) 555-0123 or +1-202-555-0123", "tel:+12025550123"),
     ] as [(String, String?)])
     func detectedCalls(_ notes: String, _ url: String?) throws {
         let card = try #require(engine.card(for: event { $0.structuredPlace = place; $0.notes = notes }, now: now))
-        let number = card.actions.lazy.compactMap { if case .call(let number) = $0.kind { number } else { nil } }.first
-        #expect(number.flatMap(ImpactEngine.telURL)?.absoluteString == url)
+        let numbers = card.actions.compactMap { if case .call(let number) = $0.kind { number } else { nil } }
+        #expect(numbers.count == (url == nil ? 0 : 1))
+        #expect(numbers.first.flatMap(ImpactEngine.telURL)?.absoluteString == url)
     }
 
     @Test("Meeting fields have stable priority and invalid links do not hide later matches")

@@ -61,11 +61,12 @@ public struct ImpactEngine: Sendable {
             }
         }
         if meeting == nil, place != nil {
+            // One Call per number it would dial, however it is written; none for a number it cannot dial.
+            var dialed: Set<URL> = []
             for (matches, field) in [(locationMatches, "location"), (notesMatches, "notes")] {
                 for match in matches {
-                    if let phone = match.phoneNumber, Self.telURL(phone) != nil {
-                        let action = ImpactAction(kind: .call(phone), provenance: .calendar(field: field))
-                        if !actions.contains(where: { $0.kind == action.kind }) { actions.append(action) }
+                    if let phone = match.phoneNumber, let url = Self.telURL(phone), dialed.insert(url).inserted {
+                        actions.append(ImpactAction(kind: .call(phone), provenance: .calendar(field: field)))
                     }
                 }
             }
