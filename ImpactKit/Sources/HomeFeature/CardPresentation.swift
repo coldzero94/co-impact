@@ -84,11 +84,12 @@ extension ActionKind {
 }
 
 extension URL {
-    /// The host to label a link by (PRODUCT.md → Action catalog), without a leading "www." in any case. Links
-    /// come from notes other people write, so anything but a plain ASCII host name (a lookalike script,
-    /// percent-encoding, control characters) gives nil and the generic label.
+    /// The host to label a link by (PRODUCT.md → Action catalog): lowercased, as browsers show it, so "paypaI"
+    /// cannot pass for "paypal", and without a leading "www.". Links come from notes other people write, so
+    /// anything but a plain ASCII host name (a lookalike script, percent-encoding, control characters) gives
+    /// nil and the generic label.
     var shortHost: String? {
-        guard let host = host()?.replacing(/^www\./.ignoresCase(), with: ""), !host.isEmpty,
+        guard let host = host()?.lowercased().replacing(/^www\./, with: ""), !host.isEmpty,
               host.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-" || $0 == ".") })
         else { return nil }
         return host
