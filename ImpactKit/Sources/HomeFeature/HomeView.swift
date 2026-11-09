@@ -81,7 +81,7 @@ public struct HomeView: View {
             }
             if !typeSize.isAccessibilitySize { Spacer() }
             // The ring fills the moment's segment only when its token lands.
-            let unshown = pending != nil || flying != nil ? 1 : 0
+            let unshown = (pending == nil ? 0 : 1) + (flying == nil ? 0 : 1)
             ImpactRing(filled: max(0, snapshot.impactsToday - unshown), segments: snapshot.ringSegments)
                 .frame(width: ringSize, height: ringSize)
                 .recordingFrame(Self.ringID, into: $frames)
