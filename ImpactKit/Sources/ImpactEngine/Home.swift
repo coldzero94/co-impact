@@ -4,7 +4,8 @@ import Foundation
 public struct HomeSnapshot: Sendable, Hashable {
     /// The user's own timed events today that have not ended: the summary line's "of N".
     public let eventsLeftToday: Int
-    /// The earliest of today's cards that is not done.
+    /// The earliest card not done that started less than 10 minutes ago; otherwise the earliest
+    /// card not done, so a meeting the user joined elsewhere does not hide the next one.
     public let nextUp: ImpactCard?
     /// Today's other cards by start time; done cards stay until they expire.
     public let laterToday: [ImpactCard]
@@ -12,15 +13,14 @@ public struct HomeSnapshot: Sendable, Hashable {
     public let tomorrowMorning: [ImpactCard]
     /// The Impact ring: one segment per Impact today plus one per card still to do today.
     /// Expired cards drop out instead of counting as missed (P7).
-    public let impactsToday: Int
     public let ringSegments: Int
 }
 
 extension ImpactEngine {
-    /// `events` is the fetched horizon (PRODUCT.md → Horizon); `completedToday` holds the IDs of
-    /// cards whose primary action ran today.
+    /// `events` is the fetched horizon (PRODUCT.md → Horizon). `completedCardIDs` holds every card
+    /// whose primary action ran, on any day, so a card done the evening before stays done.
     public func home(
-        events: [CalendarEvent], now: Date, calendar: Calendar, completedToday: Set<String>,
+        events: [CalendarEvent], now: Date, calendar: Calendar, completedCardIDs: Set<String>, impactsToday: Int,
         suppressionRules: [SuppressionRule] = [], includedCalendarIDs: Set<String> = []
     ) -> HomeSnapshot {
         let today = calendar.startOfDay(for: now)
@@ -37,8 +37,8 @@ extension ImpactEngine {
 
         let todaysEvents = events.filter { $0.start < tomorrow }
         let todayCards = cards(todaysEvents).filter { !Self.hasExpired($0, now: now) }
-        let toDo = todayCards.filter { !completedToday.contains($0.id) }
-        let nextUp = toDo.first
+        let toDo = todayCards.filter { !completedCardIDs.contains($0.id) }
+        let nextUp = toDo.first { now < $0.start.addingTimeInterval(10 * 60) } ?? toDo.first
         let showTomorrow = calendar.component(.hour, from: now) >= 18 || toDo.isEmpty
         let tomorrowCards = showTomorrow
             ? cards(events.filter { $0.start >= tomorrow && $0.start < tomorrowNoon }).prefix(2) : []
@@ -50,8 +50,7 @@ extension ImpactEngine {
             nextUp: nextUp,
             laterToday: todayCards.filter { $0.id != nextUp?.id },
             tomorrowMorning: Array(tomorrowCards),
-            impactsToday: completedToday.count,
-            ringSegments: completedToday.count + toDo.count
+            ringSegments: impactsToday + toDo.count
         )
     }
 

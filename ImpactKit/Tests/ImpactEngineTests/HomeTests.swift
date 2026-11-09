@@ -36,8 +36,8 @@ private let morning = [
 
     init() throws { engine = try ImpactEngine() }
 
-    private func home(_ events: [CalendarEvent], at hour: Double, completed: Set<String> = []) -> HomeSnapshot {
-        engine.home(events: events, now: at(hour), calendar: utc, completedToday: completed)
+    private func home(_ events: [CalendarEvent], at hour: Double, completed: Set<String> = [], impacts: Int = 0) -> HomeSnapshot {
+        engine.home(events: events, now: at(hour), calendar: utc, completedCardIDs: completed, impactsToday: impacts)
     }
 
     @Test("The earliest card is Next up; the rest are later today")
@@ -47,17 +47,32 @@ private let morning = [
         #expect(home.laterToday.map(\.id) == ["Dentist", "Town hall"])
         #expect(home.tomorrowMorning.isEmpty)
         #expect(home.eventsLeftToday == 4)
-        #expect(home.impactsToday == 0)
         #expect(home.ringSegments == 3)
     }
 
     @Test("A done card leaves Next up but stays listed, and fills a ring segment")
     func doneCard() {
-        let home = home(morning, at: 10.2, completed: ["Design review"])
+        let home = home(morning, at: 10.2, completed: ["Design review"], impacts: 1)
         #expect(home.nextUp?.id == "Dentist")
         #expect(home.laterToday.map(\.id) == ["Design review", "Town hall"])
-        #expect(home.impactsToday == 1)
         #expect(home.ringSegments == 3)
+    }
+
+    @Test("Next up moves on 10 minutes after a start, even if the meeting was joined elsewhere", arguments: [
+        (10.15, "Design review", ["Team sync"]), (10.92, "Team sync", ["Design review"]),
+    ])
+    func backToBack(_ hour: Double, _ next: String, _ later: [String]) {
+        let home = home([event("Design review", 10), event("Team sync", 11)], at: hour)
+        #expect(home.nextUp?.id == next)
+        #expect(home.laterToday.map(\.id) == later)
+    }
+
+    @Test("A card done the evening before stays done the next morning")
+    func doneTheEveningBefore() {
+        let home = home([event("Client visit", 8.5) { $0.structuredPlace = clinic }], at: 7.5, completed: ["Client visit"])
+        #expect(home.nextUp == nil)
+        #expect(home.laterToday.map(\.id) == ["Client visit"])
+        #expect(home.ringSegments == 0)
     }
 
     @Test("In-person cards expire 15 minutes after the start and leave the ring", arguments: [(14.74, true), (14.75, false)])
@@ -79,7 +94,7 @@ private let morning = [
     @Test("Tomorrow morning appears once nothing is left to do today")
     func tomorrowWhenDone() {
         let events = [event("Last meeting", 16), event("Client visit", 8.5, day: 1) { $0.structuredPlace = clinic }]
-        let home = home(events, at: 15, completed: ["Last meeting"])
+        let home = home(events, at: 15, completed: ["Last meeting"], impacts: 1)
         #expect(home.nextUp == nil)
         #expect(home.laterToday.map(\.id) == ["Last meeting"])
         #expect(home.tomorrowMorning.map(\.id) == ["Client visit"])
