@@ -1,7 +1,8 @@
 import Foundation
 import ImpactEngine
 
-/// Display text for a card, from its confirmed or computed actions only (UX.md → Card anatomy).
+/// Display text for a card (UX.md → Card anatomy). It reads the card's actions; the engine creates
+/// only calendar or computed ones, and inferred actions must never reach these (hard rule 2).
 extension ImpactCard {
     var meetingURL: URL? {
         actions.lazy.compactMap { if case .joinMeeting(let url) = $0.kind { url } else { nil } }.first
@@ -11,20 +12,10 @@ extension ImpactCard {
         actions.lazy.compactMap { if case .directions(let place) = $0.kind { place } else { nil } }.first
     }
 
-    /// The provider name for a meeting link; the hosts are those of PRODUCT.md → Signals.
-    var provider: String? {
-        guard let host = meetingURL?.host?.lowercased() else { return nil }
-        if host == "zoom.us" || host.hasSuffix(".zoom.us") { return "Zoom" }
-        if host.hasSuffix(".webex.com") { return "Webex" }
-        return switch host {
-        case "meet.google.com": "Google Meet"
-        case "teams.microsoft.com", "teams.live.com": "Teams"
-        case "facetime.apple.com": "FaceTime"
-        default: nil
-        }
-    }
+    var provider: String? { meetingURL.flatMap(ImpactEngine.meetingProvider) }
 
     /// The answer to the card's question (P1).
+    /// shortcut: in-person cards show the place until routing exists; then "Leave by HH:mm" (UX.md → Card detail).
     var answer: String {
         let link = "\(provider ?? "Meeting") link ready"
         return switch kind {
@@ -34,7 +25,7 @@ extension ImpactCard {
         }
     }
 
-    /// The one key fact on a departure-board row.
+    /// The one key fact on a row and on Next up's top line.
     var keyFact: String {
         switch kind {
         case .onlineMeeting, .hybrid: provider ?? "Online"
@@ -70,7 +61,7 @@ extension ActionKind {
     }
 }
 
-/// Next up's large time: relative under an hour, otherwise the clock time (UX.md → Card anatomy).
+/// Next up's large time (UX.md → Home): minutes under an hour, the clock time from an hour out, Now from the start.
 enum Countdown: Equatable {
     case now
     case minutes(Int)

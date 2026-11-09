@@ -1,6 +1,6 @@
 # Architecture
 
-The project structure, engine selection model, Home snapshot, and Home screen below are implemented (roadmap steps 3–5). The remaining pipeline, enrichment, storage, and system surfaces are **Proposed** (how they settle: AGENTS.md).
+The project structure, engine selection model, and Home snapshot below, and the Home screen ([UX.md → Home](UX.md#2-home)), are implemented (roadmap steps 3–5). The remaining pipeline, enrichment, storage, and system surfaces are **Proposed** (how they settle: AGENTS.md).
 
 ## Project structure
 
@@ -9,12 +9,12 @@ Follows Apple's local-package guidance and the thin-app-target pattern used by I
 ```
 Impact.xcodeproj               Thin app shell, Xcode 16+ synchronized folders
 Impact/                        App target: @main entry point and Assets.xcassets only
-ImpactKit/                     Local Swift package: all logic and, later, UI features
+ImpactKit/                     Local Swift package: all logic and UI features
 ├── Package.swift              One umbrella product, `ImpactKit`, linked by the app
 ├── Sources/ImpactEngine/      Pure Swift: model, rules, ranking (no UI, no EventKit)
 ├── Sources/HomeFeature/       SwiftUI Home screen, card text, Impact ring, synthetic fixtures
 ├── Tests/ImpactEngineTests/   Swift Testing
-└── Tests/HomeFeatureTests/    Swift Testing (card text, countdown, summary line)
+└── Tests/HomeFeatureTests/    Swift Testing
 ```
 
 Decisions:
@@ -70,7 +70,7 @@ Physical selection first uses valid `structuredPlace` coordinates (calendar prov
 
 `home(…)` runs selection on today's events in the fetched horizon, sorts cards by start, then ID, and applies [UX.md → Home](UX.md#2-home) (Next up, summary, ring) and [PRODUCT.md → Horizon](PRODUCT.md#horizon) in the given calendar. Soon and Now come from PRODUCT.md → Card timeline; until leave-by exists, in-person cards count from the event start. Completions are passed for any day, so a card done the evening before stays done; the caller also passes today's Impact count, which the ring adds to the cards still to do. Tomorrow's events are selected only while Tomorrow morning shows. Occurrence IDs must be unique (debug builds assert it on the listed cards).
 
-The model deliberately omits the earlier draft's unused answer string, anchor, phase, action-completion state, suggestions, and dismissal state. Presentation, routing/ETA, persisting and merging card state, dismissal, and AI grounding belong to their later roadmap steps. Product proposals are not approved by this implementation.
+The model deliberately omits the earlier draft's unused answer string, anchor, phase, action-completion state, suggestions, and dismissal state. Routing/ETA, persisting and merging card state, dismissal, and AI grounding belong to their later roadmap steps; Home presentation lives in `HomeFeature`. Product proposals are not approved by this implementation.
 
 ## Refresh and platform constraints
 
@@ -110,7 +110,7 @@ Live Activities are started **without a server** by scheduling them at analysis 
 ## Testing
 
 - `ImpactKit` engine: Swift Testing with synthetic `CalendarEvent` fixtures (one test per selection rule, plus skip cases).
-- UI: SwiftUI previews and debug builds use `HomeFixtures` (synthetic events run through the real engine); release builds show no demo data. A UI change is checked by simulator screenshots (ImpactKit/AGENTS.md → UI).
+- UI: SwiftUI previews and debug builds use `HomeFixtures` (synthetic events run through the real engine, debug only; see UX.md → Onboarding for release builds). A UI change is checked by simulator screenshots (ImpactKit/AGENTS.md → UI).
 - Device testing is required for Foundation Models and Live Activities.
 
 ## Platform facts
@@ -129,7 +129,7 @@ Verified facts only. Add the date and how each was verified.
 | `calendarItemIdentifier` is not sync-proof: a full sync can lose it, so a fallback match is needed; `calendarItemExternalIdentifier` is the server-provided one | 2026-11-09 | iOS 27 EventKit `EKCalendarItem.h` |
 | No public API turns on an iOS Focus. Apps can only read Focus status (`INFocusStatusCenter`) and adapt to it (`SetFocusFilterIntent`) | 2026-11-09 | iOS 27 SDK: AppIntents `.swiftinterface` and Intents headers list no other Focus API |
 | SDK includes JournalingSuggestions | 2026-11-09 | SDK `Frameworks/` listing |
-| `Color.mix(with:by:)` (iOS 18+) darkens the accent behind Next up in dark mode | 2026-11-09 | App and package build against the iOS 27 SDK |
+| `Color.mix(with:by:in:)` exists from iOS 18.0 and macOS 15.0 | 2026-11-09 | iOS 27 SDK `SwiftUICore.framework` `arm64e-apple-ios.swiftinterface` |
 
 To verify before relying on it:
 

@@ -71,7 +71,7 @@ public struct HomeView: View {
     }
 }
 
-/// Next up: the accent card with a large countdown and the primary action (Draft C, UX.md → Home).
+/// Next up: the accent card with a large countdown and the primary action (UX.md → Home).
 struct NextUpCard: View {
     let card: ImpactCard
     let now: Date
@@ -96,7 +96,7 @@ struct NextUpCard: View {
             Text(card.title).font(.title2.weight(.semibold))
             Text(card.answer).opacity(0.9)
             if let action = card.actions.first {
-                // shortcut: actions are wired in roadmap step 6 (card detail and actions).
+                // shortcut: the primary button does nothing yet; wire it in roadmap step 6.
                 Button {} label: {
                     Label(action.kind.label, systemImage: action.kind.symbol)
                         .font(.headline)
@@ -186,13 +186,16 @@ extension Color {
     }
 }
 
+#if DEBUG
 #Preview("09:48, Next up in 12 min") { sampleHome(hour: 9.8) }
 #Preview("08:00, done row, clock countdown") { sampleHome(hour: 8) }
 #Preview("19:00, nothing left, Tomorrow morning") { sampleHome(hour: 19) }
 
-@ViewBuilder
+@MainActor @ViewBuilder
 private func sampleHome(hour: Double) -> some View {
-    if let fixture = try? HomeFixtures.sample(at: hour) {
-        HomeView(snapshot: fixture.snapshot, now: fixture.now)
+    switch Result(catching: { try HomeFixtures.sample(at: hour) }) {
+    case .success(let fixture): HomeView(snapshot: fixture.snapshot, now: fixture.now)
+    case .failure(let error): Text("Fixture failed: \(error.localizedDescription)")
     }
 }
+#endif

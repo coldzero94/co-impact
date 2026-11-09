@@ -1,16 +1,18 @@
 import Foundation
 import ImpactEngine
 
-/// Synthetic events for previews and debug builds; never real calendar data (AGENTS.md hard rule 7).
+#if DEBUG
 public struct HomeFixture: Sendable {
     public let snapshot: HomeSnapshot
     public let now: Date
 }
 
+/// Synthetic events for previews and debug builds; never real calendar data (AGENTS.md → Public repo).
 public enum HomeFixtures {
     /// A sample day seen at `hour` (09:48 by default: two Impacts made, three cards to go).
     public static func sample(at hour: Double = 9.8, calendar: Calendar = .current, today: Date = .now) throws -> HomeFixture {
         let day = calendar.startOfDay(for: today)
+        // shortcut: fixed offsets from midnight shift by an hour on DST change days; fine for samples.
         func at(_ hour: Double, day offset: Int = 0) -> Date {
             day.addingTimeInterval(Double(offset) * 86_400 + hour * 3_600)
         }
@@ -42,3 +44,4 @@ public enum HomeFixtures {
         return HomeFixture(snapshot: snapshot, now: now)
     }
 }
+#endif

@@ -9,9 +9,9 @@ struct ImpactRing: View {
     var body: some View {
         GeometryReader { geometry in
             let diameter = min(geometry.size.width, geometry.size.height) - lineWidth
-            // Round caps reach past each segment's end, so the gap covers a line width; on busy days
-            // it shrinks to at most half a segment so every segment stays visible.
-            let gap = segments > 1 ? min((lineWidth + 3) / (.pi * diameter), 0.5 / Double(segments)) : 0
+            // Round caps reach past each segment's end, so the gap covers a line width. On very busy
+            // days the gap is capped below a segment's length, so each segment still draws as a dot.
+            let gap = segments > 1 ? min((lineWidth + 3) / (.pi * diameter), 1 / Double(segments) - 0.001) : 0
             ZStack {
                 if segments == 0 {
                     Circle().stroke(.quaternary, lineWidth: lineWidth)
@@ -37,3 +37,7 @@ struct ImpactRing: View {
         .accessibilityLabel("\(filled) \(filled == 1 ? "Impact" : "Impacts") today")
     }
 }
+
+#if DEBUG
+#Preview("Busy day") { ImpactRing(filled: 6, segments: 14).frame(width: 46, height: 46).padding() }
+#endif

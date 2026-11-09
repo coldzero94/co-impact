@@ -14,9 +14,10 @@ public struct HomeSnapshot: Sendable, Hashable {
     public let tomorrowMorning: [ImpactCard]
     /// The listed cards whose primary action has run; Home shows them subdued with a checkmark.
     public let doneCardIDs: Set<String>
-    /// The Impact ring: `impactsToday` filled segments, plus one per card still to do today.
-    /// Expired cards drop out instead of counting as missed (P7).
+    /// Impacts recorded today: the ring's filled segments.
     public let impactsToday: Int
+    /// The Impact ring's segments: one per Impact today plus one per card still to do today.
+    /// Expired cards drop out instead of counting as missed (P7).
     public let ringSegments: Int
 }
 
