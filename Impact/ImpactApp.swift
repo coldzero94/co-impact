@@ -3,13 +3,17 @@ import SwiftUI
 
 @main
 struct ImpactApp: App {
+    #if DEBUG
+    // shortcut: a sample day frozen at -fixtureHour; real events replace it in roadmap step 7.
+    @State private var home = Result { try HomeFixtures.sample(at: Self.fixtureHour) }
+    #endif
+
     var body: some Scene {
         WindowGroup {
             #if DEBUG
-            // shortcut: a sample day frozen at -fixtureHour; real events replace it in roadmap step 7.
-            switch Result(catching: { try HomeFixtures.sample(at: Self.fixtureHour) }) {
-            case .success(let fixture):
-                HomeView(snapshot: fixture.snapshot, now: fixture.now)
+            switch home {
+            case .success(let model):
+                HomeView(model: model)
             case .failure(let error):
                 Text("Impact could not start: \(error.localizedDescription)").padding()
             }

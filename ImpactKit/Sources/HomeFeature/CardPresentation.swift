@@ -1,22 +1,27 @@
 import Foundation
 import ImpactEngine
 
-/// Display text for a card (UX.md → Card anatomy). It reads the card's actions without checking provenance,
-/// which is safe only while the engine creates calendar or computed actions alone; filter out inferred
-/// ones here before any exist (hard rule 2).
+/// Display text for a card (UX.md → Card anatomy).
 extension ImpactCard {
+    /// The actions shown as buttons: calendar and computed ones. Inferred ones belong in Suggested
+    /// (UX.md → Confirmed vs. inferred; AGENTS.md hard rule 2).
+    var confirmedActions: [ImpactAction] {
+        actions.filter { if case .inferred = $0.provenance { false } else { true } }
+    }
+
     var meetingURL: URL? {
-        actions.lazy.compactMap { if case .joinMeeting(let url) = $0.kind { url } else { nil } }.first
+        confirmedActions.lazy.compactMap { if case .joinMeeting(let url) = $0.kind { url } else { nil } }.first
     }
 
     var place: Place? {
-        actions.lazy.compactMap { if case .directions(let place) = $0.kind { place } else { nil } }.first
+        confirmedActions.lazy.compactMap { if case .directions(let place) = $0.kind { place } else { nil } }.first
     }
 
     var provider: String? { meetingURL.flatMap(ImpactEngine.meetingProvider) }
 
     /// The answer to the card's question (P1).
-    /// shortcut: in-person answers show the place until routing exists; then the leave-by time (UX.md → Card detail).
+    /// shortcut: in-person answers show the place; with routing (step 7 onward) they show the leave-by time,
+    /// keeping the place when no route exists (PRODUCT.md → Card timeline).
     var answer: String {
         let link = "\(provider ?? "Meeting") link ready"
         return switch kind {
@@ -27,7 +32,8 @@ extension ImpactCard {
     }
 
     /// The one key fact on a row and on Next up's top line.
-    /// shortcut: in-person cards show the place until routing exists; then the leave-by time (UX.md → Home).
+    /// shortcut: in-person cards show the place; with routing they show the leave-by time, keeping the place
+    /// when no route exists (PRODUCT.md → Card timeline).
     var keyFact: String {
         switch kind {
         case .onlineMeeting, .hybrid: provider ?? "Online"
@@ -48,8 +54,18 @@ extension ActionKind {
         switch self {
         case .joinMeeting: "Join meeting"
         case .directions: "Directions"
-        case .openLink: "Open link"
+        case .openLink(let url): url.host().map { "Open \($0.replacing(/^www\./, with: ""))" } ?? "Open link"
         case .call: "Call"
+        }
+    }
+
+    /// Replaces the label once the action ran (UX.md → Card anatomy).
+    var doneLabel: String {
+        switch self {
+        case .joinMeeting: "Joined"
+        case .directions: "Directions opened"
+        case .openLink: "Link opened"
+        case .call: "Called"
         }
     }
 
