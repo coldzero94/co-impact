@@ -63,7 +63,7 @@ private let productExamples: [Example] = [
         #expect(selected.title == example.event.title)
         #expect(selected.start == example.event.start)
         #expect(selected.end == example.event.end)
-        let primary = try #require(selected.actions.first)
+        let primary = try #require(selected.primaryAction)
         switch kind {
         case .onlineMeeting, .hybrid:
             guard case .joinMeeting = primary.kind else { Issue.record("Expected Join primary"); return }
@@ -244,6 +244,7 @@ private let productExamples: [Example] = [
 
     @Test("Call dials the number before an extension or pause; lettered numbers get no URL", arguments: [
         ("02-555-0100", "tel:025550100"), ("+82 2 555 0100", "tel:+8225550100"), ("555-0100;23", "tel:5550100"),
+        ("(+44) 20 7946 0958", "tel:+442079460958"), ("1-800+1", "tel:18001"),
         ("+1 555 010 0199,,123456#", "tel:+15550100199"), ("1-800-FLOWERS", nil), ("ext", nil),
     ] as [(String, String?)])
     func telURL(_ number: String, _ url: String?) {

@@ -48,7 +48,7 @@ extension ActionKind {
         switch self {
         case .joinMeeting: "Join meeting"
         case .directions: "Directions"
-        case .openLink(let url): url.host().map { "Open \($0.replacing(/^www\./, with: ""))" } ?? "Open link"
+        case .openLink(let url): url.shortHost.map { "Open \($0)" } ?? "Open link"
         case .call: "Call"
         }
     }
@@ -68,7 +68,7 @@ extension ActionKind {
         switch self {
         case .joinMeeting: "The meeting link didn't open"
         case .directions: "Maps didn't open"
-        case .openLink(let url): "\(url.host() ?? "The link") didn't open"
+        case .openLink(let url): "\(url.shortHost ?? "The link") didn't open"
         case .call: "The call didn't start"
         }
     }
@@ -81,6 +81,11 @@ extension ActionKind {
         case .call: "phone.fill"
         }
     }
+}
+
+extension URL {
+    /// The host without a leading "www.", as links are labeled (PRODUCT.md → Action catalog).
+    var shortHost: String? { host()?.replacing(/^www\./.ignoresCase(), with: "") }
 }
 
 /// Next up's large time (UX.md → Home): minutes under an hour, the clock time from an hour out, Now from the start.

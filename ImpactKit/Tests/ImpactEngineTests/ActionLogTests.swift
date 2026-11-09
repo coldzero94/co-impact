@@ -25,14 +25,15 @@ private func hybridCard() throws -> ImpactCard {
     @Test("Only the primary action records an Impact, and only once per card")
     func primaryRecordsOnce() throws {
         let card = try hybridCard()
+        let primary = try #require(card.primaryAction)
         var log = ActionLog()
         let secondary = log.record(card.actions[1], on: card, at: start)
         #expect(!secondary)
-        #expect(log.isDone(card.actions[1], on: card) && !log.isDone(card.actions[0], on: card))
+        #expect(log.isDone(card.actions[1], on: card) && !log.isDone(primary, on: card))
         #expect(log.completedCardIDs.isEmpty)
 
-        let first = log.record(card.actions[0], on: card, at: start)
-        let again = log.record(card.actions[0], on: card, at: start.addingTimeInterval(60))
+        let first = log.record(primary, on: card, at: start)
+        let again = log.record(primary, on: card, at: start.addingTimeInterval(60))
         #expect(first && !again)
         #expect(log.completedCardIDs == ["town-hall"])
         #expect(log.impacts == ["town-hall": start])
@@ -56,10 +57,11 @@ private func hybridCard() throws -> ImpactCard {
     @Test("Impacts count on the day they were recorded, in the given calendar")
     func countsByDay() throws {
         let card = try hybridCard()
+        let primary = try #require(card.primaryAction)
         var log = ActionLog()
         // 23:30 in Los Angeles is already the next day in UTC.
         let lateEvening = try #require(calendar.date(bySettingHour: 23, minute: 30, second: 0, of: start))
-        log.record(card.actions[0], on: card, at: lateEvening)
+        log.record(primary, on: card, at: lateEvening)
         #expect(log.impactCount(on: start, calendar: calendar) == 1)
         #expect(log.impactCount(on: start.addingTimeInterval(86_400), calendar: calendar) == 0)
     }
@@ -75,7 +77,7 @@ private func hybridCard() throws -> ImpactCard {
                                              completedCardIDs: log.completedCardIDs,
                                              impactsToday: log.impactCount(on: now, calendar: calendar)) }
         #expect(try home().nextUp?.id == "town-hall")
-        log.record(card.actions[0], on: card, at: now)
+        log.record(try #require(card.primaryAction), on: card, at: now)
         let after = try home()
         #expect(after.nextUp == nil && after.doneCardIDs == ["town-hall"])
         #expect(after.impactsToday == 1 && after.ringSegments == 1)

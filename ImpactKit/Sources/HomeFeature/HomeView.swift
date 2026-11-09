@@ -8,8 +8,9 @@ public struct HomeView: View {
     let model: HomeModel
     @State private var selected: ImpactCard?
     @State private var failed: ActionKind?
-    /// Card and ring frames in the content's coordinate space: where a moment starts and lands.
+    /// Card frames by card ID in the content's coordinate space: where a moment starts.
     @State private var frames: [String: CGRect] = [:]
+    /// Where a moment lands.
     @State private var ringFrame: CGRect?
     /// An Impact recorded when its action ran; it plays once Home is in front again with no sheet open.
     @State private var pending: Moment?
@@ -33,10 +34,14 @@ public struct HomeView: View {
             VStack(alignment: .leading, spacing: 28) {
                 header(snapshot)
                 if let next = snapshot.nextUp {
-                    // A queued moment means the last tap ran and Next up already shows the next card; ignore
-                    // taps until it plays, so a double tap cannot run that card's action.
-                    NextUpCard(card: next, now: model.now, details: { selected = next },
-                               primary: { if pending == nil { run($0, on: next) { failed = $0 } } })
+                    NextUpCard(card: next, now: model.now, details: { selected = next }, primary: { action in
+                        // Within a second of an Impact, Next up already shows the next card, so a tap is the
+                        // second half of a double tap. A later one first plays a moment still queued because
+                        // the app never left (see playPending).
+                        if let pending, Date.now.timeIntervalSince(pending.recorded) < 1 { return }
+                        playPending()
+                        run(action, on: next) { failed = $0 }
+                    })
                         .recordingFrame { frames[next.id] = $0 }
                         // A new view per card, so the promoted card records its own frame.
                         .id(next.id)
@@ -135,14 +140,15 @@ public struct HomeView: View {
     /// Fills the ring's segment (a cross-fade under Reduce Motion), plays the haptic, and tells VoiceOver.
     private func land() {
         withAnimation(reduceMotion ? .easeInOut(duration: 0.3) : .spring(duration: 0.4)) {
-            // A token landing keeps an Impact recorded during its flight queued for the next return.
+            // A token landing keeps an Impact recorded during its flight queued; playPending below plays
+            // it now if Home is in front, otherwise on return.
             if flying == nil { pending = nil }
             flying = nil
         }
         landings += 1
         let shown = model.snapshot.impactsToday - (pending == nil ? 0 : 1)
         AccessibilityNotification.Announcement("Impact recorded. \(shown) today.").post()
-        playPending() // one recorded during the flight, if the user is already back
+        playPending()
     }
 }
 

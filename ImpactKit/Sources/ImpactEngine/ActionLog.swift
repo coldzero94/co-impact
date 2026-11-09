@@ -10,8 +10,8 @@ public struct ActionLog: Sendable {
     public init() {}
 
     /// Marks `action` done on `card`. The card's `primaryAction` also records the card's Impact, once.
-    /// Returns true when this call recorded the Impact. An action that is not the card's records nothing
-    /// (debug builds assert), so a stale card cannot crash the app or log a false Impact.
+    /// Returns true when this call recorded the Impact. An action passed with the wrong card records nothing
+    /// in release builds instead of crashing (debug builds assert).
     @discardableResult
     public mutating func record(_ action: ImpactAction, on card: ImpactCard, at date: Date) -> Bool {
         guard card.actions.contains(action) else {

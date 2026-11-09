@@ -2,7 +2,13 @@ import Foundation
 import ImpactEngine
 
 #if DEBUG
-enum FixtureError: Error { case noCard(String) }
+enum FixtureError: LocalizedError {
+    case noCard(String)
+
+    var errorDescription: String? {
+        switch self { case .noCard(let title): "Sample event \"\(title)\" produced no card" }
+    }
+}
 
 /// Synthetic events for previews and debug builds; never real calendar data (AGENTS.md hard rule 7).
 public enum HomeFixtures {

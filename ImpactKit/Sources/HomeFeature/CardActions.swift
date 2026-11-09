@@ -5,7 +5,7 @@ import SwiftUI
 
 extension ActionKind {
     /// Opens the action outside the app (PRODUCT.md → Action catalog); `completion` gets whether the system
-    /// accepted it (it cannot see a call the user then cancels).
+    /// accepted it.
     @MainActor
     func run(with openURL: OpenURLAction, completion: @escaping (Bool) -> Void) {
         switch self {

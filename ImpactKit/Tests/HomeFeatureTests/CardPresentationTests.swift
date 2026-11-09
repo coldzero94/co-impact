@@ -111,6 +111,7 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
 
     @Test("Open link is labeled by host (PRODUCT.md → Action catalog)")
     func linkLabel() throws {
-        #expect(ActionKind.openLink(try #require(URL(string: "https://www.figma.com/file/x"))).label == "Open figma.com")
+        let figma = ActionKind.openLink(try #require(URL(string: "https://WWW.figma.com/file/x")))
+        #expect(figma.label == "Open figma.com" && figma.failureTitle == "figma.com didn't open")
     }
 }
