@@ -109,23 +109,6 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         #expect(!model.snapshot.doneCardIDs.contains("Town hall"))
     }
 
-    /// Notes text, run through the engine's detector, and the number Call dials (nil: no Call URL).
-    private static let phones: [(String, String?)] = [
-        ("Front desk 02-555-0100", "tel:025550100"), ("Call +82 2 555 0100", "tel:+8225550100"),
-        ("Reception 02-555-0100 내선 3", "tel:025550100"), ("Desk (555) 010-0199 ext. 23", "tel:5550100199"),
-        ("Dial-in +1 555 010 0199,,123456#", "tel:+15550100199"), ("Order at 1-800-FLOWERS", nil),
-    ]
-
-    @Test("Call dials the detected number, without its extension or pauses", arguments: phones)
-    func tel(_ notes: String, _ url: String?) throws {
-        var event = CalendarEvent(id: "call", calendarID: "personal", title: "Call", start: start, end: start.addingTimeInterval(3_600))
-        event.structuredPlace = clinic
-        event.notes = notes
-        let card = try #require(try ImpactEngine().card(for: event, now: start.addingTimeInterval(-3_600)))
-        let number = card.actions.lazy.compactMap { if case .call(let number) = $0.kind { number } else { nil } }.first
-        #expect(number.flatMap(telURL)?.absoluteString == url)
-    }
-
     @Test("Open link is labeled by host (PRODUCT.md → Action catalog)")
     func linkLabel() throws {
         #expect(ActionKind.openLink(try #require(URL(string: "https://www.figma.com/file/x"))).label == "Open figma.com")

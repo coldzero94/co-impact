@@ -242,6 +242,25 @@ private let productExamples: [Example] = [
         #expect(notesOnly.actions.last?.kind == call.kind)
     }
 
+    @Test("Call dials the number before an extension or pause; lettered numbers get no URL", arguments: [
+        ("02-555-0100", "tel:025550100"), ("+82 2 555 0100", "tel:+8225550100"), ("555-0100;23", "tel:5550100"),
+        ("+1 555 010 0199,,123456#", "tel:+15550100199"), ("1-800-FLOWERS", nil), ("ext", nil),
+    ] as [(String, String?)])
+    func telURL(_ number: String, _ url: String?) {
+        #expect(ImpactEngine.telURL(number)?.absoluteString == url)
+    }
+
+    /// Notes text through the real detector, and the number Call dials (nil: no Call action).
+    @Test("Call actions dial what the detector found, without extensions", arguments: [
+        ("Reception 02-555-0100 내선 3", "tel:025550100"), ("Desk (555) 010-0199 ext. 23", "tel:5550100199"),
+        ("Order at 1-800-FLOWERS", nil),
+    ] as [(String, String?)])
+    func detectedCalls(_ notes: String, _ url: String?) throws {
+        let card = try #require(engine.card(for: event { $0.structuredPlace = place; $0.notes = notes }, now: now))
+        let number = card.actions.lazy.compactMap { if case .call(let number) = $0.kind { number } else { nil } }.first
+        #expect(number.flatMap(ImpactEngine.telURL)?.absoluteString == url)
+    }
+
     @Test("Meeting fields have stable priority and invalid links do not hide later matches")
     func meetingPriority() throws {
         var input = event {

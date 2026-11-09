@@ -63,7 +63,7 @@ public struct ImpactEngine: Sendable {
         if meeting == nil, place != nil {
             for (matches, field) in [(locationMatches, "location"), (notesMatches, "notes")] {
                 for match in matches {
-                    if let phone = match.phoneNumber {
+                    if let phone = match.phoneNumber, Self.telURL(phone) != nil {
                         let action = ImpactAction(kind: .call(phone), provenance: .calendar(field: field))
                         if !actions.contains(where: { $0.kind == action.kind }) { actions.append(action) }
                     }
@@ -116,6 +116,18 @@ public struct ImpactEngine: Sendable {
     }
 
     private static func isMeetingURL(_ url: URL) -> Bool { meetingProvider(url) != nil }
+
+    /// The `tel:` URL Call opens for a detected phone number: its ASCII digits, plus a leading `+`; nil when
+    /// it has letters (e.g. 1-800-FLOWERS) or no digits, and then selection offers no Call.
+    /// shortcut: the detector puts an extension or a pause after `;` or `,`, and only the number before it is
+    /// dialed; pass the rest as a `,` pause once a device shows the Phone app accepts it (step 10).
+    public static func telURL(_ number: String) -> URL? {
+        let main = number.prefix { $0 != ";" && $0 != "," }
+        let digits = main.filter { $0.isASCII && $0.isNumber }
+        guard !digits.isEmpty, !main.contains(where: \.isLetter) else { return nil }
+        let plus = main.trimmingCharacters(in: .whitespaces).hasPrefix("+") ? "+" : ""
+        return URL(string: "tel:\(plus)\(digits)")
+    }
 
     /// The provider's name for an allowlisted meeting link (PRODUCT.md → Signals), or nil for any other URL.
     public static func meetingProvider(_ url: URL) -> String? {
