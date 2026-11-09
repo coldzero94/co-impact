@@ -8,9 +8,10 @@ public struct HomeView: View {
     let model: HomeModel
     @State private var selected: ImpactCard?
     @State private var failed: ActionKind?
-    /// Frames in the content's coordinate space, by card ID plus `ringID`: where a moment starts and lands.
+    /// Card and ring frames in the content's coordinate space: where a moment starts and lands.
     @State private var frames: [String: CGRect] = [:]
-    /// An Impact recorded while the user was away or in card detail; it plays once Home is in front again.
+    @State private var ringFrame: CGRect?
+    /// An Impact recorded when its action ran; it plays once Home is in front again with no sheet open.
     @State private var pending: Moment?
     @State private var flying: Moment?
     @State private var landings = 0
@@ -21,7 +22,6 @@ public struct HomeView: View {
     @ScaledMetric(relativeTo: .title) private var ringSize = 46.0
 
     nonisolated static let space = "home"
-    private static let ringID = "ring"
 
     public init(model: HomeModel) {
         self.model = model
@@ -33,9 +33,11 @@ public struct HomeView: View {
             VStack(alignment: .leading, spacing: 28) {
                 header(snapshot)
                 if let next = snapshot.nextUp {
+                    // A queued moment means the last tap ran and Next up already shows the next card; ignore
+                    // taps until it plays, so a double tap cannot run that card's action.
                     NextUpCard(card: next, now: model.now, details: { selected = next },
-                               primary: { run($0, on: next) { failed = $0 } })
-                        .recordingFrame(next.id, into: $frames)
+                               primary: { if pending == nil { run($0, on: next) { failed = $0 } } })
+                        .recordingFrame { frames[next.id] = $0 }
                         // A new view per card, so the promoted card records its own frame.
                         .id(next.id)
                 } else {
@@ -52,7 +54,7 @@ public struct HomeView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
             .overlay {
-                if let flying, let from = flying.from, let to = frames[Self.ringID] {
+                if let flying, let from = flying.from, let to = ringFrame {
                     ImpactToken(symbol: flying.symbol, from: from, to: to, onLanded: land).id(flying.id)
                 }
             }
@@ -84,7 +86,7 @@ public struct HomeView: View {
             let unshown = (pending == nil ? 0 : 1) + (flying == nil ? 0 : 1)
             ImpactRing(filled: max(0, snapshot.impactsToday - unshown), segments: snapshot.ringSegments)
                 .frame(width: ringSize, height: ringSize)
-                .recordingFrame(Self.ringID, into: $frames)
+                .recordingFrame { ringFrame = $0 }
         }
     }
 
@@ -100,7 +102,7 @@ public struct HomeView: View {
                         if index > 0 { Divider().padding(.leading, 16) }
                         Button { selected = card } label: { CardRow(card: card, done: done.contains(card.id)) }
                             .buttonStyle(RowButtonStyle())
-                            .recordingFrame(card.id, into: $frames)
+                            .recordingFrame { frames[card.id] = $0 }
                     }
                 }
                 .background(Color.card, in: .rect(cornerRadius: 18))
@@ -122,7 +124,7 @@ public struct HomeView: View {
     /// (UX.md → The Impact moment).
     private func playPending() {
         guard scenePhase == .active, selected == nil, flying == nil, let moment = pending else { return }
-        if reduceMotion || moment.from == nil || frames[Self.ringID] == nil {
+        if reduceMotion || moment.from == nil || ringFrame == nil {
             land()
         } else {
             pending = nil
@@ -138,8 +140,9 @@ public struct HomeView: View {
             flying = nil
         }
         landings += 1
-        let count = model.snapshot.impactsToday
-        AccessibilityNotification.Announcement("Impact recorded. \(count) today.").post()
+        let shown = model.snapshot.impactsToday - (pending == nil ? 0 : 1)
+        AccessibilityNotification.Announcement("Impact recorded. \(shown) today.").post()
+        playPending() // one recorded during the flight, if the user is already back
     }
 }
 
@@ -150,9 +153,9 @@ private struct RowButtonStyle: ButtonStyle {
 }
 
 extension View {
-    /// Keeps this view's frame in Home's content space, which scrolling does not change.
-    fileprivate func recordingFrame(_ id: String, into frames: Binding<[String: CGRect]>) -> some View {
-        onGeometryChange(for: CGRect.self) { $0.frame(in: .named(HomeView.space)) } action: { frames.wrappedValue[id] = $0 }
+    /// Reports this view's frame in Home's content space, which scrolling does not change.
+    fileprivate func recordingFrame(_ action: @escaping (CGRect) -> Void) -> some View {
+        onGeometryChange(for: CGRect.self, of: { $0.frame(in: .named(HomeView.space)) }, action: action)
     }
 }
 
@@ -189,7 +192,7 @@ struct NextUpCard: View {
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
-            if let action = card.confirmedActions.first {
+            if let action = card.primaryAction {
                 Button { primary(action) } label: {
                     Label(action.kind.label, systemImage: action.kind.symbol)
                         .font(.headline)

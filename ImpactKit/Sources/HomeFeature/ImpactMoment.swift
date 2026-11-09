@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// An Impact waiting to be shown: the acted-on card's symbol and its frame on Home when it was tapped.
-struct Moment: Equatable {
+/// An Impact waiting to be shown: the acted-on card's symbol and its frame on Home when its action ran.
+struct Moment {
     let id = UUID()
     let symbol: String
     let from: CGRect?

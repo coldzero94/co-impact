@@ -91,8 +91,9 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         let model = try HomeFixtures.sample(at: 9.8, calendar: losAngeles, today: sampleDate)
         let review = try #require(model.snapshot.nextUp)
         #expect(review.id == "Design review" && model.snapshot.impactsToday == 2)
-        let recorded = model.record(review.actions[0], on: review)
-        let again = model.record(review.actions[0], on: review)
+        let primary = try #require(review.primaryAction)
+        let recorded = model.record(primary, on: review)
+        let again = model.record(primary, on: review)
         #expect(recorded && !again)
         #expect(model.snapshot.nextUp?.id == "Dentist" && model.snapshot.doneCardIDs.contains("Design review"))
         #expect(model.snapshot.impactsToday == 3 && model.snapshot.ringSegments == 5)
@@ -108,16 +109,21 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         #expect(!model.snapshot.doneCardIDs.contains("Town hall"))
     }
 
-    @Test("Call opens a tel: URL of the detected digits", arguments: [
-        ("02-555-0100", "tel:025550100"), ("+82 2 555 0100", "tel:+8225550100"), ("(555) 010-0199 ext", "tel:5550100199"),
-    ])
-    func tel(_ number: String, _ url: String) {
-        #expect(telURL(number)?.absoluteString == url)
-    }
+    /// Notes text, run through the engine's detector, and the number Call dials (nil: no Call URL).
+    private static let phones: [(String, String?)] = [
+        ("Front desk 02-555-0100", "tel:025550100"), ("Call +82 2 555 0100", "tel:+8225550100"),
+        ("Reception 02-555-0100 내선 3", "tel:025550100"), ("Desk (555) 010-0199 ext. 23", "tel:5550100199"),
+        ("Dial-in +1 555 010 0199,,123456#", "tel:+15550100199"), ("Order at 1-800-FLOWERS", nil),
+    ]
 
-    @Test("Call without digits has no URL")
-    func telWithoutDigits() {
-        #expect(telURL("call me") == nil)
+    @Test("Call dials the detected number, without its extension or pauses", arguments: phones)
+    func tel(_ notes: String, _ url: String?) throws {
+        var event = CalendarEvent(id: "call", calendarID: "personal", title: "Call", start: start, end: start.addingTimeInterval(3_600))
+        event.structuredPlace = clinic
+        event.notes = notes
+        let card = try #require(try ImpactEngine().card(for: event, now: start.addingTimeInterval(-3_600)))
+        let number = card.actions.lazy.compactMap { if case .call(let number) = $0.kind { number } else { nil } }.first
+        #expect(number.flatMap(telURL)?.absoluteString == url)
     }
 
     @Test("Open link is labeled by host (PRODUCT.md → Action catalog)")

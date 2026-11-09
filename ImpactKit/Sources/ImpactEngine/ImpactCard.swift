@@ -34,6 +34,16 @@ public struct ImpactCard: Sendable, Hashable, Identifiable {
     public let end: Date
     public let kind: CardKind
     public let facts: [Fact]
-    /// First is primary. Selection always produces at least one action.
+    /// In display order. Selection always produces at least one calendar or computed action.
     public let actions: [ImpactAction]
+
+    /// The actions shown as buttons: calendar and computed ones. Inferred ones belong in Suggested
+    /// (UX.md → Confirmed vs. inferred; AGENTS.md hard rule 2).
+    public var confirmedActions: [ImpactAction] {
+        actions.filter { if case .inferred = $0.provenance { false } else { true } }
+    }
+
+    /// The card's one primary action (UX.md → Simplicity rules): the first confirmed one. Running it
+    /// makes the card done and records its Impact (PRODUCT.md → Completion semantics).
+    public var primaryAction: ImpactAction? { confirmedActions.first }
 }

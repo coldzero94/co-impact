@@ -10,7 +10,7 @@ The one place for status. Update the row when a step starts or finishes, in the 
 | 4 | Impact Engine data model + selection rules, with tests; add `swift test` to CI | Done (2026-11-08) |
 | 5 | Home screen with mock calendar data and the Impact ring: two or three SwiftUI preview drafts, then pick one | Done (2026-11-09, PR #10) |
 | 6 | Impact Card detail, actions, and the Impact moment | Done (2026-11-09, PR #11); action state is memory-only until step 7 |
-| 7 | EventKit integration | |
+| 7 | EventKit integration, with stored card state (done actions, Impacts, dismissals) | |
 | 8 | Foundation Models enrichment | |
 | 9 | Live Activities, widgets, Siri / Shortcuts | |
 | 10 | Background refresh, simulator and device testing | |

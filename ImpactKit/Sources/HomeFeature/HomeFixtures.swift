@@ -2,6 +2,8 @@ import Foundation
 import ImpactEngine
 
 #if DEBUG
+enum FixtureError: Error { case noCard(String) }
+
 /// Synthetic events for previews and debug builds; never real calendar data (AGENTS.md hard rule 7).
 public enum HomeFixtures {
     /// A sample day seen at `hour` (09:48 by default: two Impacts made, three cards to go).
@@ -33,12 +35,14 @@ public enum HomeFixtures {
             },
             event("Client visit", 8.5, day: 1) { $0.structuredPlace = hall },
         ]
-        // Joined at their start: Standup by 08:00, and 1:1 with Mina too by 09:30.
+        // Joined at their start: Standup always, and 1:1 with Mina too from 09:30.
         let engine = try ImpactEngine()
         var log = ActionLog()
         for event in events.prefix(hour >= 9.5 ? 2 : 1) {
-            guard let card = engine.card(for: event, now: event.start) else { preconditionFailure("\(event.title) has no card") }
-            log.record(card.actions[0], on: card, at: event.start)
+            guard let card = engine.card(for: event, now: event.start), let primary = card.primaryAction else {
+                throw FixtureError.noCard(event.title)
+            }
+            log.record(primary, on: card, at: event.start)
         }
         return try HomeModel(events: events, now: at(hour), calendar: calendar, log: log)
     }

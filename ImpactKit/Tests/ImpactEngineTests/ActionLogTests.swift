@@ -1,5 +1,5 @@
 import Foundation
-import ImpactEngine
+@testable import ImpactEngine
 import Testing
 
 private let calendar: Calendar = {
@@ -36,6 +36,21 @@ private func hybridCard() throws -> ImpactCard {
         #expect(first && !again)
         #expect(log.completedCardIDs == ["town-hall"])
         #expect(log.impacts == ["town-hall": start])
+    }
+
+    @Test("An inferred action is never primary or shown, so the shown primary records the Impact")
+    func inferredFirst() throws {
+        let zoom = ImpactAction(kind: .joinMeeting(try #require(URL(string: "https://zoom.us/j/1"))),
+                                provenance: .calendar(field: "url"))
+        let guess = ImpactAction(kind: .openLink(try #require(URL(string: "https://example.com/deck"))),
+                                 provenance: .inferred(by: "model"))
+        let card = ImpactCard(id: "review", title: "Review", start: start, end: start.addingTimeInterval(3_600),
+                              kind: .onlineMeeting, facts: [], actions: [guess, zoom])
+        #expect(card.confirmedActions == [zoom] && card.primaryAction == zoom)
+        var log = ActionLog()
+        let fromGuess = log.record(guess, on: card, at: start)
+        let fromJoin = log.record(zoom, on: card, at: start)
+        #expect(!fromGuess && fromJoin && log.completedCardIDs == ["review"])
     }
 
     @Test("Impacts count on the day they were recorded, in the given calendar")

@@ -6,8 +6,8 @@ import Observation
 @Observable @MainActor
 public final class HomeModel {
     public private(set) var snapshot: HomeSnapshot
-    /// shortcut: fixed, so countdowns and phases do not move; rebuild `now` and the snapshot together on a
-    /// schedule once live data arrives (roadmap step 7).
+    /// shortcut: fixed, so countdowns and phases do not move and `record` stamps Impacts with it; rebuild
+    /// `now` and the snapshot together on a schedule once live data arrives (roadmap step 7).
     public let now: Date
     private(set) var log: ActionLog
     private let events: [CalendarEvent]
@@ -24,7 +24,7 @@ public final class HomeModel {
         self.engine = engine
     }
 
-    /// Records an action the system opened (PRODUCT.md → Completion semantics); true when it recorded an Impact.
+    /// Records an action the system accepted (PRODUCT.md → Completion semantics); true when it recorded an Impact.
     func record(_ action: ImpactAction, on card: ImpactCard) -> Bool {
         let recorded = log.record(action, on: card, at: now)
         snapshot = Self.home(engine, events, now, calendar, log)

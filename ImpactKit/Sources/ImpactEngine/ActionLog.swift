@@ -9,13 +9,17 @@ public struct ActionLog: Sendable {
 
     public init() {}
 
-    /// Marks `action` done on `card`. The card's primary action also records the card's Impact, once.
-    /// Returns true when this call recorded the Impact.
+    /// Marks `action` done on `card`. The card's `primaryAction` also records the card's Impact, once.
+    /// Returns true when this call recorded the Impact. An action that is not the card's records nothing
+    /// (debug builds assert), so a stale card cannot crash the app or log a false Impact.
     @discardableResult
     public mutating func record(_ action: ImpactAction, on card: ImpactCard, at date: Date) -> Bool {
-        precondition(card.actions.contains(action), "\(action.kind) is not an action of card \(card.id)")
+        guard card.actions.contains(action) else {
+            assertionFailure("\(action.kind) is not an action of card \(card.id)")
+            return false
+        }
         done[card.id, default: []].insert(action.kind)
-        guard action == card.actions.first, impacts[card.id] == nil else { return false }
+        guard action == card.primaryAction, impacts[card.id] == nil else { return false }
         impacts[card.id] = date
         return true
     }

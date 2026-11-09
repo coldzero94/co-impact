@@ -57,7 +57,7 @@ The source of truth for the implemented types is [ImpactKit/Sources/ImpactEngine
 | `SuppressionRule` | Same recurring series on one calendar, or exact title on one calendar |
 | `Provenance`, `Fact` | Calendar field, computation, or inference attached to each displayed fact |
 | `ActionKind`, `ImpactAction` | Closed catalog from PRODUCT.md, with provenance; action identity is its kind and payload within a card |
-| `ImpactCard` | Event occurrence ID, title, dates, kind, facts, and ordered actions (first is primary) |
+| `ImpactCard` | Event occurrence ID, title, dates, kind, facts, and ordered actions; the first calendar or computed one is the primary action (`primaryAction`), and inferred ones are never shown as buttons (`confirmedActions`) |
 | `ActionLog` | Which actions ran, by card, and when each card's Impact was recorded (its primary action, once). Feeds `home(…)`'s completions and today's Impact count |
 | `HomeSnapshot` | What Home shows: Next up, later today, tomorrow morning, the summary count, the Impact ring, and which listed cards are done. Built by `home(events:now:calendar:completedCardIDs:impactsToday:…)` |
 
@@ -131,8 +131,8 @@ Verified facts only. Add the date and how each was verified.
 | No public API turns on an iOS Focus. Apps can only read Focus status (`INFocusStatusCenter`) and adapt to it (`SetFocusFilterIntent`) | 2026-11-09 | iOS 27 SDK: AppIntents `.swiftinterface` and Intents headers list no other Focus API |
 | SDK includes JournalingSuggestions | 2026-11-09 | SDK `Frameworks/` listing |
 | `Color.mix(with:by:in:)` exists from iOS 18.0 and macOS 15.0 | 2026-11-09 | iOS 27 SDK `SwiftUICore.framework` `arm64e-apple-ios.swiftinterface` |
-| `MKMapItem(location:address:)` exists from iOS 26.0 and macOS 26.0 (`init(placemark:)` is deprecated there); `openInMaps(launchOptions:)` returns whether Maps opened, on iOS and macOS | 2026-11-09 | iOS 27 SDK MapKit `MKMapItem.h` |
-| `OpenURLAction` calls back with whether the URL was accepted; `ButtonRole.close` exists from iOS 26.0 | 2026-11-09 | iOS 27 SDK `SwiftUICore` and `SwiftUI` `.swiftinterface` |
+| `MKMapItem(location:address:)` exists from iOS 26.0 and macOS 26.0 (`init(placemark:)` is deprecated there), with `MKAddress(fullAddress:shortAddress:)` (failable); `openInMaps(launchOptions:)` returns whether Maps opened, on iOS and macOS | 2026-11-09 | iOS 27 SDK MapKit `MKMapItem.h` |
+| `OpenURLAction` calls back with whether the URL was accepted (not whether the user then confirmed a call); `ButtonRole.close` exists from iOS 26.0 | 2026-11-09 | iOS 27 SDK `SwiftUICore` and `SwiftUI` `.swiftinterface` |
 
 To verify before relying on it:
 

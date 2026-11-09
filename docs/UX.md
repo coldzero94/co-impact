@@ -60,7 +60,7 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 - **Goal-time card** sits below the time-bound cards, one at a time. **Block time** shows "Blocked · Undo" for 5 seconds; swiping offers **Not now**.
 - **Tomorrow morning** follows PRODUCT.md → Horizon.
 - Events that need nothing are counted but not listed; Home is not a calendar.
-- Tapping Next up or a row opens the card's detail; Next up's button runs the primary action in one tap.
+- Tapping Next up opens the card's detail; its button runs the primary action in one tap.
 - Not built yet: goal-time and focus cards (steps 11–12); swiping to dismiss, which needs stored card state (step 7); the ring tap and the "Today" row from 18:00, with the daily review (step 13). Leave-by times are not drawn: rows and answers show the place, which stays the fallback when no route exists (PRODUCT.md → Card timeline). Nor is the empty state's "Next:" line (it needs events past the horizon, step 7).
 
 ### 3. Empty state
@@ -81,7 +81,7 @@ Often the most common state. It must feel like a result, not an error (P7).
 | Details | Place, organizer, attendees, notes excerpt | Calendar |
 | Suggested | Up to two AI next steps, each with its source quote from the notes | Inferred |
 
-Executing an action marks it done in place (checkmark, subdued). No confirmation dialogs. Done actions stay tappable (to rejoin a meeting, for example). If the system cannot open an action, an alert says so ("Directions didn't open") and the action stays not done.
+Executing an action marks it done in place (checkmark, subdued). No confirmation dialogs. Done actions stay tappable (to rejoin a meeting, for example). If the system cannot open an action, an alert says so ("Maps didn't open") and the action stays not done.
 
 Not built yet: Details shows the place only; organizer, attendees, and the notes excerpt come with EventKit (step 7), and Suggested with Foundation Models (step 8).
 

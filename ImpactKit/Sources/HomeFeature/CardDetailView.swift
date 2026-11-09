@@ -2,8 +2,8 @@ import ImpactEngine
 import SwiftUI
 
 /// Card detail (UX.md → Card detail): header, answer, the card's actions, and the place.
-/// shortcut: no organizer, attendees, or notes excerpt until EventKit supplies them (step 7), and no
-/// Suggested section until Foundation Models (step 8).
+/// shortcut: no organizer, attendees, or notes excerpt until the card carries them (EventKit, step 7), and
+/// no Suggested section until Foundation Models (step 8).
 struct CardDetailView: View {
     let card: ImpactCard
     let model: HomeModel
@@ -23,8 +23,8 @@ struct CardDetailView: View {
                         Text(card.answer).font(.title3.weight(.semibold)).padding(.top, 6)
                     }
                     VStack(spacing: 10) {
-                        ForEach(Array(card.confirmedActions.enumerated()), id: \.element.id) { index, action in
-                            actionButton(action, primary: index == 0)
+                        ForEach(card.confirmedActions) { action in
+                            actionButton(action, primary: action == card.primaryAction)
                         }
                     }
                     if let place = card.place {

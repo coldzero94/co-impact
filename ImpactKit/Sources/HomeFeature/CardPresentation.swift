@@ -3,12 +3,6 @@ import ImpactEngine
 
 /// Display text for a card (UX.md → Card anatomy).
 extension ImpactCard {
-    /// The actions shown as buttons: calendar and computed ones. Inferred ones belong in Suggested
-    /// (UX.md → Confirmed vs. inferred; AGENTS.md hard rule 2).
-    var confirmedActions: [ImpactAction] {
-        actions.filter { if case .inferred = $0.provenance { false } else { true } }
-    }
-
     var meetingURL: URL? {
         confirmedActions.lazy.compactMap { if case .joinMeeting(let url) = $0.kind { url } else { nil } }.first
     }
@@ -20,7 +14,7 @@ extension ImpactCard {
     var provider: String? { meetingURL.flatMap(ImpactEngine.meetingProvider) }
 
     /// The answer to the card's question (P1).
-    /// shortcut: in-person answers show the place; with routing (step 7 onward) they show the leave-by time,
+    /// shortcut: in-person answers show the place; once routing exists they show the leave-by time,
     /// keeping the place when no route exists (PRODUCT.md → Card timeline).
     var answer: String {
         let link = "\(provider ?? "Meeting") link ready"
@@ -65,7 +59,17 @@ extension ActionKind {
         case .joinMeeting: "Joined"
         case .directions: "Directions opened"
         case .openLink: "Link opened"
-        case .call: "Called"
+        case .call: "Call opened"
+        }
+    }
+
+    /// The failure alert's title: what did not open.
+    var failureTitle: String {
+        switch self {
+        case .joinMeeting: "The meeting link didn't open"
+        case .directions: "Maps didn't open"
+        case .openLink(let url): "\(url.host() ?? "The link") didn't open"
+        case .call: "The call didn't start"
         }
     }
 
