@@ -1,6 +1,6 @@
 # Architecture
 
-The project structure, engine selection model, Home snapshot, and the Home screen as far as [UX.md → Home](UX.md#2-home) says (its last bullet lists what is not built) are implemented (roadmap steps 3–5). The remaining pipeline, enrichment, storage, and system surfaces are **Proposed** (how they settle: AGENTS.md).
+The project structure, engine selection model, Home snapshot, the action log, and the Home screen and card detail as far as [UX.md → Screens](UX.md#screens) says (their "Not built yet" notes list the rest) are implemented (roadmap steps 3–6). The remaining pipeline, enrichment, storage, and system surfaces are **Proposed** (how they settle: AGENTS.md).
 
 ## Project structure
 
@@ -12,7 +12,7 @@ Impact/                        App target: @main entry point and Assets.xcassets
 ImpactKit/                     Local Swift package: all logic and UI features
 ├── Package.swift              One umbrella product, `ImpactKit`, linked by the app
 ├── Sources/ImpactEngine/      Pure Swift: model, rules, ranking (no UI, no EventKit)
-├── Sources/HomeFeature/       SwiftUI Home screen, card text, Impact ring, synthetic fixtures
+├── Sources/HomeFeature/       SwiftUI Home, card detail, actions, Impact ring and moment, synthetic fixtures
 ├── Tests/ImpactEngineTests/   Swift Testing
 └── Tests/HomeFeatureTests/    Swift Testing
 ```
@@ -57,20 +57,21 @@ The source of truth for the implemented types is [ImpactKit/Sources/ImpactEngine
 | `SuppressionRule` | Same recurring series on one calendar, or exact title on one calendar |
 | `Provenance`, `Fact` | Calendar field, computation, or inference attached to each displayed fact |
 | `ActionKind`, `ImpactAction` | Closed catalog from PRODUCT.md, with provenance; action identity is its kind and payload within a card |
-| `ImpactCard` | Event occurrence ID, title, dates, kind, facts, and ordered actions (first is primary) |
+| `ImpactCard` | Event occurrence ID, title, dates, kind, facts, and ordered actions; the first calendar or computed one is the primary action (`primaryAction`), and inferred ones are never shown as buttons (`confirmedActions`) |
+| `ActionLog` | Which actions ran, by card, and when each card's Impact was recorded (its primary action, once). Feeds `home(…)`'s completions and today's Impact count |
 | `HomeSnapshot` | What Home shows: Next up, later today, tomorrow morning, the summary count, the Impact ring, and which listed cards are done. Built by `home(events:now:calendar:completedCardIDs:impactsToday:…)` |
 
 `CalendarEvent.id` must identify an occurrence, not just a recurring series. The future calendar adapter supplies this ID and the self-organizer/self-attendee flags; unknown membership on an event with attendees is excluded. `seriesID` is separate and supports muting all occurrences. Re-enabling a subscription or Birthdays calendar through `includedCalendarIDs` removes only the calendar-type exclusion, not declined/foreign-event or other exclusions.
 
 `try ImpactEngine()` constructs Foundation's link/phone detector and propagates initialization errors. `card(for:now:suppressionRules:includedCalendarIDs:)` returns one card or `nil`. It implements [PRODUCT.md → Event selection rules v1](PRODUCT.md#event-selection-rules-v1), including all 13 examples. Selection uses an explicit clock; events ending exactly at `now` and invalid date intervals are excluded, and in-person cards leave 15 minutes after their start (PRODUCT.md → Card timeline). The caller fetches the horizon; this single-event selector does not rank or limit tomorrow's cards.
 
-Meeting URLs are checked against one host/path allowlist. Text detection uses the original matched substring and requires explicit HTTP(S) URLs without credentials; it does not turn a detector-supplied scheme into a calendar fact. If several meeting links exist, the first wins in `url`, then `location`, then `notes` order. Non-meeting HTTP(S) links from notes become document actions, deduplicated by URL. Phone matches become Call actions for in-person cards only, deduplicated by matched text, with location taking precedence over notes.
+Meeting URLs are checked against one host/path allowlist. Text detection uses the original matched substring and requires explicit HTTP(S) URLs without credentials; it does not turn a detector-supplied scheme into a calendar fact. If several meeting links exist, the first wins in `url`, then `location`, then `notes` order. Non-meeting HTTP(S) links from notes become document actions, deduplicated by URL. Phone matches become Call actions for in-person cards only, deduplicated by the `tel:` URL they dial (`telURL`), with location taking precedence over notes; a number `telURL` cannot dial (letters, no digits) gets none, and an extension or pause after `;` or `,` is not dialed.
 
 Physical selection first uses valid `structuredPlace` coordinates (calendar provenance). Otherwise `canGeocode(_:)` rejects empty, URL, room, and floor labels before the caller requests a lookup. `geocodedPlace` must be the successful address/POI result for that event's location; the engine checks the candidate again and marks its result computed. Failed or missing lookups produce no physical signal. No place or travel time is invented: the Dentist example currently produces Directions without a leave-by time, as PRODUCT.md specifies when no route is available.
 
 `home(…)` runs selection on today's events in the fetched horizon, sorts cards by start, then ID, and applies [UX.md → Home](UX.md#2-home) (Next up, summary, ring) and [PRODUCT.md → Horizon](PRODUCT.md#horizon) in the given calendar. Soon and Now come from PRODUCT.md → Card timeline; until leave-by exists, in-person cards count from the event start. Completions are passed for any day, so a card done the evening before stays done; the caller also passes today's Impact count, which the ring adds to the cards still to do. Tomorrow's events are selected only while Tomorrow morning shows. Occurrence IDs must be unique (debug builds assert it on the listed cards).
 
-The model deliberately omits the earlier draft's unused answer string, anchor, phase, action-completion state, suggestions, and dismissal state. Routing/ETA, persisting and merging card state, dismissal, and AI grounding belong to their later roadmap steps; Home presentation lives in `HomeFeature`. Product proposals are not approved by this implementation.
+The model deliberately omits the earlier draft's unused answer string, anchor, phase, suggestions, and dismissal state. `ActionLog` keeps action completion in memory only (step 6); routing/ETA, persisting and merging card state, dismissal, and AI grounding belong to their later roadmap steps. Presentation lives in `HomeFeature`: `HomeModel` rebuilds the snapshot after each recorded action, and views run actions through SwiftUI's `openURL` (Join, Open link, Call) and MapKit (Directions). Product proposals are not approved by this implementation.
 
 ## Refresh and platform constraints
 
@@ -130,6 +131,8 @@ Verified facts only. Add the date and how each was verified.
 | No public API turns on an iOS Focus. Apps can only read Focus status (`INFocusStatusCenter`) and adapt to it (`SetFocusFilterIntent`) | 2026-11-09 | iOS 27 SDK: AppIntents `.swiftinterface` and Intents headers list no other Focus API |
 | SDK includes JournalingSuggestions | 2026-11-09 | SDK `Frameworks/` listing |
 | `Color.mix(with:by:in:)` exists from iOS 18.0 and macOS 15.0 | 2026-11-09 | iOS 27 SDK `SwiftUICore.framework` `arm64e-apple-ios.swiftinterface` |
+| `MKMapItem(location:address:)` exists from iOS 26.0 and macOS 26.0 (`init(placemark:)` is deprecated there), with `MKAddress(fullAddress:shortAddress:)` (failable); `openInMaps(launchOptions:)` returns whether Maps opened, on iOS and macOS | 2026-11-09 | iOS 27 SDK MapKit `MKMapItem.h` and `MKAddress.h` |
+| `OpenURLAction` calls back with whether the URL was accepted; `ButtonRole.close` exists from iOS 26.0 | 2026-11-09 | iOS 27 SDK `SwiftUICore` and `SwiftUI` `.swiftinterface` |
 
 To verify before relying on it:
 
@@ -141,3 +144,4 @@ To verify before relying on it:
 - Geocoding quality for Korean addresses and place names (selection rule for physical places).
 - How Impact recognizes the focus blocks it created after a sync changes `calendarItemIdentifier` (PRODUCT.md → Block time), on Google and Exchange accounts.
 - Journaling Suggestions: required entitlement, availability, and what the picker returns (PRODUCT.md → Daily log).
+- Whether `OpenURLAction` reports a `tel:` URL as accepted before the user confirms the call prompt; if so, a cancelled call still shows "Call opened" (UX.md → Card detail). Check on a device (step 10).

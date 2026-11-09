@@ -61,11 +61,12 @@ public struct ImpactEngine: Sendable {
             }
         }
         if meeting == nil, place != nil {
+            // One Call per distinct `tel:` URL; lettered numbers get none.
+            var dialed: Set<URL> = []
             for (matches, field) in [(locationMatches, "location"), (notesMatches, "notes")] {
                 for match in matches {
-                    if let phone = match.phoneNumber {
-                        let action = ImpactAction(kind: .call(phone), provenance: .calendar(field: field))
-                        if !actions.contains(where: { $0.kind == action.kind }) { actions.append(action) }
+                    if let phone = match.phoneNumber, let url = Self.telURL(phone), dialed.insert(url).inserted {
+                        actions.append(ImpactAction(kind: .call(phone), provenance: .calendar(field: field)))
                     }
                 }
             }
@@ -116,6 +117,19 @@ public struct ImpactEngine: Sendable {
     }
 
     private static func isMeetingURL(_ url: URL) -> Bool { meetingProvider(url) != nil }
+
+    /// The `tel:` URL Call opens for a detected phone number: its ASCII digits, plus `+` when one comes before
+    /// the first digit, as in "(+82) 2-555-0100"; nil when the number before any `;` or `,` has letters
+    /// (e.g. 1-800-FLOWERS) or no digits, and then selection offers no Call.
+    /// shortcut: the detector puts an extension or a pause after `;` or `,`, and only the number before it is
+    /// dialed; pass the rest as a `,` pause once a device shows the Phone app accepts it (step 10).
+    public static func telURL(_ number: String) -> URL? {
+        let main = number.prefix { $0 != ";" && $0 != "," }
+        let digits = main.filter { $0.isASCII && $0.isNumber }
+        guard !digits.isEmpty, !main.contains(where: \.isLetter) else { return nil }
+        let plus = main.first { $0 == "+" || $0.isNumber } == "+" ? "+" : ""
+        return URL(string: "tel:\(plus)\(digits)")
+    }
 
     /// The provider's name for an allowlisted meeting link (PRODUCT.md → Signals), or nil for any other URL.
     public static func meetingProvider(_ url: URL) -> String? {

@@ -5,6 +5,7 @@ struct ImpactRing: View {
     let filled: Int
     let segments: Int
     var lineWidth: CGFloat = 5
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geometry in
@@ -17,13 +18,16 @@ struct ImpactRing: View {
                     Circle().stroke(.quaternary, lineWidth: lineWidth)
                 }
                 ForEach(0..<segments, id: \.self) { index in
-                    Circle()
-                        .trim(from: Double(index) / Double(segments) + gap / 2,
-                              to: Double(index + 1) / Double(segments) - gap / 2)
-                        .stroke(index < filled ? AnyShapeStyle(.tint) : AnyShapeStyle(.quaternary),
-                                style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
+                    let start = Double(index) / Double(segments) + gap / 2
+                    let end = Double(index + 1) / Double(segments) - gap / 2
+                    let style = StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                    Circle().trim(from: start, to: end).stroke(.quaternary, style: style)
+                    // A new Impact sweeps its segment in; Reduce Motion fades it in instead.
+                    Circle().trim(from: start, to: index < filled || reduceMotion ? end : start)
+                        .stroke(.tint, style: style)
+                        .opacity(index < filled ? 1 : 0)
                 }
+                .rotationEffect(.degrees(-90))
             }
             .frame(width: diameter, height: diameter)
             .frame(width: geometry.size.width, height: geometry.size.height)
@@ -32,6 +36,7 @@ struct ImpactRing: View {
             Text(filled, format: .number)
                 .font(.system(.headline, design: .rounded).weight(.semibold))
                 .monospacedDigit()
+                .contentTransition(.numericText(value: Double(filled)))
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(filled) \(filled == 1 ? "Impact" : "Impacts") today")

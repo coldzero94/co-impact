@@ -2,15 +2,19 @@ import Foundation
 import ImpactEngine
 
 #if DEBUG
-public struct HomeFixture: Sendable {
-    public let snapshot: HomeSnapshot
-    public let now: Date
+enum FixtureError: LocalizedError {
+    case noCard(String)
+
+    var errorDescription: String? {
+        switch self { case .noCard(let title): "Sample event \"\(title)\" produced no card" }
+    }
 }
 
 /// Synthetic events for previews and debug builds; never real calendar data (AGENTS.md hard rule 7).
 public enum HomeFixtures {
     /// A sample day seen at `hour` (09:48 by default: two Impacts made, three cards to go).
-    public static func sample(at hour: Double = 9.8, calendar: Calendar = .current, today: Date = .now) throws -> HomeFixture {
+    @MainActor
+    public static func sample(at hour: Double = 9.8, calendar: Calendar = .current, today: Date = .now) throws -> HomeModel {
         let day = calendar.startOfDay(for: today)
         // shortcut: fixed offsets from midnight shift by an hour on DST change days; fine for samples.
         func at(_ hour: Double, day offset: Int = 0) -> Date {
@@ -37,11 +41,16 @@ public enum HomeFixtures {
             },
             event("Client visit", 8.5, day: 1) { $0.structuredPlace = hall },
         ]
-        let now = at(hour)
-        let done: Set<String> = hour >= 9.5 ? ["Standup", "1:1 with Mina"] : ["Standup"]
-        let snapshot = try ImpactEngine().home(
-            events: events, now: now, calendar: calendar, completedCardIDs: done, impactsToday: done.count)
-        return HomeFixture(snapshot: snapshot, now: now)
+        // Joined at their start: Standup always, and 1:1 with Mina too from 09:30.
+        let engine = try ImpactEngine()
+        var log = ActionLog()
+        for event in events.prefix(hour >= 9.5 ? 2 : 1) {
+            guard let card = engine.card(for: event, now: event.start), let primary = card.primaryAction else {
+                throw FixtureError.noCard(event.title)
+            }
+            log.record(primary, on: card, at: event.start)
+        }
+        return try HomeModel(events: events, now: at(hour), calendar: calendar, log: log)
     }
 }
 #endif

@@ -1,0 +1,36 @@
+import CoreLocation
+import ImpactEngine
+import MapKit
+import SwiftUI
+
+extension ActionKind {
+    /// Opens the action outside the app (PRODUCT.md → Action catalog); `completion` gets whether the system
+    /// accepted it.
+    @MainActor
+    func run(with openURL: OpenURLAction, completion: @escaping (Bool) -> Void) {
+        switch self {
+        case .joinMeeting(let url), .openLink(let url):
+            openURL(url, completion: completion)
+        case .call(let number):
+            guard let url = ImpactEngine.telURL(number) else { return completion(false) }
+            openURL(url, completion: completion)
+        case .directions(let place):
+            let item = MKMapItem(location: CLLocation(latitude: place.latitude, longitude: place.longitude),
+                                 address: place.address.flatMap { MKAddress(fullAddress: $0, shortAddress: nil) })
+            item.name = place.title
+            completion(item.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDefault]))
+        }
+    }
+}
+
+extension View {
+    /// Says which action did not open, so a failed tap is never silent; the card stays not done.
+    func actionFailureAlert(_ failed: Binding<ActionKind?>) -> some View {
+        alert(failed.wrappedValue?.failureTitle ?? "",
+              isPresented: Binding(get: { failed.wrappedValue != nil }, set: { if !$0 { failed.wrappedValue = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Open it from the event in your calendar instead.")
+        }
+    }
+}
