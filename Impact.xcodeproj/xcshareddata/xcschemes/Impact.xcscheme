@@ -50,6 +50,17 @@
                ReferencedContainer = "container:ImpactKit">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "HomeFeatureTests"
+               BuildableName = "HomeFeatureTests"
+               BlueprintName = "HomeFeatureTests"
+               ReferencedContainer = "container:ImpactKit">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
       <CommandLineArguments>
       </CommandLineArguments>

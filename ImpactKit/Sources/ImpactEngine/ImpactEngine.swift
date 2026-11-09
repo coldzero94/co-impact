@@ -115,25 +115,29 @@ public struct ImpactEngine: Sendable {
             && url.user == nil && url.password == nil
     }
 
-    private static func isMeetingURL(_ url: URL) -> Bool {
-        guard isWebURL(url), let host = url.host?.lowercased() else { return false }
+    private static func isMeetingURL(_ url: URL) -> Bool { meetingProvider(url) != nil }
+
+    /// The provider's name for an allowlisted meeting link (PRODUCT.md → Signals), or nil for any other URL.
+    public static func meetingProvider(_ url: URL) -> String? {
+        guard isWebURL(url), let host = url.host?.lowercased() else { return nil }
         let path = url.pathComponents.filter { $0 != "/" }
         if host == "zoom.us" || host.hasSuffix(".zoom.us") {
-            return path.count >= 2 && ["j", "my", "w"].contains(path[0])
+            return path.count >= 2 && ["j", "my", "w"].contains(path[0]) ? "Zoom" : nil
         }
         switch host {
         case "meet.google.com":
-            return path.count == 1
+            let code = path.count == 1
                 && path[0].range(of: #"^[a-z]{3}-[a-z]{4}-[a-z]{3}$"#, options: .regularExpression) != nil
+            return code ? "Google Meet" : nil
         case "teams.microsoft.com":
-            return path.count >= 3 && path[0] == "l" && path[1] == "meetup-join"
+            return path.count >= 3 && path[0] == "l" && path[1] == "meetup-join" ? "Teams" : nil
         case "teams.live.com":
-            return path.count >= 2 && path[0] == "meet"
+            return path.count >= 2 && path[0] == "meet" ? "Teams" : nil
         case "facetime.apple.com":
-            return path == ["join"]
+            return path == ["join"] ? "FaceTime" : nil
         default:
-            guard host.hasSuffix(".webex.com"), path.count >= 2 else { return false }
-            return ["meet", "join"].contains(path[0]) || (path.count == 2 && path[1] == "j.php")
+            guard host.hasSuffix(".webex.com"), path.count >= 2 else { return nil }
+            return ["meet", "join"].contains(path[0]) || (path.count == 2 && path[1] == "j.php") ? "Webex" : nil
         }
     }
 }

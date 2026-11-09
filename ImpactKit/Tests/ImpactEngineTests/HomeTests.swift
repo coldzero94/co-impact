@@ -76,6 +76,7 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         #expect(home.nextUp?.id == "Dentist")
         #expect(ids(home.laterToday) == ["Design review", "Town hall"])
         #expect(home.doneCardIDs == ["Design review"])
+        #expect(home.impactsToday == 1)
         #expect(home.ringSegments == 3)
     }
 
@@ -166,6 +167,7 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         #expect(home.nextUp == nil)
         #expect(ids(home.laterToday) == ["Client visit"])
         #expect(home.doneCardIDs == ["Client visit"])
+        #expect(home.impactsToday == 0)
         #expect(home.ringSegments == 0)
     }
 

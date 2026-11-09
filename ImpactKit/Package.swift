@@ -16,10 +16,12 @@ let package = Package(
     products: [
         // Umbrella product: the app links only this, so a new module needs no pbxproj edit.
         // Add its test target to Impact.xcscheme → Testables; CI fails until you do.
-        .library(name: "ImpactKit", targets: ["ImpactEngine"]),
+        .library(name: "ImpactKit", targets: ["ImpactEngine", "HomeFeature"]),
     ],
     targets: [
         .target(name: "ImpactEngine", swiftSettings: swiftSettings),
+        .target(name: "HomeFeature", dependencies: ["ImpactEngine"], swiftSettings: swiftSettings),
         .testTarget(name: "ImpactEngineTests", dependencies: ["ImpactEngine"], swiftSettings: swiftSettings),
+        .testTarget(name: "HomeFeatureTests", dependencies: ["HomeFeature", "ImpactEngine"], swiftSettings: swiftSettings),
     ]
 )
