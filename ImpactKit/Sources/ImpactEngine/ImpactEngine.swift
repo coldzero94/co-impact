@@ -61,7 +61,7 @@ public struct ImpactEngine: Sendable {
             }
         }
         if meeting == nil, place != nil {
-            // One Call per distinct `tel:` URL; none when `telURL` returns nil.
+            // One Call per distinct `tel:` URL; lettered numbers get none.
             var dialed: Set<URL> = []
             for (matches, field) in [(locationMatches, "location"), (notesMatches, "notes")] {
                 for match in matches {

@@ -4,7 +4,7 @@ import SwiftUI
 struct Moment {
     let id = UUID()
     /// When it was queued, for Next up's double-tap window: uptime, which clock changes do not move
-    /// (not `HomeModel.now`, which is fixed).
+    /// (not `HomeModel.now`, which moves only when the snapshot is rebuilt).
     let recorded = ProcessInfo.processInfo.systemUptime
     let symbol: String
     let from: CGRect?

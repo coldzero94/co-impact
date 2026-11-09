@@ -125,8 +125,9 @@ public struct HomeView: View {
         }
     }
 
-    /// Catalog actions leave the app on iPhone, so the moment waits until Home is in front again with no
-    /// sheet open (UX.md → The Impact moment). If an action never left, the next Next up tap plays it.
+    /// Event-card actions leave the app on iPhone, so the moment waits until Home is in front again with no
+    /// sheet open (UX.md → The Impact moment). If an action never left, the next Next up tap or sheet close
+    /// plays it.
     private func playPending() {
         guard scenePhase == .active, selected == nil, flying == nil, let moment = pending else { return }
         if reduceMotion || moment.from == nil || ringFrame == nil {

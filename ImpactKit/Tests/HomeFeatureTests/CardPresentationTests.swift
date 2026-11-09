@@ -109,10 +109,14 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         #expect(!model.snapshot.doneCardIDs.contains("Town hall"))
     }
 
-    @Test("Open link and its failure alert name the host, decoded and without www in any case")
+    @Test("Open link and its failure alert name a plain ASCII host without www; any other host gets the generic label")
     func linkLabel() throws {
         let figma = ActionKind.openLink(try #require(URL(string: "https://WWW.figma.com/file/x")))
         #expect(figma.label == "Open figma.com" && figma.failureTitle == "figma.com didn't open")
         #expect(try #require(URL(string: "https://www./doc")).shortHost == nil)
+        // A Cyrillic "а" (lookalike apple.com) and an encoded right-to-left override must never read as a real host.
+        #expect(try #require(URL(string: "https://\u{0430}pple.com/login")).shortHost == nil)
+        #expect(try #require(URL(string: "https://%E2%80%AEmoc.amgif/x")).shortHost == nil)
+        #expect(ActionKind.openLink(try #require(URL(string: "https://\u{0430}pple.com/login"))).label == "Open link")
     }
 }

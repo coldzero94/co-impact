@@ -242,7 +242,7 @@ private let productExamples: [Example] = [
         #expect(notesOnly.actions.last?.kind == call.kind)
     }
 
-    @Test("Call dials the number before an extension or pause, with a + only before the first digit; lettered numbers get no URL", arguments: [
+    @Test("Call dials the number before an extension or pause, keeping a + that comes before the first digit; lettered numbers get no URL", arguments: [
         ("02-555-0100", "tel:025550100"), ("+82 2 555 0100", "tel:+8225550100"), ("555-0100;23", "tel:5550100"),
         ("(+44) 20 7946 0958", "tel:+442079460958"),
         ("+1 555 010 0199,,123456#", "tel:+15550100199"), ("1-800-FLOWERS", nil), ("ext", nil),
