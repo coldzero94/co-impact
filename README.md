@@ -1,6 +1,6 @@
 # Impact
 
-A native iOS app that reads your calendar, finds the events that actually need preparation, and turns each one into an **Impact Card**: verified facts plus one-tap actions such as joining the meeting or getting directions.
+A native iOS app that reads your calendar, finds the events that actually need preparation, and turns each one into an **Impact Card**: verified facts plus one-tap actions such as joining the meeting or getting directions. If you set one to three goals, it also finds free time for them and blocks it in one tap (proposed).
 
 No to-do lists, no daily planning, no AI chat. Local-first and private: no backend, and calendar data is processed on device (Apple Foundation Models where available).
 

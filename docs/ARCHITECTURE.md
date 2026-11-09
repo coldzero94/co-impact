@@ -92,12 +92,13 @@ Live Activities are started **without a server** by scheduling them at analysis 
 ## Storage (Proposed)
 
 - Card and action state: SwiftData in an App Group container (shared with widgets).
+- Goals, Impact records, daily-log lines, and the identifiers of events Impact created: SwiftData in the same container.
 - Settings and local rules (e.g. "don't suggest for events like this"): `UserDefaults` in the App Group.
 - No calendar content is persisted beyond what card state needs; re-read from EventKit instead.
 
 ## Privacy
 
-- Calendar access: full access is required to read events. Usage string states on-device processing.
+- Calendar access: full access is required to read events. It also allows writing; the only write is Block time (PRODUCT.md → Goals). Usage string states on-device processing and that Impact adds events only when the user taps Block time.
 - No analytics SDKs, no network calls with calendar content.
 - Google Calendar API (if ever added, D7): official OAuth via `ASWebAuthenticationSession`, tokens in Keychain, read-only scope.
 
@@ -119,6 +120,10 @@ Verified facts only. Add the date and how each was verified.
 | `Activity.request(attributes:content:pushType:style:alertConfiguration:start:)` exists, iOS 26.0+ | 2026-11-07 | ActivityKit `.swiftinterface` |
 | Xcode MCP bridge available at `xcrun mcpbridge` (not configured) | 2026-11-07 | `xcrun --find mcpbridge` |
 | `NSDataDetector` finds links and phone numbers in natural-language text; results expose `url` and `phoneNumber` | 2026-11-08 | [Apple documentation](https://developer.apple.com/documentation/foundation/nsdatadetector), iOS 27 Foundation headers, and engine tests on macOS; URLs are validated separately |
+| Full calendar access lets an app create, view, edit, and delete events; there is no read-only access. Writes use `saveEvent:span:commit:error:`; `EKCalendar.allowsContentModifications` says whether a calendar accepts them | 2026-11-09 | [Accessing the event store](https://developer.apple.com/documentation/eventkit/accessing-the-event-store), iOS 27 EventKit headers |
+| `calendarItemIdentifier` is not sync-proof: a full sync can lose it, so a fallback match is needed; `calendarItemExternalIdentifier` is the server-provided one | 2026-11-09 | iOS 27 EventKit `EKCalendarItem.h` |
+| No public API turns on an iOS Focus. Apps can only read Focus status (`INFocusStatusCenter`) and adapt to it (`SetFocusFilterIntent`) | 2026-11-09 | iOS 27 SDK: AppIntents `.swiftinterface` and Intents headers list no other Focus API |
+| SDK includes JournalingSuggestions | 2026-11-09 | SDK `Frameworks/` listing |
 
 To verify before relying on it:
 
@@ -128,3 +133,5 @@ To verify before relying on it:
 - MapKit routing and ETA in South Korea (driving and transit). Leave-by times depend on it; see PRODUCT.md D15.
 - Whether the `alertConfiguration` of a scheduled Live Activity alerts the user when it starts (PRODUCT.md → Interruptions relies on it).
 - Geocoding quality for Korean addresses and place names (selection rule for physical places).
+- How Impact recognizes the focus blocks it created after a sync changes `calendarItemIdentifier` (PRODUCT.md → Block time), on Google and Exchange accounts.
+- Journaling Suggestions: required entitlement, availability, and what the picker returns (PRODUCT.md → Daily log).
