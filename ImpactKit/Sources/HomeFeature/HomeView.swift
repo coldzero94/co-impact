@@ -36,6 +36,8 @@ public struct HomeView: View {
                     NextUpCard(card: next, now: model.now, details: { selected = next },
                                primary: { run($0, on: next) { failed = $0 } })
                         .recordingFrame(next.id, into: $frames)
+                        // A new view per card, so the promoted card records its own frame.
+                        .id(next.id)
                 } else {
                     // shortcut: no "Next:" line until events past the horizon arrive (roadmap step 7).
                     Text("Nothing needs you today.")
@@ -57,14 +59,13 @@ public struct HomeView: View {
             .coordinateSpace(.named(Self.space))
         }
         .background(Color.page)
-        .sheet(item: $selected) { card in
+        .sheet(item: $selected, onDismiss: playPending) { card in
             CardDetailView(card: card, model: model) { action, failed in run(action, on: card, failed: failed) }
                 .presentationDetents(typeSize.isAccessibilitySize ? [.large] : [.medium, .large])
         }
         .actionFailureAlert($failed)
         .sensoryFeedback(.success, trigger: landings)
         .onChange(of: scenePhase) { playPending() }
-        .onChange(of: selected) { playPending() }
     }
 
     private func header(_ snapshot: HomeSnapshot) -> some View {
@@ -132,7 +133,8 @@ public struct HomeView: View {
     /// Fills the ring's segment (a cross-fade under Reduce Motion), plays the haptic, and tells VoiceOver.
     private func land() {
         withAnimation(reduceMotion ? .easeInOut(duration: 0.3) : .spring(duration: 0.4)) {
-            pending = nil
+            // A token landing keeps an Impact recorded during its flight queued for the next return.
+            if flying == nil { pending = nil }
             flying = nil
         }
         landings += 1
