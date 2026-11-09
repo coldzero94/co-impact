@@ -5,14 +5,12 @@ import SwiftUI
 public struct HomeView: View {
     let snapshot: HomeSnapshot
     let now: Date
-    let impactsToday: Int
     @Environment(\.dynamicTypeSize) private var typeSize
     @ScaledMetric(relativeTo: .title) private var ringSize = 46.0
 
-    public init(snapshot: HomeSnapshot, now: Date, impactsToday: Int) {
+    public init(snapshot: HomeSnapshot, now: Date) {
         self.snapshot = snapshot
         self.now = now
-        self.impactsToday = impactsToday
     }
 
     public var body: some View {
@@ -49,7 +47,7 @@ public struct HomeView: View {
                     .font(.subheadline).foregroundStyle(.secondary)
             }
             if !typeSize.isAccessibilitySize { Spacer() }
-            ImpactRing(filled: impactsToday, segments: snapshot.ringSegments)
+            ImpactRing(filled: snapshot.impactsToday, segments: snapshot.ringSegments)
                 .frame(width: ringSize, height: ringSize)
         }
     }
@@ -94,7 +92,7 @@ struct NextUpCard: View {
                 }
             }
             .font(.subheadline.weight(.semibold))
-            countdownText(countdown).padding(.top, 6)
+            countdownText(countdown).lineLimit(1).minimumScaleFactor(0.5).padding(.top, 6)
             Text(card.title).font(.title2.weight(.semibold))
             Text(card.answer).opacity(0.9)
             if let action = card.actions.first {
@@ -188,8 +186,13 @@ extension Color {
     }
 }
 
-#Preview("Morning") {
-    if let fixture = try? HomeFixtures.morning() {
-        HomeView(snapshot: fixture.snapshot, now: fixture.now, impactsToday: fixture.impactsToday)
+#Preview("09:48, Next up in 12 min") { sampleHome(hour: 9.8) }
+#Preview("08:00, done row, clock countdown") { sampleHome(hour: 8) }
+#Preview("19:00, nothing left, Tomorrow morning") { sampleHome(hour: 19) }
+
+@ViewBuilder
+private func sampleHome(hour: Double) -> some View {
+    if let fixture = try? HomeFixtures.sample(at: hour) {
+        HomeView(snapshot: fixture.snapshot, now: fixture.now)
     }
 }

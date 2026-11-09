@@ -9,8 +9,9 @@ struct ImpactRing: View {
     var body: some View {
         GeometryReader { geometry in
             let diameter = min(geometry.size.width, geometry.size.height) - lineWidth
-            // Round caps reach past each segment's end, so the gap must cover a line width.
-            let gap = segments > 1 ? (lineWidth + 3) / (.pi * diameter) : 0
+            // Round caps reach past each segment's end, so the gap covers a line width; on busy days
+            // it shrinks to at most half a segment so every segment stays visible.
+            let gap = segments > 1 ? min((lineWidth + 3) / (.pi * diameter), 0.5 / Double(segments)) : 0
             ZStack {
                 if segments == 0 {
                     Circle().stroke(.quaternary, lineWidth: lineWidth)

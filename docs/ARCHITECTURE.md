@@ -1,6 +1,6 @@
 # Architecture
 
-The project structure, engine selection model, Home snapshot, and Home screen below are implemented (roadmap steps 3–5). The remaining pipeline, enrichment, storage, and system surfaces are **Proposed**; an architecture item settles when it is exercised in code and merged through the gate, with no separate owner decision (owner, 2026-11-09). Product decisions in PRODUCT.md settle only with the owner.
+The project structure, engine selection model, Home snapshot, and Home screen below are implemented (roadmap steps 3–5). The remaining pipeline, enrichment, storage, and system surfaces are **Proposed** (how they settle: AGENTS.md).
 
 ## Project structure
 

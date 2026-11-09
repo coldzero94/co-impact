@@ -17,7 +17,7 @@ The local Swift package with all app logic and, later, UI features. Why this lay
 ## UI
 
 - A UI change is done when its simulator screenshots were looked at (light, dark, largest accessibility size), not when it compiles. Build with `-derivedDataPath <dir>` and install `<dir>/Build/Products/Debug-iphonesimulator/Impact.app` (a stale Release build can sit beside it), launch with `xcrun simctl launch`, capture with `xcrun simctl io booted screenshot`, and switch with `xcrun simctl ui booted appearance dark` and `content_size accessibility-extra-extra-extra-large`.
-- Previews and debug builds use `HomeFixtures`; release builds never show demo data.
+- `-fixtureHour <hour>` (debug builds) sets the sample day's clock, e.g. 8 for a done row and a clock countdown, 19 for the empty state and Tomorrow morning.
 
 ## Tests
 

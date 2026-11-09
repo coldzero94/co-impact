@@ -14,8 +14,9 @@ public struct HomeSnapshot: Sendable, Hashable {
     public let tomorrowMorning: [ImpactCard]
     /// The listed cards whose primary action has run; Home shows them subdued with a checkmark.
     public let doneCardIDs: Set<String>
-    /// The Impact ring: one segment per Impact today plus one per card still to do today.
+    /// The Impact ring: `impactsToday` filled segments, plus one per card still to do today.
     /// Expired cards drop out instead of counting as missed (P7).
+    public let impactsToday: Int
     public let ringSegments: Int
 }
 
@@ -59,6 +60,7 @@ extension ImpactEngine {
             laterToday: todayCards.filter { $0.id != nextUp?.id },
             tomorrowMorning: tomorrowCards,
             doneCardIDs: completedCardIDs.intersection(listed.map(\.id)),
+            impactsToday: impactsToday,
             ringSegments: impactsToday + toDo.count
         )
     }
