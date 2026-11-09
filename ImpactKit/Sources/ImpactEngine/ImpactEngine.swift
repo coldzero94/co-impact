@@ -14,10 +14,8 @@ public struct ImpactEngine: Sendable {
         for event: CalendarEvent, now: Date,
         suppressionRules: [SuppressionRule] = [], includedCalendarIDs: Set<String> = []
     ) -> ImpactCard? {
-        guard !event.isAllDay, !event.isCanceled, event.participation != .declined,
+        guard Self.isUsersTimedEvent(event, includedCalendarIDs: includedCalendarIDs),
               event.end > now, event.end > event.start,
-              !event.hasAttendees || event.isUserOrganizer || event.isUserAttendee,
-              event.calendarKind == .regular || includedCalendarIDs.contains(event.calendarID),
               !suppressionRules.contains(where: { $0.matches(event) }) else { return nil }
 
         let locationMatches = matches(in: event.location)
@@ -75,6 +73,13 @@ public struct ImpactEngine: Sendable {
             kind: meeting == nil ? .inPerson : (place == nil ? .onlineMeeting : .hybrid),
             facts: facts, actions: actions
         )
+    }
+
+    /// The exclusions that depend on neither the clock nor user feedback.
+    static func isUsersTimedEvent(_ event: CalendarEvent, includedCalendarIDs: Set<String>) -> Bool {
+        !event.isAllDay && !event.isCanceled && event.participation != .declined
+            && (!event.hasAttendees || event.isUserOrganizer || event.isUserAttendee)
+            && (event.calendarKind == .regular || includedCalendarIDs.contains(event.calendarID))
     }
 
     /// Use before requesting a geocode; room labels and URL locations are not destinations.

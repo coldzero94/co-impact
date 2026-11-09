@@ -52,7 +52,7 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 ```
 
 - **Impact ring** shows today's Impacts. Its segments are the day's chances for one (event cards and focus blocks); each Impact fills one. A dismissed or expired card's segment disappears instead of showing as missed, so the ring has no target to fail (P7). Tapping it opens the daily review.
-- **Summary line** counts all of today's events and how many need the user. It tells the user the app looked at everything, so a short list feels trustworthy rather than incomplete.
+- **Summary line** counts the user's events left today and how many of them need the user. It tells the user the app looked at everything, so a short list feels trustworthy rather than incomplete.
 - **Next up** is the earliest card in its Soon or Now phase, shown large with its primary action. If no card is Soon yet, the first row is promoted with its time. A focus block in its Now phase shows here with **Start focus**.
 - **Later today** uses one line per card, like a departure board: time, title, and the one key fact (leave-by time or meeting provider). Tapping a row opens the card.
 - **Goal-time card** sits below the time-bound cards, one at a time. **Block time** shows "Blocked · Undo" for 5 seconds; swiping offers **Not now**.
