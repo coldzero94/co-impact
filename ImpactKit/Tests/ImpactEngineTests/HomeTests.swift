@@ -27,7 +27,7 @@ private func event(
     return event
 }
 
-/// The UX.md Home mock-up's cards, plus events that get no card.
+/// The UX.md mock-up's today cards, plus events with no card (room label, all-day) and one tomorrow event.
 private let mockDay = [
     event("Design review", 10),
     event("Dentist", 14, 30) { $0.structuredPlace = clinic },
@@ -103,7 +103,7 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         #expect(home(events, at: now).nextUp?.id == next)
     }
 
-    @Test("In-person Soon runs from 30 minutes before the start to the start; hybrid follows the online window", arguments: [
+    @Test("In-person Soon/Now runs from 30 minutes before the start until the start; hybrid follows the online window", arguments: [
         (at(13, 59, 59), "Call"), (at(14), "Dentist"), (at(14, 30), "Check-in"), (at(17, 5), "Town hall"),
     ])
     func soonByKind(_ now: Date, _ next: String) {
@@ -146,13 +146,13 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         let events = [event("Midnight", 0, day: 1), event("Noon", 12, day: 1), event("After noon", 13, day: 1)]
         let home = home(events, at: at(18))
         #expect(ids(home.tomorrowMorning) == ["Midnight"])
-        #expect(home.laterToday.isEmpty)
+        #expect(home.nextUp == nil)
     }
 
     @Test("Tomorrow morning appears once today has no cards listed; a done card still listed keeps it hidden", arguments: [
         (13, true), (16, false),
     ])
-    func tomorrowWhenNoCardsLeft(_ hour: Int, _ shown: Bool) {
+    func tomorrowWhenNoCardsListed(_ hour: Int, _ shown: Bool) {
         let events = [event("Last meeting", hour), event("Client visit", 8, 30, day: 1) { $0.structuredPlace = clinic }]
         let home = home(events, at: at(15), completed: ["Last meeting", "Client visit"], impacts: 2)
         #expect(home.nextUp == nil)

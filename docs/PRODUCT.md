@@ -232,7 +232,7 @@ Goal-time cards have no phases: they leave when the block is created, when the s
 ## Horizon
 
 - Home shows **Today**: from now until the end of the local day.
-- From 18:00, or once today has no cards listed (done cards count until they expire), Home also shows **Tomorrow morning**: cards for events before 12:00 tomorrow, at most two. Preparing the evening before (e.g. an early appointment far away) is high value.
+- From 18:00, or once today has no cards listed (a done card stays listed until it expires), Home also shows **Tomorrow morning**: cards for events before 12:00 tomorrow, at most two. Preparing the evening before (e.g. an early appointment far away) is high value.
 - Goal-time cards are the exception: they may propose a slot later this week, because blocking it is decided now.
 
 ## AI scope (MVP)

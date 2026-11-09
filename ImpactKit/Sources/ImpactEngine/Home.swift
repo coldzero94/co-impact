@@ -20,8 +20,8 @@ public struct HomeSnapshot: Sendable, Hashable {
 }
 
 extension ImpactEngine {
-    /// `events` is the fetched horizon (PRODUCT.md → Horizon), with unique occurrence IDs (asserted in
-    /// debug builds). `completedCardIDs` holds cards whose primary action ran on any day, so a card done
+    /// `events` is the fetched horizon (PRODUCT.md → Horizon); occurrence IDs must be unique (debug
+    /// builds assert it on the listed cards). `completedCardIDs` holds cards whose primary action ran on any day, so a card done
     /// the evening before stays done; IDs that match no listed card are ignored. `impactsToday` counts
     /// every Impact recorded today and must not be negative. `calendar` sets the day boundaries and the
     /// 18:00 and noon cut-offs.

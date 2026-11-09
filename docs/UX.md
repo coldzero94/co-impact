@@ -46,7 +46,7 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 │ │ [ Block time ]              │ │
 │ └─────────────────────────────┘ │
 │                                 │
-│ TOMORROW MORNING                │  ← PRODUCT.md → Horizon
+│ TOMORROW MORNING                │  ← shown for layout; when: PRODUCT.md → Horizon
 │ 08:30  Client visit Leave 07:40 │
 └─────────────────────────────────┘
 ```
