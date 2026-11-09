@@ -1,6 +1,6 @@
 # Architecture
 
-The project structure, engine selection model, and Home snapshot below are implemented (roadmap steps 3–4 and the engine part of step 5). The remaining pipeline, enrichment, storage, and system surfaces are **Proposed** until exercised in code. Product decisions remain tracked in PRODUCT.md.
+The project structure, engine selection model, Home snapshot, and Home screen below are implemented (roadmap steps 3–5). The remaining pipeline, enrichment, storage, and system surfaces are **Proposed**; an architecture item settles when it is exercised in code and merged through the gate, with no separate owner decision (owner, 2026-11-09). Product decisions in PRODUCT.md settle only with the owner.
 
 ## Project structure
 
@@ -12,13 +12,15 @@ Impact/                        App target: @main entry point and Assets.xcassets
 ImpactKit/                     Local Swift package: all logic and, later, UI features
 ├── Package.swift              One umbrella product, `ImpactKit`, linked by the app
 ├── Sources/ImpactEngine/      Pure Swift: model, rules, ranking (no UI, no EventKit)
-└── Tests/ImpactEngineTests/   Swift Testing
+├── Sources/HomeFeature/       SwiftUI Home screen, card text, Impact ring, synthetic fixtures
+├── Tests/ImpactEngineTests/   Swift Testing
+└── Tests/HomeFeatureTests/    Swift Testing (card text, countdown, summary line)
 ```
 
 Decisions:
 
 - **New code goes into `ImpactKit`**; the app target stays an entry point plus wiring. Working rules for the package (adding modules, platforms, tests): [ImpactKit/AGENTS.md](../ImpactKit/AGENTS.md).
-- **Modules are added one per area as their roadmap step starts.** Planned (Proposed): `DesignSystem` and `HomeFeature` (steps 5–6), `CalendarSources` (step 7), `ImpactIntelligence` (step 8).
+- **Modules are added one per area as their roadmap step starts.** `HomeFeature` exists (step 5). Planned (Proposed): `DesignSystem` once a second feature shares components, `CalendarSources` (step 7), `ImpactIntelligence` (step 8).
 - **The package also builds for macOS**, so `swift test` runs without a simulator.
 - **Files need no project edits.** The app folder is a synchronized folder, package targets pick up files by directory, and the app links one umbrella product.
 - **The `.xcodeproj` is committed.** XcodeGen was used once to scaffold it and is not a dependency. Project-level changes (the widget extension in step 9, capabilities, signing) are made in Xcode or in `project.pbxproj`; revisit a generator (XcodeGen, Tuist) if they become frequent.
@@ -108,7 +110,7 @@ Live Activities are started **without a server** by scheduling them at analysis 
 ## Testing
 
 - `ImpactKit` engine: Swift Testing with synthetic `CalendarEvent` fixtures (one test per selection rule, plus skip cases).
-- UI: SwiftUI previews backed by `MockSource`.
+- UI: SwiftUI previews and debug builds use `HomeFixtures` (synthetic events run through the real engine); release builds show no demo data. A UI change is checked by simulator screenshots (ImpactKit/AGENTS.md → UI).
 - Device testing is required for Foundation Models and Live Activities.
 
 ## Platform facts
@@ -127,6 +129,7 @@ Verified facts only. Add the date and how each was verified.
 | `calendarItemIdentifier` is not sync-proof: a full sync can lose it, so a fallback match is needed; `calendarItemExternalIdentifier` is the server-provided one | 2026-11-09 | iOS 27 EventKit `EKCalendarItem.h` |
 | No public API turns on an iOS Focus. Apps can only read Focus status (`INFocusStatusCenter`) and adapt to it (`SetFocusFilterIntent`) | 2026-11-09 | iOS 27 SDK: AppIntents `.swiftinterface` and Intents headers list no other Focus API |
 | SDK includes JournalingSuggestions | 2026-11-09 | SDK `Frameworks/` listing |
+| `Color.mix(with:by:)` (iOS 18+) darkens the accent behind Next up in dark mode | 2026-11-09 | App and package build against the iOS 27 SDK |
 
 To verify before relying on it:
 

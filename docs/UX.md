@@ -29,12 +29,13 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 │ Saturday, Nov 7            ◔ 2  │  ← Impact ring: today's Impacts
 │ 3 of 6 events need you          │  ← summary: shows the app checked everything
 │                                 │
-│ ┌─────────────────────────────┐ │
-│ │ IN 12 MIN · 10:00           │ │  ← Next up: the earliest card in Soon/Now
-│ │ Design review               │ │
-│ │ Zoom link ready             │ │  ← the answer to the card's question (P1)
-│ │ [ Join meeting ]            │ │  ← primary action, one tap
-│ └─────────────────────────────┘ │
+│ ╔═════════════════════════════╗ │
+│ ║ ▶ Zoom              10:00   ║ │  ← Next up: accent card (Draft C)
+│ ║ 12 min                      ║ │  ← large countdown; clock time from 1 hour out
+│ ║ Design review               ║ │
+│ ║ Zoom link ready             ║ │  ← the answer to the card's question (P1)
+│ ║ ( Join meeting )            ║ │  ← primary action, one tap
+│ ╚═════════════════════════════╝ │
 │                                 │
 │ LATER TODAY                     │
 │ 14:30  Dentist      Leave 14:05 │  ← departure-board rows (P2)
@@ -53,7 +54,7 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 
 - **Impact ring** shows today's Impacts. Its segments are the day's chances for one (event cards and focus blocks); each Impact fills one. A dismissed or expired card's segment disappears instead of showing as missed, so the ring has no target to fail (P7). Tapping it opens the daily review.
 - **Summary line** counts the user's events left today and how many of them have a card, done or not. It tells the user the app looked at everything, so a short list feels trustworthy rather than incomplete.
-- **Next up** is the earliest card not done in its Soon or Now phase, shown large with its primary action. If none is, the card that started most recently and is still running leads (the user may be late); otherwise the next card is promoted with its time. Done cards never lead. A focus block in its Now phase shows here with **Start focus**.
+- **Next up** is the earliest card not done in its Soon or Now phase, drawn as an accent-colored card with a large countdown ("12 min", "Now", or the clock time from an hour out) and its primary action. Chosen from three drafts on 2026-11-09 (Draft C); the accent is indigo, darkened behind white text in dark mode. If none is, the card that started most recently and is still running leads (the user may be late); otherwise the next card is promoted with its time. Done cards never lead. A focus block in its Now phase shows here with **Start focus**.
 - **Later today** lists today's other cards by start time, including done cards until they expire and a running card that Next up has moved past. One line per card, like a departure board: time, title, and the one key fact (leave-by time or meeting provider). Tapping a row opens the card.
 - **Goal-time card** sits below the time-bound cards, one at a time. **Block time** shows "Blocked · Undo" for 5 seconds; swiping offers **Not now**.
 - **Tomorrow morning** follows PRODUCT.md → Horizon.
