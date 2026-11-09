@@ -14,8 +14,7 @@ public struct ImpactEngine: Sendable {
         for event: CalendarEvent, now: Date,
         suppressionRules: [SuppressionRule] = [], includedCalendarIDs: Set<String> = []
     ) -> ImpactCard? {
-        guard Self.isUsersTimedEvent(event, includedCalendarIDs: includedCalendarIDs),
-              event.end > now, event.end > event.start,
+        guard Self.isUsersTimedEvent(event, includedCalendarIDs: includedCalendarIDs), event.end > now,
               !suppressionRules.contains(where: { $0.matches(event) }) else { return nil }
 
         let locationMatches = matches(in: event.location)
@@ -36,6 +35,9 @@ public struct ImpactEngine: Sendable {
             placeProvenance = .computed(by: "geocoding")
         }
         guard meeting != nil || place != nil else { return nil }
+        // In-person cards leave 15 minutes after the start (PRODUCT.md → Card timeline); cards with a
+        // meeting link (online and hybrid) leave at the end, which the first guard enforces.
+        if meeting == nil, now >= event.start.addingTimeInterval(15 * 60) { return nil }
 
         var facts = [
             Fact(label: "Title", value: event.title, provenance: .calendar(field: "title")),
@@ -75,9 +77,11 @@ public struct ImpactEngine: Sendable {
         )
     }
 
-    /// The exclusions that depend on neither the clock nor user feedback.
+    /// True for the user's own valid timed event: not all-day, canceled, declined, or empty; organized
+    /// or attended by the user when it has attendees; on a regular or opted-in calendar. The clock and
+    /// suppression checks stay in `card(for:)`.
     static func isUsersTimedEvent(_ event: CalendarEvent, includedCalendarIDs: Set<String>) -> Bool {
-        !event.isAllDay && !event.isCanceled && event.participation != .declined
+        !event.isAllDay && !event.isCanceled && event.participation != .declined && event.end > event.start
             && (!event.hasAttendees || event.isUserOrganizer || event.isUserAttendee)
             && (event.calendarKind == .regular || includedCalendarIDs.contains(event.calendarID))
     }

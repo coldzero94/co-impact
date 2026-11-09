@@ -215,7 +215,7 @@ The diary, without writing a diary.
 
 ## Card timeline
 
-Cards move through phases (P3). Times are relative to the event start, or to the leave-by time for in-person cards.
+Cards move through phases (P3). Times are relative to the event start, or to the leave-by time for in-person cards. Hybrid cards follow the online column.
 
 **Leave-by time** = start − travel time − 5 min buffer. Travel time comes from MapKit using the current location at analysis time. Without location permission, or if no route is available, there is no leave-by time: the card shows the address and the Directions action only.
 
