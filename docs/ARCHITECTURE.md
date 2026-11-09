@@ -1,6 +1,6 @@
 # Architecture
 
-The project structure, engine selection model, and Home snapshot below are implemented (roadmap steps 3–5). The remaining pipeline, enrichment, storage, and system surfaces are **Proposed** until exercised in code. Product decisions remain tracked in PRODUCT.md.
+The project structure, engine selection model, and Home snapshot below are implemented (roadmap steps 3–4 and the engine part of step 5). The remaining pipeline, enrichment, storage, and system surfaces are **Proposed** until exercised in code. Product decisions remain tracked in PRODUCT.md.
 
 ## Project structure
 
@@ -56,7 +56,7 @@ The source of truth for the implemented types is [ImpactKit/Sources/ImpactEngine
 | `Provenance`, `Fact` | Calendar field, computation, or inference attached to each displayed fact |
 | `ActionKind`, `ImpactAction` | Closed catalog from PRODUCT.md, with provenance; action identity is its kind and payload within a card |
 | `ImpactCard` | Event occurrence ID, title, dates, kind, facts, and ordered actions (first is primary) |
-| `HomeSnapshot` | What Home shows: Next up, later today, tomorrow morning, the summary count, and the Impact ring, built by `home(events:now:calendar:completedCardIDs:impactsToday:…)`, plus which listed cards are done |
+| `HomeSnapshot` | What Home shows: Next up, later today, tomorrow morning, the summary count, the Impact ring, and which listed cards are done. Built by `home(events:now:calendar:completedCardIDs:impactsToday:…)` |
 
 `CalendarEvent.id` must identify an occurrence, not just a recurring series. The future calendar adapter supplies this ID and the self-organizer/self-attendee flags; unknown membership on an event with attendees is excluded. `seriesID` is separate and supports muting all occurrences. Re-enabling a subscription or Birthdays calendar through `includedCalendarIDs` removes only the calendar-type exclusion, not declined/foreign-event or other exclusions.
 
@@ -66,7 +66,7 @@ Meeting URLs are checked against one host/path allowlist. Text detection uses th
 
 Physical selection first uses valid `structuredPlace` coordinates (calendar provenance). Otherwise `canGeocode(_:)` rejects empty, URL, room, and floor labels before the caller requests a lookup. `geocodedPlace` must be the successful address/POI result for that event's location; the engine checks the candidate again and marks its result computed. Failed or missing lookups produce no physical signal. No place or travel time is invented: the Dentist example currently produces Directions without a leave-by time, as PRODUCT.md specifies when no route is available.
 
-`home(…)` runs selection on every event in the fetched horizon, sorts cards by start, then ID, and applies [UX.md → Home](UX.md#2-home) (Next up, summary, ring) and [PRODUCT.md → Horizon](PRODUCT.md#horizon) in the given calendar. Soon and Now come from PRODUCT.md → Card timeline; until leave-by exists, in-person cards count from the event start. Completions are passed for any day, so a card done the evening before stays done; the caller also passes today's Impact count, which the ring adds to the cards still to do. Occurrence IDs must be unique (asserted in debug builds).
+`home(…)` runs selection on today's events in the fetched horizon, sorts cards by start, then ID, and applies [UX.md → Home](UX.md#2-home) (Next up, summary, ring) and [PRODUCT.md → Horizon](PRODUCT.md#horizon) in the given calendar. Soon and Now come from PRODUCT.md → Card timeline; until leave-by exists, in-person cards count from the event start. Completions are passed for any day, so a card done the evening before stays done; the caller also passes today's Impact count, which the ring adds to the cards still to do. Tomorrow's events are selected only while Tomorrow morning shows. Occurrence IDs must be unique across the listed cards (asserted in debug builds).
 
 The model deliberately omits the earlier draft's unused answer string, anchor, phase, action-completion state, suggestions, and dismissal state. Presentation, routing/ETA, persisting and merging card state, dismissal, and AI grounding belong to their later roadmap steps. Product proposals are not approved by this implementation.
 

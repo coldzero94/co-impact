@@ -77,9 +77,9 @@ public struct ImpactEngine: Sendable {
         )
     }
 
-    /// True for the user's own valid timed event: not all-day, canceled, declined, or empty; organized
-    /// or attended by the user when it has attendees; on a regular or opted-in calendar. The clock and
-    /// suppression checks stay in `card(for:)`.
+    /// True for the user's own valid timed event: not all-day, canceled, declined, or with an empty or
+    /// inverted interval; organized or attended by the user when it has attendees; on a regular or
+    /// opted-in calendar. Callers apply the clock and suppression checks.
     static func isUsersTimedEvent(_ event: CalendarEvent, includedCalendarIDs: Set<String>) -> Bool {
         !event.isAllDay && !event.isCanceled && event.participation != .declined && event.end > event.start
             && (!event.hasAttendees || event.isUserOrganizer || event.isUserAttendee)

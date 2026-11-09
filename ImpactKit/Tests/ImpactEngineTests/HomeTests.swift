@@ -16,7 +16,7 @@ private func at(_ hour: Int, _ minute: Int = 0, _ second: Int = 0, day: Int = 0)
     calendar.date(byAdding: DateComponents(day: day, hour: hour, minute: minute, second: second), to: midnight)!
 }
 
-/// An online meeting unless `edit` says otherwise; `edit` replaces the default Zoom link.
+/// An online meeting by default. A custom `edit` replaces that default, so the event has no link unless `edit` sets one.
 private func event(
     _ id: String, _ hour: Int, _ minute: Int = 0, day: Int = 0, minutes: Int = 60,
     _ edit: (inout CalendarEvent) -> Void = { $0.url = zoom }
@@ -27,7 +27,7 @@ private func event(
     return event
 }
 
-/// The day in the UX.md Home mock-up.
+/// The UX.md Home mock-up's cards, plus events that get no card.
 private let mockDay = [
     event("Design review", 10),
     event("Dentist", 14, 30) { $0.structuredPlace = clinic },
@@ -52,7 +52,7 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
                     suppressionRules: suppressionRules, includedCalendarIDs: includedCalendarIDs)
     }
 
-    @Test("The UX.md mock-up: Next up, later today, summary, and ring")
+    @Test("Mock-up day: Next up, later today, summary, and ring")
     func layout() {
         let home = home(mockDay, at: at(9, 48))
         #expect(home.nextUp?.id == "Design review")
@@ -72,7 +72,7 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
 
     @Test("A done card leaves Next up but stays listed and marked done")
     func doneCard() {
-        let home = home(mockDay, at: at(10, 12), completed: ["Design review"], impacts: 1)
+        let home = home(mockDay, at: at(10, 2), completed: ["Design review"], impacts: 1)
         #expect(home.nextUp?.id == "Dentist")
         #expect(ids(home.laterToday) == ["Design review", "Town hall"])
         #expect(home.doneCardIDs == ["Design review"])
@@ -103,7 +103,19 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         #expect(home(events, at: now).nextUp?.id == next)
     }
 
-    @Test("In-person cards expire 15 minutes after the start and leave the ring; hybrid cards stay", arguments: [
+    @Test("In-person Soon runs from 30 minutes before the start to the start; hybrid follows the online window", arguments: [
+        (at(13, 59, 59), "Call"), (at(14), "Dentist"), (at(14, 30), "Check-in"), (at(17, 5), "Town hall"),
+    ])
+    func soonByKind(_ now: Date, _ next: String) {
+        let events = [
+            event("Call", 13, 30, minutes: 120), event("Dentist", 14, 30) { $0.structuredPlace = clinic },
+            event("Check-in", 14, 35), event("Town hall", 17) { $0.url = zoom; $0.structuredPlace = clinic },
+            event("Wrap-up", 17, 10),
+        ]
+        #expect(home(events, at: now).nextUp?.id == next)
+    }
+
+    @Test("In-person cards expire 15 minutes after the start and leave the ring", arguments: [
         (at(14, 44, 59), true), (at(14, 45), false),
     ])
     func inPersonExpiry(_ now: Date, _ listed: Bool) {
@@ -111,7 +123,11 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         let shown = ids([home.nextUp].compactMap(\.self) + home.laterToday)
         #expect(shown.contains("Dentist") == listed)
         #expect(home.ringSegments == (listed ? 2 : 1))
-        #expect(self.home(mockDay, at: at(17, 20)).nextUp?.id == "Town hall")
+    }
+
+    @Test("Hybrid cards stay until the event ends")
+    func hybridStays() {
+        #expect(home(mockDay, at: at(17, 50)).nextUp?.id == "Town hall")
     }
 
     @Test("Tomorrow morning appears from 18:00, with the earliest two cards", arguments: [
@@ -128,17 +144,20 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
     @Test("Tomorrow morning ends before noon")
     func tomorrowNoon() {
         let events = [event("Midnight", 0, day: 1), event("Noon", 12, day: 1), event("After noon", 13, day: 1)]
-        #expect(ids(home(events, at: at(18)).tomorrowMorning) == ["Midnight"])
+        let home = home(events, at: at(18))
+        #expect(ids(home.tomorrowMorning) == ["Midnight"])
+        #expect(home.laterToday.isEmpty)
     }
 
-    @Test("Tomorrow morning appears once today has no cards left; a done card still listed keeps it hidden", arguments: [
+    @Test("Tomorrow morning appears once today has no cards listed; a done card still listed keeps it hidden", arguments: [
         (13, true), (16, false),
     ])
     func tomorrowWhenNoCardsLeft(_ hour: Int, _ shown: Bool) {
         let events = [event("Last meeting", hour), event("Client visit", 8, 30, day: 1) { $0.structuredPlace = clinic }]
-        let home = home(events, at: at(15), completed: ["Last meeting"], impacts: 1)
+        let home = home(events, at: at(15), completed: ["Last meeting", "Client visit"], impacts: 2)
         #expect(home.nextUp == nil)
         #expect(ids(home.tomorrowMorning) == (shown ? ["Client visit"] : []))
+        #expect(home.doneCardIDs == (shown ? ["Client visit"] : ["Last meeting"]))
     }
 
     @Test("A card done the evening before stays done the next morning")

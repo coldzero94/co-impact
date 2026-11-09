@@ -27,7 +27,7 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 ```
 ┌─────────────────────────────────┐
 │ Saturday, Nov 7            ◔ 2  │  ← Impact ring: today's Impacts
-│ 2 of 6 events need you          │  ← summary: shows the app checked everything
+│ 3 of 6 events need you          │  ← summary: shows the app checked everything
 │                                 │
 │ ┌─────────────────────────────┐ │
 │ │ IN 12 MIN · 10:00           │ │  ← Next up: the earliest card in Soon/Now
@@ -46,7 +46,7 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 │ │ [ Block time ]              │ │
 │ └─────────────────────────────┘ │
 │                                 │
-│ TOMORROW MORNING                │  ← from 18:00, or once today has no cards left
+│ TOMORROW MORNING                │  ← PRODUCT.md → Horizon
 │ 08:30  Client visit Leave 07:40 │
 └─────────────────────────────────┘
 ```
@@ -54,9 +54,9 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 - **Impact ring** shows today's Impacts. Its segments are the day's chances for one (event cards and focus blocks); each Impact fills one. A dismissed or expired card's segment disappears instead of showing as missed, so the ring has no target to fail (P7). Tapping it opens the daily review.
 - **Summary line** counts the user's events left today and how many of them have a card, done or not. It tells the user the app looked at everything, so a short list feels trustworthy rather than incomplete.
 - **Next up** is the earliest card not done in its Soon or Now phase, shown large with its primary action. If none is, the card that started most recently and is still running leads (the user may be late); otherwise the next card is promoted with its time. Done cards never lead. A focus block in its Now phase shows here with **Start focus**.
-- **Later today** uses one line per card, like a departure board: time, title, and the one key fact (leave-by time or meeting provider). Tapping a row opens the card.
+- **Later today** lists today's other cards by start time, including done cards until they expire and a running card that Next up has moved past. One line per card, like a departure board: time, title, and the one key fact (leave-by time or meeting provider). Tapping a row opens the card.
 - **Goal-time card** sits below the time-bound cards, one at a time. **Block time** shows "Blocked · Undo" for 5 seconds; swiping offers **Not now**.
-- **Tomorrow morning** appears from 18:00, or once today has no cards left (PRODUCT.md → Horizon).
+- **Tomorrow morning** follows PRODUCT.md → Horizon.
 - Events that need nothing are counted but not listed; Home is not a calendar.
 
 ### 3. Empty state

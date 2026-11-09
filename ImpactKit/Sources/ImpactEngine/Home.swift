@@ -20,10 +20,11 @@ public struct HomeSnapshot: Sendable, Hashable {
 }
 
 extension ImpactEngine {
-    /// `events` is the fetched horizon (PRODUCT.md → Horizon). `completedCardIDs` holds cards whose
-    /// primary action ran on any day, so a card done the evening before stays done; IDs outside the
-    /// horizon are ignored. `impactsToday` counts every Impact recorded today. `calendar` sets the day
-    /// boundaries and the 18:00 and noon cut-offs.
+    /// `events` is the fetched horizon (PRODUCT.md → Horizon), with unique occurrence IDs (asserted in
+    /// debug builds). `completedCardIDs` holds cards whose primary action ran on any day, so a card done
+    /// the evening before stays done; IDs that match no listed card are ignored. `impactsToday` counts
+    /// every Impact recorded today and must not be negative. `calendar` sets the day boundaries and the
+    /// 18:00 and noon cut-offs.
     public func home(
         events: [CalendarEvent], now: Date, calendar: Calendar, completedCardIDs: Set<String>, impactsToday: Int,
         suppressionRules: [SuppressionRule] = [], includedCalendarIDs: Set<String> = []
@@ -34,11 +35,10 @@ extension ImpactEngine {
             preconditionFailure("\(calendar.identifier)/\(calendar.timeZone.identifier) cannot compute tomorrow or its noon from \(now)")
         }
         let cards = { (events: [CalendarEvent]) in
-            let cards = events.compactMap {
+            events.compactMap {
                 card(for: $0, now: now, suppressionRules: suppressionRules, includedCalendarIDs: includedCalendarIDs)
             }
-            assert(Set(cards.map(\.id)).count == cards.count, "Duplicate occurrence IDs in \(cards.map(\.id))")
-            return cards.sorted { ($0.start, $0.id) < ($1.start, $1.id) }
+            .sorted { ($0.start, $0.id) < ($1.start, $1.id) }
         }
 
         let todaysEvents = events.filter { $0.start < tomorrow }
@@ -48,6 +48,8 @@ extension ImpactEngine {
         let showTomorrow = calendar.component(.hour, from: now) >= 18 || todayCards.isEmpty
         let tomorrowCards = showTomorrow
             ? Array(cards(events.filter { $0.start >= tomorrow && $0.start < tomorrowNoon }).prefix(2)) : []
+        let listed = todayCards + tomorrowCards
+        assert(Set(listed.map(\.id)).count == listed.count, "Duplicate occurrence IDs in \(listed.map(\.id))")
 
         return HomeSnapshot(
             eventsLeftToday: todaysEvents.count {
@@ -56,13 +58,13 @@ extension ImpactEngine {
             nextUp: nextUp,
             laterToday: todayCards.filter { $0.id != nextUp?.id },
             tomorrowMorning: tomorrowCards,
-            doneCardIDs: completedCardIDs.intersection((todayCards + tomorrowCards).map(\.id)),
+            doneCardIDs: completedCardIDs.intersection(listed.map(\.id)),
             ringSegments: impactsToday + toDo.count
         )
     }
 
-    /// Soon or Now (PRODUCT.md → Card timeline). Leave-by is not computed yet, so in-person cards
-    /// count from the event start.
+    /// Soon or Now (PRODUCT.md → Card timeline).
+    /// shortcut: in-person cards count from the event start until leave-by (routing/ETA) exists.
     static func isSoonOrNow(_ card: ImpactCard, now: Date) -> Bool {
         let sinceStart = now.timeIntervalSince(card.start)
         return card.kind == .inPerson

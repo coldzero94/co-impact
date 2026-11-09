@@ -232,7 +232,7 @@ Goal-time cards have no phases: they leave when the block is created, when the s
 ## Horizon
 
 - Home shows **Today**: from now until the end of the local day.
-- From 18:00, or once today has no remaining cards, Home also shows **Tomorrow morning**: cards for events before 12:00 tomorrow, at most two. Preparing the evening before (e.g. an early appointment far away) is high value.
+- From 18:00, or once today has no cards listed (done cards count until they expire), Home also shows **Tomorrow morning**: cards for events before 12:00 tomorrow, at most two. Preparing the evening before (e.g. an early appointment far away) is high value.
 - Goal-time cards are the exception: they may propose a slot later this week, because blocking it is decided now.
 
 ## AI scope (MVP)
@@ -301,7 +301,7 @@ AI is optional enrichment (P5, P6). Without Apple Intelligence the product is co
 | D7 | Google Calendar API | Defer; verify Meet links via EventKit with a real account first | Proposed |
 | D8 | Minimum iOS version | iOS 26.0 | Proposed |
 | D9 | License | Not chosen yet | Open |
-| D10 | Home horizon | Today, plus Tomorrow morning from 18:00 | Proposed |
+| D10 | Home horizon | Today, plus Tomorrow morning (see Horizon) | Proposed |
 | D11 | Location permission | Ask in context on the first in-person card; work without it | Proposed |
 | D12 | Subscribed and shared calendars | Excluded by default; user's own events only | Proposed |
 | D13 | Interruptions | One alert per card, plus one "Changed" alert | Proposed |
