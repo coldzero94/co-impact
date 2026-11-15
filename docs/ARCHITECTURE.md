@@ -58,7 +58,7 @@ The source of truth for the implemented types is [ImpactKit/Sources/ImpactEngine
 | `CalendarEvent` | Source-independent occurrence, calendar ID/type, dates, cancellation, participation, user membership, optional series ID, raw URL/location/notes, and resolved places |
 | `Place` | Title, optional address, and a required coordinate pair; invalid coordinates are rejected during selection |
 | `SuppressionRule` | Same recurring series on one calendar, exact title on one calendar, or one occurrence |
-| `Dismissals` | Occurrences marked Not needed (with when, pruned after two days) and muted series or titles; its `rules` go to `home(suppressionRules:)` |
+| `Dismissals` | Occurrences marked Not needed (until the event ends) and muted series or titles; its `rules` go to `home(suppressionRules:)` |
 | `Provenance`, `Fact` | Calendar field, computation, or inference attached to each displayed fact |
 | `ActionKind`, `ImpactAction` | Closed catalog from PRODUCT.md, with provenance; action identity is its kind and payload within a card |
 | `ImpactCard` | Event occurrence ID, title ("Untitled" when the calendar's is empty; the Title fact keeps it empty, and title rules match the event's title, never the displayed "Untitled"), dates, kind, facts, and ordered actions; the first calendar or computed one is the primary action (`primaryAction`), and inferred ones are never shown as buttons (`confirmedActions`) |
@@ -107,8 +107,8 @@ Live Activities are started **without a server** by scheduling them at analysis 
 - Built (step 7): recorded Impacts, as card IDs and times, in one JSON file in the app's Application Support folder. Which secondary actions ran is not stored. A file that does not decode is renamed aside; one that cannot be read at the moment is left alone, each save first tries reading it again and skips until it can, and each refresh tries too and adds what it reads to Home. Merges keep each card's earlier stamp. Without a usable file, Impacts count until the app quits.
 - Proposed: card and action state in SwiftData in an App Group container (shared with widgets). The Impact file moves there when widgets read it (step 9).
 - Proposed: goals, Impact records, daily-log lines, and the identifiers of events Impact created, in SwiftData in the same container.
-- Built (step 7): dismissals, as JSON in standard `UserDefaults`: occurrence IDs with when (pruned after two days) and muted series IDs or titles. Data that does not decode is kept under another key. They move to the App Group with the widgets (step 9).
-- Proposed: settings and local rules (e.g. "don't suggest for events like this") in `UserDefaults` in the App Group.
+- Built (step 7): dismissals, as JSON in standard `UserDefaults`: occurrence IDs with their event's end (dropped once it has passed) and muted series IDs or titles. Data that does not decode is kept under another key. They move to the App Group with the widgets (step 9).
+- Proposed: settings in `UserDefaults` in the App Group.
 - No calendar content is persisted beyond what card state needs; re-read from EventKit instead.
 
 ## Privacy

@@ -15,7 +15,7 @@ private func event(_ id: String, series: String? = nil, title: String = "Standup
     @Test("Not needed hides that occurrence only")
     func notNeeded() {
         var dismissals = Dismissals()
-        dismissals.dismiss(event("mon", series: "s"), at: now)
+        dismissals.dismiss(event("mon", series: "s"))
         #expect(engine.card(for: event("mon", series: "s"), now: now, suppressionRules: dismissals.rules) == nil)
         #expect(engine.card(for: event("tue", series: "s"), now: now, suppressionRules: dismissals.rules) != nil)
     }
@@ -34,20 +34,23 @@ private func event(_ id: String, series: String? = nil, title: String = "Standup
         #expect(engine.card(for: event("again", title: "Review"), now: now, suppressionRules: title.rules) != nil)
     }
 
-    @Test("Old Not needed entries are pruned after two days; mutes stay")
+    @Test("Not needed lasts until the event ends, even for a multi-day one; mutes stay")
     func prune() throws {
         var dismissals = Dismissals()
-        dismissals.dismiss(event("old"), at: now.addingTimeInterval(-3 * 86_400))
-        dismissals.dismiss(event("new"), at: now.addingTimeInterval(-3_600))
+        var conference = event("conference")
+        conference.end = now.addingTimeInterval(3 * 86_400)
+        dismissals.dismiss(conference)
+        dismissals.dismiss(event("standup"))
         dismissals.mute(like: event("x", series: "s"))
-        let pruned = dismissals.pruned(now: now)
-        #expect(Set(pruned.occurrences.keys) == ["new"] && pruned.muted == dismissals.muted)
+        let twoDaysLater = dismissals.pruned(now: now.addingTimeInterval(2 * 86_400))
+        #expect(Set(twoDaysLater.occurrences.keys) == ["conference"] && twoDaysLater.muted == dismissals.muted)
+        #expect(dismissals.pruned(now: now.addingTimeInterval(3 * 86_400)).occurrences.isEmpty)
     }
 
     @Test("Dismissals survive encoding")
     func codable() throws {
         var dismissals = Dismissals()
-        dismissals.dismiss(event("mon"), at: now)
+        dismissals.dismiss(event("mon"))
         dismissals.mute(like: event("x", series: "s"))
         dismissals.mute(like: event("y"))
         let decoded = try JSONDecoder().decode(Dismissals.self, from: JSONEncoder().encode(dismissals))

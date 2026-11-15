@@ -135,7 +135,7 @@ private func withFile(_ body: (ImpactFile) throws -> Void) throws {
 
         model.dismiss(try #require(model.snapshot.nextUp), similar: false)
         #expect(model.snapshot.cards.map(\.id) == ["review"] && model.snapshot.ringSegments == 1)
-        #expect(saved.last?.occurrences.keys.sorted() == ["standup-mon"])
+        #expect(saved.last?.occurrences == ["standup-mon": weekly.end])
         model.update(events: events, now: morning.addingTimeInterval(60))
         #expect(model.snapshot.cards.map(\.id) == ["review"])
 
@@ -147,16 +147,18 @@ private func withFile(_ body: (ImpactFile) throws -> Void) throws {
         #expect(muted.snapshot.cards.isEmpty && saved.last?.muted == [.series(calendarID: "work", seriesID: "standup")])
     }
 
-    @Test("Dismissals survive the store, pruned; data that does not decode is kept aside")
+    @Test("Dismissals survive the store, without ended events; data that does not decode is kept aside")
     func dismissalStore() throws {
-        let defaults = try #require(UserDefaults(suiteName: "impact-tests-\(UUID().uuidString)"))
+        let suite = "impact-tests-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
         let store = DismissalStore(defaults: defaults)
         #expect(store.load(now: morning) == Dismissals())
         var dismissals = Dismissals()
-        dismissals.dismiss(meeting("old", at: morning), at: morning.addingTimeInterval(-3 * 86_400))
-        dismissals.dismiss(meeting("new", at: morning), at: morning)
+        dismissals.dismiss(meeting("ended", at: morning.addingTimeInterval(-7_200)))
+        dismissals.dismiss(meeting("later", at: morning.addingTimeInterval(3_600)))
         store.save(dismissals)
-        #expect(store.load(now: morning).occurrences.keys.sorted() == ["new"])
+        #expect(store.load(now: morning).occurrences.keys.sorted() == ["later"])
 
         defaults.set(Data("not json".utf8), forKey: DismissalStore.key)
         #expect(store.load(now: morning) == Dismissals())
