@@ -1,5 +1,6 @@
 import Accessibility
 import ImpactEngine
+import os
 import SwiftUI
 
 /// Home (UX.md → Home): summary and Impact ring, Next up, Later today, Tomorrow morning. Tapping a card
@@ -20,8 +21,13 @@ public struct HomeView: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @ScaledMetric(relativeTo: .title) private var ringSize = 46.0
 
-    public init(model: HomeModel) {
+    /// A card whose primary action a Live Activity asked Impact to run (`LiveCard.runURL`); Home runs it and
+    /// clears it.
+    @Binding private var runCardID: String?
+
+    public init(model: HomeModel, runCardID: Binding<String?> = .constant(nil)) {
         self.model = model
+        _runCardID = runCardID
     }
 
     public var body: some View {
@@ -83,6 +89,16 @@ public struct HomeView: View {
                 .presentationDetents(typeSize.isAccessibilitySize ? [.large] : [.medium, .large])
         }
         .actionFailureAlert($failed)
+        .onChange(of: runCardID, initial: true) {
+            guard let id = runCardID else { return }
+            runCardID = nil
+            guard let card = model.snapshot.cards.first(where: { $0.id == id }), let primary = card.primaryAction else {
+                // Done, dismissed, or gone since the activity was scheduled: Home shows what is left.
+                homeLog.info("A Live Activity asked to run a card Home no longer lists")
+                return
+            }
+            run(primary, on: card) { failed = $0 }
+        }
         .sensoryFeedback(.success, trigger: landings)
         .onChange(of: scenePhase) { playPending() }
         .onChange(of: model.snapshot) { _, snapshot in

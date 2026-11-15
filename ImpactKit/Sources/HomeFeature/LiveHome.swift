@@ -1,5 +1,6 @@
 import CalendarSources
 import ImpactEngine
+import LiveSurfaces
 import os
 import SwiftUI
 
@@ -16,6 +17,8 @@ public struct LiveHome: View {
     @State private var noCalendars = false
     @State private var startFailure: String?
     @State private var requestFailed = false
+    /// A Live Activity's button opened Impact to run this card's primary action.
+    @State private var runCardID: String?
     @Environment(\.scenePhase) private var scenePhase
 
     public init() {}
@@ -27,7 +30,7 @@ public struct LiveHome: View {
                 if noCalendars {
                     NoCalendars()
                 } else if let model {
-                    HomeView(model: model)
+                    HomeView(model: model, runCardID: $runCardID)
                 } else if let startFailure {
                     Text(startFailure).padding()
                 } else {
@@ -62,6 +65,16 @@ public struct LiveHome: View {
             access = EventKitCalendar.access // the user may have changed it in Settings
             refresh()
         }
+        .onOpenURL { url in
+            runCardID = LiveCard.cardID(fromRunURL: url)
+        }
+        #if os(iOS)
+        .task(id: model?.liveCards) {
+            // Scheduled Live Activities carry each card's one Now alert (PRODUCT.md → Interruptions).
+            guard let model else { return }
+            await LiveActivities.sync(model.liveCards, now: model.now)
+        }
+        #endif
     }
 
     private func connect() async {

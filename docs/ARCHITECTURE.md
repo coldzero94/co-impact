@@ -8,13 +8,16 @@ Follows Apple's local-package guidance and the thin-app-target pattern used by I
 
 ```
 Impact.xcodeproj               Thin app shell, Xcode 16+ synchronized folders
-Impact/                        App target: @main entry point and Assets.xcassets only
+Impact/                        App target: @main entry point, Assets.xcassets, and Info.plist (URL scheme, Live Activities)
+ImpactWidgets/                 Widget extension: its @main WidgetBundle and Info.plist only
 ImpactKit/                     Local Swift package: all logic and UI features
-├── Package.swift              One umbrella product, `ImpactKit`, linked by the app
+├── Package.swift              Umbrella product `ImpactKit` for the app; `LiveSurfaces` for the extension
 ├── Sources/ImpactEngine/      Pure Swift: model, rules, ranking (no UI, no EventKit)
 ├── Sources/CalendarSources/   EventKit: calendar access, fetching, and mapping events to CalendarEvent
+├── Sources/LiveSurfaces/      The Live Activity: what it shows (`LiveCard`), its layouts, its run link, and
+│                              scheduling (ActivityKit and WidgetKit code iOS-only)
 ├── Sources/HomeFeature/       SwiftUI onboarding, Home, card detail, actions, Impact ring and moment, live
-│                              refresh, stored Impacts, synthetic fixtures
+│                              refresh, stored Impacts, Live Activity sync and run links, synthetic fixtures
 ├── Tests/ImpactEngineTests/   Swift Testing
 ├── Tests/CalendarSourcesTests/ Swift Testing
 └── Tests/HomeFeatureTests/    Swift Testing
@@ -23,9 +26,9 @@ ImpactKit/                     Local Swift package: all logic and UI features
 Decisions:
 
 - **New code goes into `ImpactKit`**; the app target stays an entry point plus wiring. Working rules for the package (adding modules, platforms, tests): [ImpactKit/AGENTS.md](../ImpactKit/AGENTS.md).
-- **Modules are added one per area as their roadmap step starts.** `HomeFeature` (step 5) and `CalendarSources` (step 7) exist; `HomeFeature` uses `CalendarSources` for its live root view. Planned (Proposed): `DesignSystem` once a second feature shares components, `ImpactIntelligence` (step 8).
+- **Modules are added one per area as their roadmap step starts.** `HomeFeature` (step 5), `CalendarSources` (step 7), and `LiveSurfaces` (step 9) exist; `HomeFeature` uses `CalendarSources` for its live root view and `LiveSurfaces` for Live Activities. Planned (Proposed): `DesignSystem` once a second feature shares components, `ImpactIntelligence` (step 8).
 - **The package also builds for macOS**, so `swift test` runs without a simulator.
-- **Files need no project edits.** The app folder is a synchronized folder, package targets pick up files by directory, and the app links one umbrella product.
+- **Files need no project edits.** The app and extension folders are synchronized folders (their `Info.plist` excluded from resources), package targets pick up files by directory, and the app links one umbrella product.
 - **The `.xcodeproj` is committed.** XcodeGen was used once to scaffold it and is not a dependency. Project-level changes (the widget extension in step 9, capabilities, signing) are made in Xcode or in `project.pbxproj`; revisit a generator (XcodeGen, Tuist) if they become frequent.
 - **Build settings** follow Xcode 27's app template (Approachable Concurrency, `MainActor` default isolation in the app target, member import visibility, user script sandboxing, String Catalogs, gnu17/gnu++20, upgrade check 2700), except Swift 6 language mode. The package enables the same upcoming features without default `MainActor` isolation.
 - **App identity:** bundle ID `io.github.coldzero94.impact` (placeholder until App Store registration), iPhone only, no development team set; set `DEVELOPMENT_TEAM` locally for device builds (step 10).
@@ -93,7 +96,7 @@ iOS does not let an app run whenever it wants. The engine runs when:
 
 Consequence: results must be **scheduled ahead** at analysis time (notifications, widget timeline entries, scheduled Live Activities). If the user does not open the app for days, newly added events may not be analyzed. This is accepted for the MVP.
 
-Live Activities are started **without a server** by scheduling them at analysis time with `Activity.request(..., pushType: nil, ..., start: Date)` (iOS 26+). ActivityKit push-to-start and push updates need APNs from a server and are out of scope. The `activitykit` skill's examples pass `.token` or `.channel` and its review checklist expects push tokens sent to a server; neither applies here (hard rule 1).
+Live Activities are started **without a server** by scheduling them at analysis time with `Activity.request(..., pushType: nil, ..., start: Date)` (iOS 26+). Built (step 9): whenever the cards that want one change (`ImpactEngine.liveActivityCards`: the next two cards still to do whose Now phase has not ended), live Home ends the activities no longer wanted and schedules the missing ones to start with their Now phase and go stale at its end; one already in its Now phase starts at once, without an alert. Running a card's primary action ends its activity at the next sync. The content never changes after scheduling (timer text moves on its own); a changed card gets a new activity. ActivityKit push-to-start and push updates need APNs from a server and are out of scope. The `activitykit` skill's examples pass `.token` or `.channel` and its review checklist expects push tokens sent to a server; neither applies here (hard rule 1).
 
 ## Foundation Models
 
@@ -133,7 +136,8 @@ Verified facts only. Add the date and how each was verified.
 | Xcode 27.0 (27A266a), iOS 27.0 SDK installed | 2026-11-07 | `xcodebuild -version` |
 | SDK includes FoundationModels, ActivityKit, AlarmKit, EventKit, AppIntents | 2026-11-07 | SDK `Frameworks/` listing |
 | `SystemLanguageModel` unavailability reasons: `deviceNotEligible`, `appleIntelligenceNotEnabled`, `modelNotReady`; `contextSize` and `supportedLanguages` exist | 2026-11-07 | FoundationModels `.swiftinterface` |
-| `Activity.request(attributes:content:pushType:style:alertConfiguration:start:)` exists, iOS 26.0+ | 2026-11-07 | ActivityKit `.swiftinterface` |
+| `Activity.request(attributes:content:pushType:style:alertConfiguration:start:)` exists, iOS 26.0+; `pushType` is `PushType? = nil` | 2026-11-07, 2026-11-15 | ActivityKit `.swiftinterface` |
+| In the iOS 27 simulator, a scheduled request returns an activity in state `pending` that turns `active` at its start date while the app is in the background; `end(_:dismissalPolicy:)` removes it. Activities appear on the Lock Screen and in the Dynamic Island (also in `simctl` screenshots) only after the Lock Screen's first "Allow Live Activities from Impact?" is answered. A Live Activity `Link` to `impact://run?card=…` opens Impact with the URL | 2026-11-15 | Simulator run (iPhone 18 Pro, iOS 27) |
 | Xcode MCP bridge available at `xcrun mcpbridge` (not configured) | 2026-11-07 | `xcrun --find mcpbridge` |
 | `NSDataDetector` finds links and phone numbers in natural-language text; results expose `url` and `phoneNumber` | 2026-11-08 | [Apple documentation](https://developer.apple.com/documentation/foundation/nsdatadetector), iOS 27 Foundation headers, and engine tests on macOS; URLs are validated separately |
 | Full calendar access lets an app create, view, edit, and delete events; there is no read-only access. Writes use `saveEvent:span:commit:error:`; `EKCalendar.allowsContentModifications` says whether a calendar accepts them | 2026-11-09 | [Accessing the event store](https://developer.apple.com/documentation/eventkit/accessing-the-event-store), iOS 27 EventKit headers |
@@ -155,7 +159,7 @@ To verify before relying on it:
 - Current Live Activity duration limits and scheduled-start behavior on device.
 - Foundation Models availability in the Simulator on this Mac.
 - MapKit routing and ETA in South Korea (driving and transit). Leave-by times depend on it; see PRODUCT.md D15.
-- Whether the `alertConfiguration` of a scheduled Live Activity alerts the user when it starts (PRODUCT.md → Interruptions relies on it).
+- Whether the `alertConfiguration` of a scheduled Live Activity alerts the user when it starts, including under a Focus or the silent switch (PRODUCT.md → Interruptions relies on it), and whether `end` cancels a pending one on a device.
 - Geocoding quality for Korean addresses and place names on a device in Korea, including whether results outside the user's area can be told apart (selection rule for physical places; the simulator check above found wrong or no places), with the request's `region` set and a non-Korean control address, and MapKit's geocoding rate limits.
 - How Impact recognizes the focus blocks it created after a sync changes `calendarItemIdentifier` (PRODUCT.md → Block time), on Google and Exchange accounts.
 - Journaling Suggestions: required entitlement, availability, and what the picker returns (PRODUCT.md → Daily log).

@@ -12,13 +12,14 @@ The local Swift package with all app logic and UI features. Why this layout: [do
 ## Platforms
 
 - `swift test` compiles every target for macOS, so wrap iOS-only API in `#if os(iOS)`.
-- ActivityKit code goes in the app or the extension.
+- ActivityKit and WidgetKit code goes in `LiveSurfaces`, inside `#if os(iOS)`; `ImpactWidgets/` holds only the extension's entry point.
 
 ## UI
 
 - A UI change is done when its simulator screenshots were looked at ([UX.md → Design checklist](../docs/UX.md#design-checklist-for-ui-changes)), not when it compiles. Build with `-derivedDataPath <dir>` and install `<dir>/Build/Products/Debug-iphonesimulator/Impact.app` (a stale Release build can sit beside it), launch with `xcrun simctl launch`, capture with `xcrun simctl io booted screenshot`, and switch with `xcrun simctl ui booted appearance dark` and `content_size accessibility-extra-extra-extra-large`. Reduce Motion: `xcrun simctl spawn booted defaults write com.apple.Accessibility ReduceMotionEnabled -bool true`, then relaunch.
 - If the owner has installed AXe (`axe` on the PATH; never install it yourself), prove an interaction by driving it: `axe describe-ui --udid <id>` lists frames, `axe tap -x <x> -y <y> --udid <id>` taps, and `axe record-video --udid <id> --output <file>` captures motion. Tap by coordinates: time labels contain U+202F, so `--label` misses them. `xcrun simctl launch` brings the app back after an action opened another app.
 - `-fixtureHour <hour>` (debug builds) shows the synthetic sample day frozen at that hour instead of the calendar, e.g. 9.8 for Next up in 12 min, 8 for a done row and a clock countdown, 19 for the empty state and Tomorrow morning, 21 for the empty state's "Next:" line (tomorrow's Client visit dismissed). Without it the app reads the simulator's calendar.
+- Live Activities need live Home (no `-fixtureHour`) and test events a few minutes ahead; they show only after the Lock Screen's "Allow Live Activities from Impact?" is answered. `xcrun simctl openurl booted 'impact://run?card=<id>'` runs a card's primary action; an event's ID is its `UUID` in the simulator's `data/Library/Calendar/Calendar.sqlitedb` (`sqlite3 -readonly`).
 - Calendar access: `xcrun simctl privacy booted grant|revoke|reset calendar io.github.coldzero94.impact` (a change can terminate the running app). Test events: write a synthetic `.ics` outside the repo, serve its folder with `python3 -m http.server --bind 127.0.0.1 --directory <folder>`, open a page linking it in Safari, and tap the link, then Add All. Never real calendar data. The import drops coordinates, so these events give online cards only. `simctl openurl` on the `.ics` itself offers a subscription, which the engine skips.
 
 ## Tests

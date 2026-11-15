@@ -8,21 +8,80 @@
 
 /* Begin PBXBuildFile section */
 		5C8F75F772BF670118205BAC /* ImpactKit in Frameworks */ = {isa = PBXBuildFile; productRef = BD7D2A39156E2B0E1530894B /* ImpactKit */; };
+		866402E76D88198E274BE377 /* LiveSurfaces in Frameworks */ = {isa = PBXBuildFile; productRef = 34AAF86895F5DBCE00A94B95 /* LiveSurfaces */; };
+		3F4E6F887827D2947D0963D5 /* ImpactWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 4682544B4A178834830EBCE4 /* ImpactWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		08DE3205D290336BCB7C30E9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 976B50771D99C222087C5806 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BB47C43C18BDEBB59FA6B48C;
+			remoteInfo = ImpactWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		2AF86EDAC1E62E7D43260253 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				3F4E6F887827D2947D0963D5 /* ImpactWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		97AA18F92C99BBE0BEC05438 /* ImpactKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ImpactKit; path = ImpactKit; sourceTree = SOURCE_ROOT; };
 		BD6B6E70C8F25538993B1AC7 /* Impact.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Impact.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4682544B4A178834830EBCE4 /* ImpactWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ImpactWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		9FC0A1C51BDAE2E9E5821485 /* Exceptions for "Impact" folder in "Impact" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 60086CF4DF85CC50ED9876A1 /* Impact */;
+		};
+		79E2C2AC066AC7F43C0ED4B1 /* Exceptions for "ImpactWidgets" folder in "ImpactWidgets" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = BB47C43C18BDEBB59FA6B48C /* ImpactWidgets */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		8ACA1EA645A2F78CF3CE49D7 /* Impact */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				9FC0A1C51BDAE2E9E5821485 /* Exceptions for "Impact" folder in "Impact" target */,
+			);
 			explicitFileTypes = {
 			};
 			explicitFolders = (
 			);
 			path = Impact;
+			sourceTree = "<group>";
+		};
+		438DCBCF725155BD5E74FF39 /* ImpactWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				79E2C2AC066AC7F43C0ED4B1 /* Exceptions for "ImpactWidgets" folder in "ImpactWidgets" target */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = ImpactWidgets;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -36,6 +95,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E6B29C36C876374FC5ED3C6A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				866402E76D88198E274BE377 /* LiveSurfaces in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -43,6 +110,7 @@
 			isa = PBXGroup;
 			children = (
 				BD6B6E70C8F25538993B1AC7 /* Impact.app */,
+				4682544B4A178834830EBCE4 /* ImpactWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -51,6 +119,7 @@
 			isa = PBXGroup;
 			children = (
 				8ACA1EA645A2F78CF3CE49D7 /* Impact */,
+				438DCBCF725155BD5E74FF39 /* ImpactWidgets */,
 				BE88D552FA25D68293B55BBA /* Packages */,
 				B0B9CCDC389ECD9E71726492 /* Products */,
 			);
@@ -74,10 +143,12 @@
 				830DDDE04DD400686804A267 /* Sources */,
 				7E97D48151291783CF3E1709 /* Resources */,
 				0CC2B3CBD2144BC3A6B0B64F /* Frameworks */,
+				2AF86EDAC1E62E7D43260253 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				BA42A74ABAB66E772B60E92F /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				8ACA1EA645A2F78CF3CE49D7 /* Impact */,
@@ -89,6 +160,29 @@
 			productName = Impact;
 			productReference = BD6B6E70C8F25538993B1AC7 /* Impact.app */;
 			productType = "com.apple.product-type.application";
+		};
+		BB47C43C18BDEBB59FA6B48C /* ImpactWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 50D2D6B61B914982190E5C06 /* Build configuration list for PBXNativeTarget "ImpactWidgets" */;
+			buildPhases = (
+				9A270C9DA197F472888BFA92 /* Sources */,
+				E6B29C36C876374FC5ED3C6A /* Frameworks */,
+				7D68F7551A2CDFDCAE7EE248 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				438DCBCF725155BD5E74FF39 /* ImpactWidgets */,
+			);
+			name = ImpactWidgets;
+			packageProductDependencies = (
+				34AAF86895F5DBCE00A94B95 /* LiveSurfaces */,
+			);
+			productName = ImpactWidgets;
+			productReference = 4682544B4A178834830EBCE4 /* ImpactWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -119,12 +213,20 @@
 			projectRoot = "";
 			targets = (
 				60086CF4DF85CC50ED9876A1 /* Impact */,
+				BB47C43C18BDEBB59FA6B48C /* ImpactWidgets */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		7E97D48151291783CF3E1709 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7D68F7551A2CDFDCAE7EE248 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -141,7 +243,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9A270C9DA197F472888BFA92 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		BA42A74ABAB66E772B60E92F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BB47C43C18BDEBB59FA6B48C /* ImpactWidgets */;
+			targetProxy = 08DE3205D290336BCB7C30E9 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		2A5AB4AA170818659FD05D56 /* Debug */ = {
@@ -153,6 +270,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Impact/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Impact;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Impact reads your events on this iPhone to find the ones that need you. Your calendar never leaves your device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -180,6 +298,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Impact/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Impact;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Impact reads your events on this iPhone to find the ones that need you. Your calendar never leaves your device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -331,6 +450,54 @@
 			};
 			name = Debug;
 		};
+		6859695C60A796B8228D80D6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ImpactWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Impact;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.coldzero94.impact.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		47633EFB57C60B886101731E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ImpactWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Impact;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.coldzero94.impact.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -352,6 +519,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		50D2D6B61B914982190E5C06 /* Build configuration list for PBXNativeTarget "ImpactWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6859695C60A796B8228D80D6 /* Debug */,
+				47633EFB57C60B886101731E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -365,6 +541,10 @@
 		BD7D2A39156E2B0E1530894B /* ImpactKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ImpactKit;
+		};
+		34AAF86895F5DBCE00A94B95 /* LiveSurfaces */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = LiveSurfaces;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

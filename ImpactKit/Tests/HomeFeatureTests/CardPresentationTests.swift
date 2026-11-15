@@ -1,6 +1,7 @@
 import Foundation
 @testable import HomeFeature
 import ImpactEngine
+import LiveSurfaces
 import Testing
 
 private let start = Date(timeIntervalSince1970: 1_800_000_000)
@@ -88,6 +89,30 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         event.notes = nil; event.organizer = nil; event.attendees = []
         let bare = try #require(try ImpactEngine().card(for: event, now: start.addingTimeInterval(-3_600)))
         #expect(bare.organizer == nil && bare.attendees.isEmpty && bare.notes == nil)
+    }
+
+    @Test("A Live Activity carries the card's title, answer, primary action, and Now phase")
+    func liveCard() throws {
+        let zoom = try card(.onlineMeeting, link: "https://zoom.us/j/1")
+        let live = try #require(LiveCard(zoom))
+        #expect(live.cardID == zoom.id && live.title == zoom.title && live.answer == "Zoom link ready")
+        #expect(live.symbol == "video.fill" && live.actionLabel == "Join meeting" && live.start == zoom.start)
+        #expect(live.nowPhase == ImpactEngine.nowPhase(of: zoom))
+    }
+
+    @Test("A run link names its card, whatever the ID holds; other links name none")
+    func runLink() throws {
+        let id = "AD37F411-AFC9@1800000000/x?y=1&z"
+        #expect(LiveCard.cardID(fromRunURL: LiveCard.runURL(cardID: id)) == id)
+        #expect(LiveCard.cardID(fromRunURL: try #require(URL(string: "impact://open?card=x"))) == nil)
+        #expect(LiveCard.cardID(fromRunURL: try #require(URL(string: "https://run?card=x"))) == nil)
+        #expect(LiveCard.cardID(fromRunURL: try #require(URL(string: "impact://run?card="))) == nil)
+    }
+
+    @Test("Home wants Live Activities for the next two cards whose Now has not ended")
+    @MainActor func liveCards() throws {
+        let model = try HomeFixtures.sample(at: 9.8, calendar: losAngeles, today: sampleDate)
+        #expect(model.liveCards.map(\.cardID) == ["Design review", "Dentist"])
     }
 
     /// The states ImpactKit/AGENTS.md → UI documents for `-fixtureHour`, pinned so screenshots keep showing them.
