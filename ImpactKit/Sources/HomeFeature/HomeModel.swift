@@ -6,15 +6,18 @@ import Observation
 @Observable @MainActor
 public final class HomeModel {
     public private(set) var snapshot: HomeSnapshot
-    /// shortcut: fixed, so countdowns and phases do not move and `record` stamps Impacts with it; rebuild
-    /// `now` and the snapshot together on a schedule once live data arrives (roadmap step 7).
-    public let now: Date
+    /// The time the snapshot was built for; `update` moves it (live Home does every minute). `record` stamps
+    /// Impacts with it, so a stamp can be up to a minute early.
+    public private(set) var now: Date
     private(set) var log: ActionLog
-    private let events: [CalendarEvent]
+    private var events: [CalendarEvent]
     private let calendar: Calendar
     private let engine: ImpactEngine
+    /// Receives every recorded Impact after a new one, to store them.
+    private let saveImpacts: ([String: Date]) -> Void
 
-    public init(events: [CalendarEvent], now: Date, calendar: Calendar, log: ActionLog = ActionLog()) throws {
+    public init(events: [CalendarEvent], now: Date, calendar: Calendar, log: ActionLog = ActionLog(),
+                saveImpacts: @escaping ([String: Date]) -> Void = { _ in }) throws {
         let engine = try ImpactEngine()
         snapshot = Self.home(engine, events, now, calendar, log)
         self.now = now
@@ -22,12 +25,21 @@ public final class HomeModel {
         self.events = events
         self.calendar = calendar
         self.engine = engine
+        self.saveImpacts = saveImpacts
+    }
+
+    /// Rebuilds the snapshot for newly fetched events at a new time.
+    public func update(events: [CalendarEvent], now: Date) {
+        self.events = events
+        self.now = now
+        snapshot = Self.home(engine, events, now, calendar, log)
     }
 
     /// Records an action the system accepted (PRODUCT.md → Completion semantics); true when it recorded an Impact.
     func record(_ action: ImpactAction, on card: ImpactCard) -> Bool {
         let recorded = log.record(action, on: card, at: now)
         snapshot = Self.home(engine, events, now, calendar, log)
+        if recorded { saveImpacts(log.impacts) }
         return recorded
     }
 

@@ -19,6 +19,7 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 - One screen (P5): what Impact does, in one sentence, plus a **Connect Calendar** button.
 - Request full calendar access. The usage string says events are analyzed on device only.
 - If denied: explain what the app needs and link to Settings. No demo data in release builds (mock data is for previews and debug only).
+- Built in step 7, with Home refreshing from the calendar every minute, on calendar changes, and on return to the app.
 - No other permission here. Notifications and location are asked in context (PRODUCT.md → Permissions).
 - No goal setup here. After the first Impact, Home offers it once as a quiet row under the cards ("Set up to three goals for this year"); afterwards it is in Settings.
 
@@ -61,7 +62,7 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 - **Tomorrow morning** follows PRODUCT.md → Horizon.
 - Events that need nothing are counted but not listed; Home is not a calendar.
 - Tapping Next up opens the card's detail; its button runs the primary action in one tap.
-- Not built yet: goal-time and focus cards (steps 11–12); swiping to dismiss, which needs stored card state (step 7); the ring tap and the "Today" row from 18:00, with the daily review (step 13). Leave-by times are not drawn: rows and answers show the place, which stays the fallback when no route exists (PRODUCT.md → Card timeline). Nor is the empty state's "Next:" line (it needs events past the horizon, step 7).
+- Not built yet: goal-time and focus cards (steps 11–12); swiping to dismiss (step 7, next); the ring tap and the "Today" row from 18:00, with the daily review (step 13). Leave-by times are not drawn: rows and answers show the place, which stays the fallback when no route exists (PRODUCT.md → Card timeline). Nor is the empty state's "Next:" line (it needs events past the horizon, step 7). Typed addresses are not geocoded, so only events with a structured location (coordinates) get in-person cards.
 
 ### 3. Empty state
 

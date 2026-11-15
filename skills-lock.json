@@ -7,6 +7,12 @@
       "skillPath": "skills/apple-hig/SKILL.md",
       "computedHash": "afaaff1d44af251fbae66771d634e9ce6c41e00dc22932d1aae81c9447b5ac70"
     },
+    "eventkit": {
+      "source": "dpearson2699/swift-ios-skills",
+      "sourceType": "github",
+      "skillPath": "skills/eventkit/SKILL.md",
+      "computedHash": "e042af5dc598f6cf601ed2b5791125ad6407b18304658f9d7784c1c3c748ca2b"
+    },
     "swift-concurrency": {
       "source": "avdlee/swift-concurrency-agent-skill",
       "sourceType": "github",
