@@ -19,6 +19,9 @@ public struct HomeSnapshot: Sendable, Hashable {
     /// The Impact ring's segments: one per Impact today plus one per card still to do today.
     /// Expired cards drop out instead of counting as missed (P7).
     public let ringSegments: Int
+
+    /// Every card Home lists, in screen order.
+    public var cards: [ImpactCard] { [nextUp].compactMap(\.self) + laterToday + tomorrowMorning }
 }
 
 extension ImpactEngine {

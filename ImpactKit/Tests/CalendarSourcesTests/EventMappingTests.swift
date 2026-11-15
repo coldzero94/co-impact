@@ -36,7 +36,7 @@ private func structured(_ title: String?, at coordinate: (Double, Double)? = (37
         #expect(mapped.calendarKind == .regular && mapped.participation == .unknown && !mapped.isCanceled)
         #expect(!mapped.hasAttendees && !mapped.isUserAttendee && !mapped.isUserOrganizer && mapped.seriesID == nil)
         #expect(CalendarEvent(event { $0.isAllDay = true }).isAllDay)
-        #expect(CalendarEvent(event { $0.title = "  " }).title == "Untitled")
+        #expect(CalendarEvent(event { $0.title = "  " }).title == "")
     }
 
     @Test("A single event's ID is its item ID; a recurring occurrence's adds its date and names its series")

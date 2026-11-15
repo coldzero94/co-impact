@@ -77,8 +77,7 @@ public struct HomeView: View {
             // An open detail follows its card as Home refreshes, and closes once the card is gone (canceled,
             // changed, or expired), so no action runs on a stale card.
             guard let shown = selected else { return }
-            selected = ([snapshot.nextUp].compactMap(\.self) + snapshot.laterToday + snapshot.tomorrowMorning)
-                .first { $0.id == shown.id }
+            selected = snapshot.cards.first { $0.id == shown.id }
         }
     }
 

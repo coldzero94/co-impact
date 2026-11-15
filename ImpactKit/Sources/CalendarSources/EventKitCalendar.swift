@@ -70,13 +70,13 @@ extension CalendarEvent {
     /// synced as text) gives no in-person card; fill `geocodedPlace` once the owner settles geocoding.
     init(_ event: EKEvent) {
         let me = event.attendees?.first { $0.isCurrentUser }
-        let title = event.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         self.init(
-            // A moved occurrence is detached; some servers may keep the series' item ID for it.
+            // A moved occurrence is detached. On a local calendar it gets its own item ID (Platform facts); the
+            // date keeps IDs unique if a server keeps the series' item ID instead (unverified).
             id: Self.occurrenceID(item: event.calendarItemIdentifier, occurrence: event.occurrenceDate as Date?,
                                   recurring: event.hasRecurrenceRules || event.isDetached),
             calendarID: event.calendar?.calendarIdentifier ?? "",
-            title: title.isEmpty ? "Untitled" : title,
+            title: event.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "",
             start: event.startDate, end: event.endDate,
             calendarKind: EventKitCalendar.kind(event.calendar),
             isAllDay: event.isAllDay, isCanceled: event.status == .canceled,

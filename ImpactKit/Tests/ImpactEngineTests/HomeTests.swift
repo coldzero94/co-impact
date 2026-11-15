@@ -142,6 +142,21 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         #expect(ids(home.tomorrowMorning) == (shown ? ["T 8:30", "T 9:0"] : []))
     }
 
+    @Test("Cards lists Next up, later today, and tomorrow morning; a done card stays, an expired one leaves")
+    func cards() {
+        let events = mockDay + [event("Early sync", 9, 30)]
+        #expect(ids(home(events, at: at(9, 48)).cards) == ["Design review", "Early sync", "Dentist", "Town hall"])
+        let afterDone = home(events, at: at(10, 2), completed: ["Design review"])
+        #expect(ids(afterDone.cards).contains("Design review"))
+        #expect(!ids(home(events, at: at(19)).cards).contains("Design review"))
+    }
+
+    @Test("An untitled event's card reads Untitled; its Title fact keeps the calendar's empty title")
+    func untitled() throws {
+        let card = try #require(try ImpactEngine().card(for: event("", 10), now: at(9)))
+        #expect(card.title == "Untitled" && card.facts.first { $0.label == "Title" }?.value == "")
+    }
+
     @Test("The fetch horizon ends tomorrow at noon, and today ends at midnight")
     func horizon() {
         let (tomorrow, end) = ImpactEngine.horizon(now: at(19), calendar: calendar)
