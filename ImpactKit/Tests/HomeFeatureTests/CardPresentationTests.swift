@@ -94,32 +94,46 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
     @Test("A Live Activity carries the card's title, answer, primary action, and Now phase")
     func liveCard() throws {
         let zoom = try card(.onlineMeeting, link: "https://zoom.us/j/1")
-        let live = try #require(LiveCard(zoom))
+        let live = try #require(LiveCard(zoom, runToken: "secret"))
         #expect(live.cardID == zoom.id && live.title == zoom.title && live.answer == "Zoom link ready")
         #expect(live.symbol == "video.fill" && live.actionLabel == "Join meeting" && live.start == zoom.start)
         #expect(live.nowPhase == ImpactEngine.nowPhase(of: zoom))
     }
 
-    @Test("A run link names its card, whatever the ID holds; other links name none", arguments: [
+    @Test("A run link names its card, whatever the ID holds, only with Impact's token", arguments: [
         "AD37F411-AFC9@1800000000/x?y=1&z", "a+b%20c d#e", "회의 🗓️",
     ])
     func runLink(_ id: String) throws {
-        #expect(LiveCard.cardID(fromRunURL: LiveCard.runURL(cardID: id)) == id)
-        #expect(LiveCard.cardID(fromRunURL: try #require(URL(string: "impact://open?card=x"))) == nil)
-        #expect(LiveCard.cardID(fromRunURL: try #require(URL(string: "https://run?card=x"))) == nil)
-        #expect(LiveCard.cardID(fromRunURL: try #require(URL(string: "impact://run?card="))) == nil)
+        let link = LiveCard.runURL(cardID: id, token: "secret")
+        #expect(LiveCard.cardID(fromRunURL: link, token: "secret") == id && LiveCard.isRunURL(link))
+        #expect(LiveCard.cardID(fromRunURL: link, token: "guess") == nil)
+        #expect(LiveCard.cardID(fromRunURL: link, token: "") == nil)
+        let untokened = try #require(URL(string: "impact://run?card=x"))
+        #expect(LiveCard.cardID(fromRunURL: untokened, token: "secret") == nil && LiveCard.isRunURL(untokened))
+        #expect(LiveCard.cardID(fromRunURL: try #require(URL(string: "impact://open?card=x&token=secret")), token: "secret") == nil)
+        #expect(LiveCard.cardID(fromRunURL: try #require(URL(string: "https://run?card=x&token=secret")), token: "secret") == nil)
+        #expect(LiveCard.cardID(fromRunURL: try #require(URL(string: "impact://run?card=&token=secret")), token: "secret") == nil)
+    }
+
+    @Test("The run token is made once and kept")
+    func runToken() throws {
+        let suite = "impact-tests-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let first = RunToken.load(defaults)
+        #expect(!first.isEmpty && RunToken.load(defaults) == first)
     }
 
     @Test("A Live Activity's card survives the encoding the system stores it in, and stays equal")
     func liveCardCodable() throws {
-        let live = try #require(LiveCard(try card(.inPerson, place: clinic)))
+        let live = try #require(LiveCard(try card(.inPerson, place: clinic), runToken: "secret"))
         #expect(try JSONDecoder().decode(LiveCard.self, from: JSONEncoder().encode(live)) == live)
     }
 
     @Test("A sync requests only cards without an activity: at once inside their Now phase, else scheduled")
     func toRequest() throws {
-        let online = try #require(LiveCard(try card(.onlineMeeting, link: "https://zoom.us/j/1")))
-        let visit = try #require(LiveCard(try card(.inPerson, place: clinic)))
+        let online = try #require(LiveCard(try card(.onlineMeeting, link: "https://zoom.us/j/1"), runToken: "secret"))
+        let visit = try #require(LiveCard(try card(.inPerson, place: clinic), runToken: "secret"))
         // Both cards start at `start`; their Now phase starts 10 minutes before.
         let early = LiveCard.toRequest(wanted: [online, visit], existing: [visit], now: start.addingTimeInterval(-3_600))
         #expect(early.startNow.isEmpty && early.schedule == [online])
@@ -130,7 +144,7 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
     @Test("Home wants Live Activities for the next two cards whose Now has not ended")
     @MainActor func liveCards() throws {
         let model = try HomeFixtures.sample(at: 9.8, calendar: losAngeles, today: sampleDate)
-        #expect(model.liveCards.map(\.cardID) == ["Design review", "Dentist"])
+        #expect(model.liveCards(runToken: "secret").map(\.cardID) == ["Design review", "Dentist"])
     }
 
     /// The states ImpactKit/AGENTS.md → UI documents for `-fixtureHour`, pinned so screenshots keep showing them.

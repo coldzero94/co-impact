@@ -19,9 +19,11 @@ public struct LiveCard: Codable, Hashable, Sendable {
     public let start: Date
     /// When the activity starts and goes stale (`ImpactEngine.nowPhase`); it holds `start`.
     public let nowPhase: Range<Date>
+    /// The secret its run link carries, so only Impact's own activities can run a card's action.
+    public let runToken: String
 
     public init(cardID: String, title: String, answer: String, symbol: String, actionLabel: String, start: Date,
-                nowPhase: Range<Date>) {
+                nowPhase: Range<Date>, runToken: String) {
         assert(nowPhase.lowerBound <= start && start <= nowPhase.upperBound, "Now phase \(nowPhase) misses \(start)")
         self.cardID = cardID
         self.title = title
@@ -30,26 +32,31 @@ public struct LiveCard: Codable, Hashable, Sendable {
         self.actionLabel = actionLabel
         self.start = start
         self.nowPhase = nowPhase
+        self.runToken = runToken
     }
 
     /// The link the activity's action button opens: Impact, which runs the card's primary action. Apple documents
     /// no way for a system surface to open a meeting, Maps, or a call directly (research/system-surfaces.md).
-    public var runURL: URL { Self.runURL(cardID: cardID) }
+    public var runURL: URL { Self.runURL(cardID: cardID, token: runToken) }
 
-    public static func runURL(cardID: String) -> URL {
+    public static func runURL(cardID: String, token: String) -> URL {
         var components = URLComponents()
         components.scheme = "impact"
         components.host = "run"
-        components.queryItems = [URLQueryItem(name: "card", value: cardID)]
+        components.queryItems = [URLQueryItem(name: "card", value: cardID), URLQueryItem(name: "token", value: token)]
         guard let url = components.url else { preconditionFailure("No run URL for card \(cardID)") }
         return url
     }
 
-    /// The card a run URL names, or nil for any other URL.
-    public static func cardID(fromRunURL url: URL) -> String? {
-        guard url.scheme == "impact", url.host() == "run",
-              let id = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "card" })?.value,
-              !id.isEmpty else { return nil }
+    /// Whether the URL is a run link at all, with or without the right token.
+    public static func isRunURL(_ url: URL) -> Bool { url.scheme == "impact" && url.host() == "run" }
+
+    /// The card a run URL names when it carries `token`; nil for any other URL or token.
+    public static func cardID(fromRunURL url: URL, token: String) -> String? {
+        guard isRunURL(url), !token.isEmpty,
+              let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems,
+              items.first(where: { $0.name == "token" })?.value == token,
+              let id = items.first(where: { $0.name == "card" })?.value, !id.isEmpty else { return nil }
         return id
     }
 
