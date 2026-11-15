@@ -45,6 +45,8 @@ extension CalendarEvent {
     /// shortcut: no geocoding, so a typed address without a structured location gives no in-person card yet.
     init(_ event: EKEvent) {
         let me = event.attendees?.first { $0.isCurrentUser }
+        // A moved occurrence of a series is detached and may report no recurrence rules of its own.
+        let recurring = event.hasRecurrenceRules || event.isDetached
         let kind: CalendarKind = switch event.calendar?.type {
         case .subscription: .subscription
         case .birthday: .birthdays
@@ -58,7 +60,7 @@ extension CalendarEvent {
         }
         self.init(
             id: Self.occurrenceID(item: event.calendarItemIdentifier, occurrence: event.occurrenceDate as Date?,
-                                  recurring: event.hasRecurrenceRules),
+                                  recurring: recurring),
             calendarID: event.calendar?.calendarIdentifier ?? "",
             title: event.title ?? "",
             start: event.startDate, end: event.endDate,
@@ -67,7 +69,7 @@ extension CalendarEvent {
             hasAttendees: event.hasAttendees,
             isUserOrganizer: event.organizer?.isCurrentUser ?? false,
             isUserAttendee: me != nil,
-            seriesID: event.hasRecurrenceRules ? event.calendarItemIdentifier : nil,
+            seriesID: recurring ? event.calendarItemIdentifier : nil,
             location: event.location, url: event.url, notes: event.notes,
             structuredPlace: event.structuredLocation.flatMap { Place($0, location: event.location) }
         )

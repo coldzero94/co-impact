@@ -41,7 +41,12 @@ public struct LiveHome: View {
                 try? await Task.sleep(for: .seconds(60 - second))
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: EventKitCalendar.changed)) { _ in refresh() }
+        .task {
+            // Iterated on the main actor whichever thread posts it.
+            for await _ in NotificationCenter.default.notifications(named: EventKitCalendar.changed).map({ _ in }) {
+                refresh()
+            }
+        }
         .onChange(of: scenePhase) {
             guard scenePhase == .active else { return }
             access = EventKitCalendar.access // the user may have changed it in Settings
@@ -65,12 +70,8 @@ public struct LiveHome: View {
         guard access == .granted else { return }
         let now = Date.now
         let calendar = Calendar.autoupdatingCurrent
-        let today = calendar.startOfDay(for: now)
-        guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: today),
-              let horizonEnd = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: tomorrow) else {
-            preconditionFailure("\(calendar.identifier) cannot compute tomorrow noon from \(now)")
-        }
-        let events = calendarSource.events(from: today, to: horizonEnd)
+        let events = calendarSource.events(from: calendar.startOfDay(for: now),
+                                           to: ImpactEngine.horizon(now: now, calendar: calendar).end)
         if let model {
             model.update(events: events, now: now)
             return

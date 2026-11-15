@@ -32,10 +32,7 @@ extension ImpactEngine {
         suppressionRules: [SuppressionRule] = [], includedCalendarIDs: Set<String> = []
     ) -> HomeSnapshot {
         precondition(impactsToday >= 0, "impactsToday \(impactsToday) < 0")
-        guard let tomorrow = calendar.dateInterval(of: .day, for: now)?.end,
-              let tomorrowNoon = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: tomorrow) else {
-            preconditionFailure("\(calendar.identifier)/\(calendar.timeZone.identifier) cannot compute tomorrow or its noon from \(now)")
-        }
+        let (tomorrow, tomorrowNoon) = Self.horizon(now: now, calendar: calendar)
         let cards = { (events: [CalendarEvent]) in
             events.compactMap {
                 card(for: $0, now: now, suppressionRules: suppressionRules, includedCalendarIDs: includedCalendarIDs)
@@ -64,6 +61,16 @@ extension ImpactEngine {
             impactsToday: impactsToday,
             ringSegments: impactsToday + toDo.count
         )
+    }
+
+    /// The fetch horizon (PRODUCT.md → Horizon): events starting before `end` (tomorrow noon) can be listed;
+    /// `tomorrow` is where today ends. Callers fetch from the start of today to `end`.
+    public static func horizon(now: Date, calendar: Calendar) -> (tomorrow: Date, end: Date) {
+        guard let tomorrow = calendar.dateInterval(of: .day, for: now)?.end,
+              let noon = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: tomorrow) else {
+            preconditionFailure("\(calendar.identifier)/\(calendar.timeZone.identifier) cannot compute tomorrow or its noon from \(now)")
+        }
+        return (tomorrow, noon)
     }
 
     /// Soon or Now (PRODUCT.md → Card timeline).
