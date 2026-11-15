@@ -46,14 +46,35 @@ struct ImpactFile {
     func save(_ impacts: [String: Date]) throws {
         try JSONEncoder().encode(impacts).write(to: url, options: .atomic)
     }
+
+    /// The save function for Home, given what `load()` returned. It never writes over Impacts it has not read:
+    /// while they are unread it tries reading again on each save, merges once it can, and otherwise skips the
+    /// save. Each save writes every Impact, so one that fails is stored by the next that succeeds.
+    func saver(stored: [String: Date]?) -> ([String: Date]) -> Void {
+        var known = stored
+        return { impacts in
+            if known == nil { known = load() }
+            guard let earlier = known else {
+                homeLog.fault("Impacts not saved: the stored ones are still unreadable")
+                return
+            }
+            do {
+                try save(earlier.merging(impacts) { _, new in new })
+            } catch {
+                homeLog.fault("Could not save Impacts: \(error.logged, privacy: .public)")
+            }
+        }
+    }
 }
 
 let homeLog = Logger(subsystem: "io.github.coldzero94.impact", category: "home")
 
 extension Error {
-    /// The error's domain and code, which are safe to log publicly; the description may hold user data.
+    /// The error's domain and code, and its underlying error's (e.g. the POSIX cause), which are safe to log
+    /// publicly; descriptions may hold user data.
     var logged: String {
         let error = self as NSError
-        return "\(error.domain) \(error.code)"
+        let cause = (error.userInfo[NSUnderlyingErrorKey] as? NSError).map { " (\($0.domain) \($0.code))" } ?? ""
+        return "\(error.domain) \(error.code)\(cause)"
     }
 }

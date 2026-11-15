@@ -4,7 +4,7 @@ import os
 import SwiftUI
 
 /// The app outside debug fixtures (UX.md → Onboarding): asks for calendar access, then shows Home on the
-/// user's calendar, refreshed as ARCHITECTURE.md → Refresh and platform constraints lists.
+/// user's calendar, refreshed on the built triggers in ARCHITECTURE.md → Refresh and platform constraints.
 public struct LiveHome: View {
     @State private var access = EventKitCalendar.access
     @State private var calendarSource = EventKitCalendar()
@@ -89,7 +89,7 @@ public struct LiveHome: View {
             model.update(events: events, now: now)
             return
         }
-        // Storage never blocks Home: without a readable file, Impacts count until the app quits.
+        // Storage never blocks Home: if the file can't be created or read, Impacts count until the app quits.
         let file: ImpactFile?
         do {
             file = try ImpactFile.standard()
@@ -99,16 +99,8 @@ public struct LiveHome: View {
         }
         let stored = file?.load()
         do {
-            model = try HomeModel(events: events, now: now, calendar: calendar,
-                                  log: ActionLog(impacts: stored ?? [:])) { impacts in
-                guard let file, stored != nil else { return } // never overwrite a file that was not read
-                do {
-                    try file.save(impacts)
-                } catch {
-                    // Each save writes every Impact, so the next one that succeeds stores this one too.
-                    homeLog.fault("Could not save Impacts: \(error.logged, privacy: .public)")
-                }
-            }
+            model = try HomeModel(events: events, now: now, calendar: calendar, log: ActionLog(impacts: stored ?? [:]),
+                                  saveImpacts: file?.saver(stored: stored) ?? { _ in })
         } catch {
             homeLog.fault("Impact could not start: \(error.logged, privacy: .public)")
             startFailure = "Impact could not start: \(error.localizedDescription)"

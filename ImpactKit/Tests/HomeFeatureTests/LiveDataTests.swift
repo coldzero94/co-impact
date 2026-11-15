@@ -68,6 +68,22 @@ private func withFile(_ body: (ImpactFile) throws -> Void) throws {
         }
     }
 
+    @Test("The saver skips while stored Impacts are unreadable, then merges them in once they read")
+    func saverWaitsForStoredImpacts() throws {
+        try withFile { file in
+            try FileManager.default.createDirectory(at: file.url, withIntermediateDirectories: false)
+            let save = file.saver(stored: file.load())
+            save(["review": morning])
+            var isFolder: ObjCBool = false
+            #expect(FileManager.default.fileExists(atPath: file.url.path(), isDirectory: &isFolder) && isFolder.boolValue)
+
+            try FileManager.default.removeItem(at: file.url)
+            try file.save(["standup": morning.addingTimeInterval(-3_600)])
+            save(["review": morning])
+            #expect(file.load() == ["standup": morning.addingTimeInterval(-3_600), "review": morning])
+        }
+    }
+
     @Test("Recording saves every Impact once; an update moves the clock and keeps them")
     @MainActor func recordAndUpdate() throws {
         var saved: [[String: Date]] = []

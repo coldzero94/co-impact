@@ -258,7 +258,7 @@ AI is optional enrichment (P5, P6). Without Apple Intelligence the product is co
 
 | Permission | When it is asked | Without it |
 |------------|------------------|-----------|
-| Calendar (full access) | Onboarding, the only permission there. Full access also covers Block time; no second prompt | App explains why and links to Settings |
+| Calendar (full access) | Onboarding, the only permission there. Full access also covers Block time; no second prompt | App explains why and links to Settings; when access is restricted, it says so without a link |
 | Notifications | The first time a card reaches its Now phase while the app is open, or from the first card's detail | Live Activities and widgets still work |
 | Location (when in use) | The first time an in-person card appears: "To tell you when to leave" | In-person cards show Directions without a leave-by time |
 
@@ -303,7 +303,7 @@ AI is optional enrichment (P5, P6). Without Apple Intelligence the product is co
 | D9 | License | Not chosen yet | Open |
 | D10 | Home horizon | Today, plus Tomorrow morning (see Horizon) | Proposed |
 | D11 | Location permission | Ask in context on the first in-person card; work without it | Proposed |
-| D12 | Subscribed and shared calendars | Excluded by default; user's own events only. EventKit cannot tell a calendar shared with the user from their own, so a shared event without attendees can still get a card (ARCHITECTURE.md → Platform facts) | Proposed |
+| D12 | Subscribed and shared calendars | Excluded by default; user's own events only. EventKit marks no calendar as shared into the user's account (delegated accounts it does mark), so a shared event without attendees can still get a card (ARCHITECTURE.md → Platform facts) | Proposed |
 | D13 | Interruptions | One alert per card, plus one "Changed" alert | Proposed |
 | D14 | AI grounding | Max two next steps, each with a verbatim quote from notes | Proposed |
 | D15 | Directions app | Apple Maps. Korean users may prefer Naver Map or Kakao Map; decide after verifying MapKit routing in Korea | Open |

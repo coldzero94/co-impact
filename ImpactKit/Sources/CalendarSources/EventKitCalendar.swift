@@ -24,8 +24,8 @@ public enum CalendarAccess: Sendable {
 /// The user's calendar through EventKit: the fetch and normalize steps of ARCHITECTURE.md → Pipeline.
 @MainActor
 public final class EventKitCalendar {
-    /// Posted whenever the calendar database changes: other apps, this app's own saves, or a change of
-    /// access. Events fetched before it may be stale.
+    /// Posted whenever the calendar database changes: other processes (including account syncs), this app's
+    /// own saves, or a change of access. Events fetched before it may be stale.
     public static let changed = Notification.Name.EKEventStoreChanged
 
     private let store = EKEventStore()
@@ -40,8 +40,10 @@ public final class EventKitCalendar {
         return Self.access
     }
 
-    /// Occurrences in the range, recurring events expanded; nil without full access or without a calendar
-    /// Impact reads, so an empty result always means an empty range, never an unread one (hard rule 2).
+    /// Occurrences in the range, recurring events expanded; nil without full access or without a regular
+    /// calendar, so callers never mistake an unread calendar for an empty day (hard rule 2).
+    /// shortcut: checks regular calendars only; count opted-in calendars too once `includedCalendarIDs` has a
+    /// setting (D12).
     public func events(from start: Date, to end: Date) -> [CalendarEvent]? {
         guard Self.access == .granted,
               store.calendars(for: .event).contains(where: { Self.kind($0) == .regular }) else { return nil }
@@ -49,8 +51,8 @@ public final class EventKitCalendar {
             .map(CalendarEvent.init)
     }
 
-    /// Subscription and Birthdays calendars are not the user's own (PRODUCT.md → Exclusions, D12). A
-    /// subscription synced through iCloud is a CalDAV calendar marked subscribed.
+    /// Subscription and Birthdays calendars are not the user's own (PRODUCT.md → Exclusions, D12). A CalDAV
+    /// subscription (e.g. on iCloud) has type CalDAV and is marked subscribed.
     nonisolated static func kind(_ calendar: EKCalendar?) -> CalendarKind {
         kind(type: calendar?.type, isSubscribed: calendar?.isSubscribed ?? false)
     }
@@ -71,8 +73,8 @@ extension CalendarEvent {
     init(_ event: EKEvent) {
         let me = event.attendees?.first { $0.isCurrentUser }
         self.init(
-            // A moved occurrence is detached. On a local calendar it gets its own item ID (Platform facts); the
-            // date keeps IDs unique if a server keeps the series' item ID instead (unverified).
+            // A detached occurrence (moved or edited on its own) gets its own item ID on a local calendar
+            // (Platform facts); the date keeps IDs unique if a server keeps the series' item ID (unverified).
             id: Self.occurrenceID(item: event.calendarItemIdentifier, occurrence: event.occurrenceDate as Date?,
                                   recurring: event.hasRecurrenceRules || event.isDetached),
             calendarID: event.calendar?.calendarIdentifier ?? "",
