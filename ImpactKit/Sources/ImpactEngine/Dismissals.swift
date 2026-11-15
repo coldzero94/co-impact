@@ -16,8 +16,8 @@ public struct Dismissals: Sendable, Hashable, Codable {
     public var rules: [SuppressionRule] { occurrences.keys.map { .occurrence(id: $0) } + muted }
 
     /// "Not needed": hides this occurrence only, until the later of its end and two days after the dismissal.
-    /// Moved with its ID, it stays hidden for those two days at least, and comes back after them if it still lies
-    /// ahead (Home lists it, or names it as the next card). Callers prune whenever `now` moves, so a running app
+    /// Moved with its ID, it stays hidden for those two days at least, and comes back once the dismissal lapses if
+    /// it still lies ahead (Home lists it, or names it as the next card). Callers prune whenever `now` moves, so a running app
     /// behaves as after a relaunch.
     public mutating func dismiss(_ event: CalendarEvent, at date: Date) {
         occurrences[event.id] = max(event.end, date.addingTimeInterval(2 * 86_400))

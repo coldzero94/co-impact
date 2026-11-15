@@ -185,7 +185,8 @@ private func withFile(_ body: (ImpactFile) throws -> Void) throws {
         let review = try #require(model.snapshot.nextUp)
         model.update(events: [], now: morning.addingTimeInterval(60))
         model.dismiss(review, similar: true)
-        #expect(saved.count == 1 && model.snapshot.cards.isEmpty)
+        model.update(events: events, now: morning.addingTimeInterval(120))
+        #expect(saved.count == 1 && model.snapshot.cards.map(\.id) == ["review"])
     }
 
     @Test("A dismissed event moved past the lapse comes back in a running app, as after a relaunch")
@@ -221,7 +222,7 @@ private func withFile(_ body: (ImpactFile) throws -> Void) throws {
         store.save(dismissals)
         #expect(store.load(now: morning).occurrences.keys.sorted() == ["recent"])
 
-        // The key and format users have stored; if either changes, an update sets every user's dismissals aside.
+        // The key and format users have stored: a new format sets every user's dismissals aside, a new key loses them.
         let json = #"{"occurrences":{"recent":900000000},"muted":[{"title":{"calendarID":"work","title":"Review"}}]}"#
         defaults.set(Data(json.utf8), forKey: "dismissals")
         #expect(store.load(now: morning).muted == [.title(calendarID: "work", title: "Review")])

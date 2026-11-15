@@ -157,7 +157,7 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         #expect(card.title == "Untitled" && card.facts.first { $0.label == "Title" }?.value == "")
     }
 
-    @Test("Today ends at midnight, Tomorrow morning at noon, and the fetch six days later")
+    @Test("Today ends at midnight, Tomorrow morning at noon, and the fetch at the end of the sixth day after today")
     func horizon() {
         let (tomorrow, noon, end) = ImpactEngine.horizon(now: at(19), calendar: calendar)
         #expect(tomorrow == at(0, day: 1) && noon == at(12, day: 1) && end == at(0, day: 7))
@@ -173,6 +173,13 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         // The week ahead spans the change: it ends at midnight, not at 23:00 or 01:00.
         #expect(ImpactEngine.horizon(now: eve, calendar: calendar).end
                 == calendar.date(from: DateComponents(year: 2027, month: 3, day: 20))!)
+        // Where DST starts at midnight (Beirut, 2026-03-29), tomorrow starts at 01:00; the fetch still ends at
+        // midnight, so it never reaches today's weekday.
+        var beirut = Calendar(identifier: .gregorian)
+        beirut.timeZone = TimeZone(identifier: "Asia/Beirut")!
+        let saturday = beirut.date(from: DateComponents(year: 2026, month: 3, day: 28, hour: 19))!
+        #expect(ImpactEngine.horizon(now: saturday, calendar: beirut).end
+                == beirut.date(from: DateComponents(year: 2026, month: 4, day: 4))!)
     }
 
     @Test("With nothing listed left to do, the next card not done after them; none past the fetched week")
@@ -193,7 +200,14 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         let rest = home(events, at: at(19), completed: ["Today", "Tomorrow", "Done early"],
                         suppressionRules: [.occurrence(id: "Dismissed")])
         #expect(rest.next?.id == "Planning" && !ids(rest.cards).contains("Planning"))
-        #expect(home([event("Next week", 9, day: 7)], at: at(19)).next == nil)
+        // Nothing listed at all, the usual empty day: the week's first card, whatever order events arrive in.
+        #expect(home([event("Later", 9, day: 4), event("Sooner", 9, day: 2)], at: at(15)).next?.id == "Sooner")
+        // A third tomorrow-morning card is not listed, so it is next once the two listed ones are done.
+        let mornings = [event("M1", 8, day: 1), event("M2", 9, day: 1), event("M3", 10, day: 1), event("Later", 9, day: 3)]
+        #expect(home(mornings, at: at(19), completed: ["M1", "M2"]).next?.id == "M3")
+        // The fetched week ends at midnight: an event starting then is past it, one a minute earlier is not.
+        #expect(home([event("Day 7", 0, day: 7)], at: at(19)).next == nil)
+        #expect(home([event("Day 6", 23, 59, day: 6)], at: at(19)).next?.id == "Day 6")
     }
 
     @Test("Tomorrow morning ends before noon")

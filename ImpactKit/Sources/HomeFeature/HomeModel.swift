@@ -58,7 +58,7 @@ public final class HomeModel {
     func dismiss(_ card: ImpactCard, similar: Bool) {
         guard let event = events.first(where: { $0.id == card.id }) else {
             // A swipe on a card from before a refresh that dropped its event: nothing left to hide.
-            homeLog.error("Dismissed card \(card.id, privacy: .private) (similar: \(similar, privacy: .public)) has no event; the next refresh shows whether it is still listed")
+            homeLog.error("Dismissed card \(card.id, privacy: .private) (similar: \(similar, privacy: .public)) has no event in the current fetch: it is gone, or now has another ID")
             return
         }
         if similar {

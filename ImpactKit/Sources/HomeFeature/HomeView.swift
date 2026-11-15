@@ -344,6 +344,7 @@ extension Color {
 #Preview("09:48, Next up in 12 min") { sampleHome(hour: 9.8) }
 #Preview("08:00, done row, clock countdown") { sampleHome(hour: 8) }
 #Preview("19:00, nothing left, Tomorrow morning") { sampleHome(hour: 19) }
+#Preview("21:00, Next line, done Tomorrow morning") { sampleHome(hour: 21) }
 
 @MainActor @ViewBuilder
 private func sampleHome(hour: Double) -> some View {
