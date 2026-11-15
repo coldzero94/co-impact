@@ -210,7 +210,8 @@ private let productExamples: [Example] = [
     @Test("Organizer, attendees, and trimmed notes become calendar facts; blank notes give none")
     func detailFacts() throws {
         let card = try #require(engine.card(for: event {
-            $0.url = zoom; $0.organizer = "Mina Park"; $0.attendees = ["Joon Lee", "Sara Kim"]; $0.notes = "\n Agenda \n"
+            $0.url = zoom; $0.hasAttendees = true; $0.isUserAttendee = true
+            $0.organizer = "Mina Park"; $0.attendees = ["Joon Lee", "Sara Kim"]; $0.notes = "\n Agenda \n"
         }, now: now))
         let details = card.facts.filter { ["Organizer", "Attendee", "Notes"].contains($0.label) }
         #expect(details.map(\.value) == ["Mina Park", "Joon Lee", "Sara Kim", "Agenda"])

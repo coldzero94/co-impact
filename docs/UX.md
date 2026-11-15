@@ -63,7 +63,7 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 - **Tomorrow morning** follows PRODUCT.md → Horizon.
 - Events that need nothing are counted but not listed; Home is not a calendar.
 - Tapping Next up opens the card's detail; its button runs the primary action in one tap.
-- Not built yet: goal-time and focus cards (steps 11–12); the ring tap and the "Today" row from 18:00, with the daily review (step 13). Leave-by times are not drawn: rows and answers show the place, which stays the fallback when no route exists (PRODUCT.md → Card timeline). Locations without coordinates are not geocoded yet (after a device check of Apple's geocoding, step 10), so only events with a structured location with coordinates get in-person cards. Calendars shared into the user's account are not marked in EventKit, so their events without attendees can get cards; delegated accounts are not filtered yet (PRODUCT.md D12).
+- Not built yet: goal-time and focus cards (steps 11–12); the ring tap and the "Today" row from 18:00, with the daily review (step 13). Leave-by times are not drawn: rows and answers show the place, which stays the fallback when no route exists (PRODUCT.md → Card timeline). Locations without coordinates are not geocoded yet (after a device check of Apple's geocoding, step 10), so only events with a structured location with coordinates get in-person cards. Calendars shared into the user's account are not marked in EventKit, so their events without attendees can get cards; calendars of delegated accounts count as the user's own (PRODUCT.md D12).
 
 ### 3. Empty state
 
@@ -72,7 +72,7 @@ Often the most common state. It must feel like a result, not an error (P7).
 - "Nothing needs you today." with the summary line still showing ("0 of 4 events need you").
 - Below it, the next event that will need the user, if any: "Next: Mon 10:00 · Design review".
 - A goal-time card may still appear; an empty day is a good day for a goal.
-- Built in step 7: the line names the first card not done in the six days after today (within them a weekday names one day), and shows only when no listed card is left to do, since a listed one comes first.
+- Built in step 7: the line names the first card not done in the six days after today (within them a weekday names one day), and shows only when no listed card is left to do, since a listed one comes first. The owner approved this range and rule (2026-11-15).
 
 ### 4. Card detail
 
@@ -86,7 +86,7 @@ Often the most common state. It must feel like a result, not an error (P7).
 
 Executing an action marks it done in place (checkmark, subdued). No confirmation dialogs. Done actions stay tappable (to rejoin a meeting, for example). If the system cannot open an action, an alert says so ("Maps didn't open") and the action stays not done.
 
-Built in step 7: under the place, Details shows the organizer unless it is the user, the other people invited (not rooms or equipment; up to three names, else two and a count), and up to six lines of the notes, as the calendar has them. Not built yet: Suggested, with Foundation Models (step 8).
+Built in step 7: below any place, Details shows the organizer unless it is the user, the other people invited (not rooms or equipment; up to three names, else two and a count; a guest with neither a name nor an email address shows as "Unnamed guest", owner 2026-11-15), and up to six lines of the notes, as the calendar has them. Not built yet: Suggested, with Foundation Models (step 8).
 
 ### 5. Goal setup (sheet)
 
@@ -119,7 +119,7 @@ Built in step 7: under the place, Details shows the organizer unless it is the u
 - Swipe a card or row → **Not needed**. It disappears with no confirmation.
 - Same menu: **Don't suggest for events like this** (mutes the recurring series, or the same title on the same calendar).
 - Goal-time cards offer **Not now** instead (hidden until tomorrow).
-- Built in step 7: the swipe shows two icon buttons, Not needed (red, a full swipe runs it) and Don't suggest (gray); VoiceOver reads both as actions with their full names. A dismissed card still to do takes its ring segment with it; a done card's Impact still counts. Don't suggest on an untitled one-off only dismisses it, since nothing marks events like it. A moved occurrence of a muted series can still show, and a full sync can bring a muted series or a dismissed occurrence back (ARCHITECTURE.md → Platform facts). Not built yet: Not now (step 11), and a way to unmute in Settings.
+- Built in step 7: the swipe shows two icon buttons, Not needed (red, a full swipe runs it) and Don't suggest (gray); VoiceOver reads both as actions with their full names. A dismissed card still to do takes its ring segment with it; a done card's Impact still counts. Don't suggest on an untitled one-off only dismisses it, since nothing marks events like it (owner, 2026-11-15). A moved occurrence of a muted series can still show, and a full sync can bring a muted series or a dismissed occurrence back (ARCHITECTURE.md → Platform facts). Not built yet: Not now (step 11), and a way to unmute in Settings.
 
 ## Motion (Proposed)
 

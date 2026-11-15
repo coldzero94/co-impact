@@ -120,8 +120,9 @@ func summaryLine(cards: Int, eventsLeft: Int) -> String {
 }
 
 /// "Mina, Joon, and Sara", or with more than three people "Mina, Joon, and 4 others". English, like the rest of
-/// the app's text, whatever the region.
+/// the app's text, whatever the region. A guest the calendar names neither by name nor address is an unnamed guest.
 func attendeeLine(_ names: [String]) -> String {
+    let names = names.map { $0.isEmpty ? "Unnamed guest" : $0 }
     let list = ListFormatStyle<StringStyle, [String]>.list(type: .and).locale(Locale(identifier: "en_US"))
     guard names.count > 3 else { return names.formatted(list) }
     return (names.prefix(2) + ["\(names.count - 2) others"]).formatted(list)
