@@ -63,10 +63,11 @@ struct CardDetailView: View {
                     detail("Organized by \(organizer)", "person")
                 }
                 if !attendees.isEmpty {
-                    detail(attendeeLine(attendees), "person.2")
+                    detail(attendeeLine(attendees), "person.2").accessibilityLabel("Invited: " + attendeeLine(attendees))
                 }
                 if let notes {
                     detail(notes, "note.text").lineLimit(6).font(.subheadline).foregroundStyle(.secondary)
+                        .accessibilityLabel("Notes: " + notes)
                 }
             }
         }
@@ -81,6 +82,7 @@ struct CardDetailView: View {
             Image(systemName: symbol).frame(width: iconWidth).accessibilityHidden(true)
             Text(text)
         }
+        .accessibilityElement(children: .combine)
     }
 
     /// "10:00 – 11:00 AM · in 12 min": the time chip (UX.md → Card anatomy) only while it adds to the range.

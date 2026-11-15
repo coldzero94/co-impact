@@ -76,6 +76,7 @@ extension CalendarEvent {
     /// (ROADMAP.md, step 10).
     init(_ event: EKEvent) {
         let me = event.attendees?.first { $0.isCurrentUser }
+        let organizer = event.organizer
         self.init(
             // A moved occurrence gets its own item ID on a local calendar (Platform facts); the date keeps IDs
             // unique for other detached occurrences, or if a server keeps the series' item ID (unverified).
@@ -88,17 +89,17 @@ extension CalendarEvent {
             isAllDay: event.isAllDay, isCanceled: event.status == .canceled,
             participation: Self.participation(me?.participantStatus),
             hasAttendees: event.hasAttendees,
-            isUserOrganizer: event.organizer?.isCurrentUser ?? false,
+            isUserOrganizer: organizer?.isCurrentUser ?? false,
             isUserAttendee: me != nil,
             seriesID: event.hasRecurrenceRules ? event.calendarItemIdentifier : nil,
             location: event.location, url: event.url, notes: event.notes,
-            organizer: event.organizer.flatMap {
+            organizer: organizer.flatMap {
                 Self.organizerName(isCurrentUser: $0.isCurrentUser, name: $0.name, url: $0.url)
             },
             attendees: (event.attendees ?? [])
                 .filter {
                     Self.isOtherPerson(type: $0.participantType, isCurrentUser: $0.isCurrentUser, url: $0.url,
-                                       organizer: event.organizer?.url)
+                                       organizer: organizer?.url)
                 }
                 .compactMap { Self.displayName(name: $0.name, url: $0.url) },
             structuredPlace: event.structuredLocation.flatMap { Place($0, location: event.location) }
