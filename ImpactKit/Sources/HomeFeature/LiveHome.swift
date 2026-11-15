@@ -69,9 +69,11 @@ public struct LiveHome: View {
             runCardID = LiveCard.cardID(fromRunURL: url)
         }
         #if os(iOS)
-        .task(id: model?.liveCards) {
-            // Scheduled Live Activities carry each card's one Now alert (PRODUCT.md → Interruptions).
-            guard let model else { return }
+        // Scheduled Live Activities carry each card's one Now alert (PRODUCT.md → Interruptions). Synced each time
+        // Impact comes to the front, so one that failed (e.g. Live Activities were off) is tried again, and never
+        // from the background, where ActivityKit refuses new ones.
+        .task(id: scenePhase == .active ? model?.liveCards : nil) {
+            guard scenePhase == .active, let model else { return }
             await LiveActivities.sync(model.liveCards, now: model.now)
         }
         #endif

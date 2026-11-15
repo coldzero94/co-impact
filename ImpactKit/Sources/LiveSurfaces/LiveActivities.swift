@@ -26,6 +26,8 @@ public enum LiveActivities {
                 await activity.end(nil, dismissalPolicy: .immediate)
             }
         }
+        // A newer sync replaced this one while it waited: nothing below waits, so only one sync schedules.
+        guard !Task.isCancelled else { return }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
             liveLog.info("Live Activities are off for Impact; none scheduled")
             return
