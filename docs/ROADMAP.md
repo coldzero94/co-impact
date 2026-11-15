@@ -12,7 +12,7 @@ The one place for status. Update the row when a step starts or finishes, in the 
 | 6 | Impact Card detail, actions, and the Impact moment | Done (2026-11-09, PR #11) |
 | 7 | EventKit integration, with stored card state (done actions, Impacts, dismissals) | Done (2026-11-15, PRs #12–#16): calendar access, live Home, stored Impacts (a done card's primary action is restored from its Impact, other done actions are not stored), dismissals, the empty state's "Next:" line, and organizer, attendees, and notes in card detail |
 | 8 | Foundation Models enrichment | After step 9 (owner, 2026-11-15) |
-| 9 | Live Activities, widgets, Siri / Shortcuts | Next (owner moved it before step 8, 2026-11-15); design inputs: [research/system-surfaces.md](research/system-surfaces.md) |
+| 9 | Live Activities, widgets, Siri / Shortcuts | In progress (owner moved it before step 8, 2026-11-15): skills installed (PR #20); design inputs: [research/system-surfaces.md](research/system-surfaces.md) |
 | 10 | Background refresh, simulator and device testing | Includes: check whether synced notes carry HTML (card detail shows them as plain text); check Apple's geocoding with Korean addresses on a device, then geocode locations without coordinates (owner decision, 2026-11-15) and reword what promises the calendar never leaves the device (ARCHITECTURE.md → Privacy) |
 | 11 | Goals: goal setup, goal-time rules in the engine (with tests), Block time | |
 | 12 | Focus blocks: Start focus and its Live Activity | |
