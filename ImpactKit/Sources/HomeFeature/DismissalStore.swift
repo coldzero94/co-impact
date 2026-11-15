@@ -2,9 +2,10 @@ import Foundation
 import ImpactEngine
 import os
 
-/// Dismissals in `UserDefaults` (ARCHITECTURE.md → Storage): occurrence IDs, and the series IDs and titles the user
-/// muted.
-/// shortcut: standard defaults; they move to the App Group with the widgets (step 9).
+/// Dismissals in `UserDefaults` (ARCHITECTURE.md → Storage): occurrence IDs, and the calendar IDs with the series
+/// IDs or titles the user muted.
+/// shortcut: standard defaults, loaded once in the foreground and saved whole; when widgets or background refresh
+/// read them (steps 9–10), move them to the App Group and never save over data that could not be read.
 struct DismissalStore {
     let defaults: UserDefaults
     static let key = "dismissals"

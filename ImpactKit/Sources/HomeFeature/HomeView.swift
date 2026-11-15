@@ -166,9 +166,9 @@ public struct HomeView: View {
     }
 }
 
-/// Where Impact moments start (card frames, by card ID) and land (the ring), in global coordinates. A plain
-/// reference rather than SwiftUI state: scrolling moves these frames all the time, and nothing has to redraw
-/// for that.
+/// Where Impact moments start (card frames, by card ID) and land (the ring), in global coordinates. A
+/// non-observable reference: scrolling moves these frames all the time and writing them redraws nothing;
+/// `@State` only keeps the instance alive.
 @MainActor
 private final class MomentFrames {
     var cards: [String: CGRect] = [:]
@@ -306,7 +306,7 @@ struct CardRow: View {
         .padding(.vertical, 15)
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(.rect)
-        .alignmentGuide(.listRowSeparatorLeading) { _ in 16 } // separators start at the row's text, as before
+        .alignmentGuide(.listRowSeparatorLeading) { _ in 16 } // separators start at the row's time
         .accessibilityElement(children: .combine)
     }
 }

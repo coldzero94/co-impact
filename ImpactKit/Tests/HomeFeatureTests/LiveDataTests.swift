@@ -123,28 +123,44 @@ private func withFile(_ body: (ImpactFile) throws -> Void) throws {
         #expect(saved == ["review": morning, "standup": morning.addingTimeInterval(-3_600), "sync": morning.addingTimeInterval(-60)])
     }
 
-    @Test("Dismissing hides the card and its ring segment, stores the change, and survives an update")
-    @MainActor func dismiss() throws {
+    @Test("Not needed hides the card and its ring segment, is stored, and survives an update")
+    @MainActor func notNeeded() throws {
         var saved: [Dismissals] = []
-        var weekly = meeting("standup-mon", at: morning.addingTimeInterval(600))
-        weekly.seriesID = "standup"
-        let tuesday = { var next = weekly; next.id = "standup-tue"; next.start += 86_400; next.end += 86_400; return next }()
-        let events = [weekly, meeting("review", at: morning.addingTimeInterval(3_600))]
+        let events = [meeting("standup", at: morning.addingTimeInterval(600)), meeting("review", at: morning.addingTimeInterval(3_600))]
         let model = try HomeModel(events: events, now: morning, calendar: losAngeles, saveDismissals: { saved.append($0) })
         #expect(model.snapshot.ringSegments == 2)
-
         model.dismiss(try #require(model.snapshot.nextUp), similar: false)
         #expect(model.snapshot.cards.map(\.id) == ["review"] && model.snapshot.ringSegments == 1)
-        #expect(saved.last?.occurrences == ["standup-mon": morning.addingTimeInterval(2 * 86_400)])
+        #expect(saved.last?.occurrences == ["standup": morning.addingTimeInterval(2 * 86_400)])
         model.update(events: events, now: morning.addingTimeInterval(60))
         #expect(model.snapshot.cards.map(\.id) == ["review"])
+    }
 
-        let muted = try HomeModel(events: [weekly, tuesday], now: morning.addingTimeInterval(13 * 3_600), calendar: losAngeles,
+    @Test("Don't suggest mutes the series: tonight's and tomorrow's occurrences both leave")
+    @MainActor func muteSeries() throws {
+        var saved: [Dismissals] = []
+        let evening = morning.addingTimeInterval(10 * 3_600) // 19:00
+        var tonight = meeting("sync-mon", at: evening.addingTimeInterval(1_800))
+        tonight.seriesID = "sync"
+        var tomorrow = tonight
+        tomorrow.id = "sync-tue"
+        tomorrow.start = morning.addingTimeInterval(86_400)
+        tomorrow.end = tomorrow.start.addingTimeInterval(3_600)
+        let model = try HomeModel(events: [tonight, tomorrow], now: evening, calendar: losAngeles,
                                   saveDismissals: { saved.append($0) })
+        #expect(model.snapshot.cards.map(\.id) == ["sync-mon", "sync-tue"])
         model.dismiss(try #require(model.snapshot.nextUp), similar: true)
-        #expect(saved.last?.muted == [.title(calendarID: "work", title: "review")])
-        muted.dismiss(try #require(muted.snapshot.cards.first), similar: true)
-        #expect(muted.snapshot.cards.isEmpty && saved.last?.muted == [.series(calendarID: "work", seriesID: "standup")])
+        #expect(model.snapshot.cards.isEmpty && saved.last?.muted == [.series(calendarID: "work", seriesID: "sync")])
+    }
+
+    @Test("Stored dismissals hide their cards from the first snapshot")
+    @MainActor func startsWithStoredDismissals() throws {
+        var dismissals = Dismissals()
+        let events = [meeting("standup", at: morning.addingTimeInterval(600)), meeting("review", at: morning.addingTimeInterval(3_600))]
+        dismissals.dismiss(events[0], at: morning.addingTimeInterval(-60))
+        dismissals.mute(like: events[1], at: morning.addingTimeInterval(-60))
+        let model = try HomeModel(events: events, now: morning, calendar: losAngeles, dismissals: dismissals)
+        #expect(model.snapshot.cards.isEmpty)
     }
 
     @Test("A dismissed event moved past the lapse comes back in a running app, as after a relaunch")
@@ -152,9 +168,16 @@ private func withFile(_ body: (ImpactFile) throws -> Void) throws {
         var event = meeting("review", at: morning.addingTimeInterval(3_600))
         let model = try HomeModel(events: [event], now: morning, calendar: losAngeles)
         model.dismiss(try #require(model.snapshot.nextUp), similar: false)
-        // Moved, same ID, to three days later; seen the evening before, after the two-day lapse.
+        // Moved, same ID, to three days later.
         event.start += 3 * 86_400
         event.end += 3 * 86_400
+        // Moved to tomorrow morning first: still hidden while the dismissal holds.
+        var soon = event
+        soon.start = morning.addingTimeInterval(86_400)
+        soon.end = soon.start.addingTimeInterval(3_600)
+        model.update(events: [soon], now: morning.addingTimeInterval(10 * 3_600))
+        #expect(model.snapshot.cards.isEmpty)
+        // Seen the evening before its new day, after the two-day lapse: it comes back.
         let eve = morning.addingTimeInterval(2 * 86_400 + 10 * 3_600)
         model.update(events: [event], now: eve)
         #expect(model.snapshot.tomorrowMorning.map(\.id) == ["review"])

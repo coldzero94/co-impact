@@ -63,7 +63,7 @@ private func hybridCard() throws -> ImpactCard {
     }
 
     @Test("Restoring stored Impacts keeps each card's earlier stamp")
-    func restoreKeepsFirst() throws {
+    func restoreKeepsEarlier() throws {
         let card = try hybridCard()
         var log = ActionLog()
         log.record(try #require(card.primaryAction), on: card, at: start)

@@ -1,6 +1,7 @@
 import Foundation
 import ImpactEngine
 import Observation
+import os
 
 /// Home's state: the fetched events, the clock, the action log, and dismissals, with the snapshot built from them.
 @Observable @MainActor
@@ -16,7 +17,7 @@ public final class HomeModel {
     private var dismissals: Dismissals
     /// Receives every Impact after one is recorded or restored, to store them.
     private let saveImpacts: ([String: Date]) -> Void
-    /// Receives the dismissals after each change, to store them.
+    /// Receives the dismissals after each dismissal, to store them.
     private let saveDismissals: (Dismissals) -> Void
 
     public init(events: [CalendarEvent], now: Date, calendar: Calendar, log: ActionLog = ActionLog(),
@@ -24,13 +25,13 @@ public final class HomeModel {
                 saveImpacts: @escaping ([String: Date]) -> Void = { _ in },
                 saveDismissals: @escaping (Dismissals) -> Void = { _ in }) throws {
         let engine = try ImpactEngine()
-        snapshot = Self.home(engine, events, now, calendar, log, dismissals)
+        snapshot = Self.home(engine, events, now, calendar, log, dismissals.pruned(now: now))
         self.now = now
         self.log = log
         self.events = events
         self.calendar = calendar
         self.engine = engine
-        self.dismissals = dismissals
+        self.dismissals = dismissals.pruned(now: now)
         self.saveImpacts = saveImpacts
         self.saveDismissals = saveDismissals
     }
@@ -52,11 +53,16 @@ public final class HomeModel {
     }
 
     /// "Not needed" hides this card's occurrence; with `similar`, "Don't suggest for events like this" mutes its
-    /// series or title too (UX.md → Dismissing). The card leaves Home at once and its ring segment with it.
+    /// series or title instead, which hides this occurrence as well (UX.md → Dismissing). The card leaves Home at
+    /// once; a card still to do takes its ring segment with it, while a done card's Impact still counts.
     func dismiss(_ card: ImpactCard, similar: Bool) {
-        guard let event = events.first(where: { $0.id == card.id }) else { return }
+        guard let event = events.first(where: { $0.id == card.id }) else {
+            // A swipe on a card from before a refresh that dropped its event: nothing left to hide.
+            homeLog.error("Dismissed a card with no event; the next refresh shows whether it is still listed")
+            return
+        }
         if similar {
-            dismissals.mute(like: event)
+            dismissals.mute(like: event, at: now)
         } else {
             dismissals.dismiss(event, at: now)
         }

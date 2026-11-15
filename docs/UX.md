@@ -118,7 +118,7 @@ Not built yet: Details shows the place only; organizer, attendees, and the notes
 - Swipe a card or row → **Not needed**. It disappears with no confirmation.
 - Same menu: **Don't suggest for events like this** (mutes the recurring series, or the same title on the same calendar).
 - Goal-time cards offer **Not now** instead (hidden until tomorrow).
-- Built in step 7: the swipe shows two icon buttons, Not needed (red, a full swipe runs it) and Don't suggest (gray); VoiceOver reads both as actions with their full names. A dismissed card's ring segment disappears with it. A muted series can come back after its organizer moves one occurrence or a full sync changes its ID (ARCHITECTURE.md → Platform facts). Not built yet: Not now (step 11), and a way to unmute in Settings.
+- Built in step 7: the swipe shows two icon buttons, Not needed (red, a full swipe runs it) and Don't suggest (gray); VoiceOver reads both as actions with their full names. A dismissed card still to do takes its ring segment with it; a done card's Impact still counts. Don't suggest on an untitled one-off only dismisses it, since nothing marks events like it. A moved occurrence of a muted series can still show, and a full sync can bring a muted series or a dismissed occurrence back (ARCHITECTURE.md → Platform facts). Not built yet: Not now (step 11), and a way to unmute in Settings.
 
 ## Motion (Proposed)
 
