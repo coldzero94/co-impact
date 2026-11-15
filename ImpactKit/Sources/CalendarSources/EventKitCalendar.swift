@@ -45,8 +45,6 @@ extension CalendarEvent {
     /// shortcut: no geocoding, so a typed address without a structured location gives no in-person card yet.
     init(_ event: EKEvent) {
         let me = event.attendees?.first { $0.isCurrentUser }
-        // A moved occurrence of a series is detached and may report no recurrence rules of its own.
-        let recurring = event.hasRecurrenceRules || event.isDetached
         let kind: CalendarKind = switch event.calendar?.type {
         case .subscription: .subscription
         case .birthday: .birthdays
@@ -60,7 +58,7 @@ extension CalendarEvent {
         }
         self.init(
             id: Self.occurrenceID(item: event.calendarItemIdentifier, occurrence: event.occurrenceDate as Date?,
-                                  recurring: recurring),
+                                  recurring: event.hasRecurrenceRules),
             calendarID: event.calendar?.calendarIdentifier ?? "",
             title: event.title ?? "",
             start: event.startDate, end: event.endDate,
@@ -69,7 +67,7 @@ extension CalendarEvent {
             hasAttendees: event.hasAttendees,
             isUserOrganizer: event.organizer?.isCurrentUser ?? false,
             isUserAttendee: me != nil,
-            seriesID: recurring ? event.calendarItemIdentifier : nil,
+            seriesID: event.hasRecurrenceRules ? event.calendarItemIdentifier : nil,
             location: event.location, url: event.url, notes: event.notes,
             structuredPlace: event.structuredLocation.flatMap { Place($0, location: event.location) }
         )
@@ -77,8 +75,9 @@ extension CalendarEvent {
 
     /// One ID per occurrence: a recurring series shares its item ID, so its occurrences add their original
     /// date, which stays put when one occurrence is moved.
-    /// shortcut: `calendarItemIdentifier` can change after a full sync (ARCHITECTURE.md → Platform facts),
-    /// and then a done card shows as not done again.
+    /// shortcut: the item ID changes after a full sync, and a moved occurrence gets an item ID of its own with
+    /// no recurrence rules (ARCHITECTURE.md → Platform facts), so after either a done card shows as not done
+    /// again, and a moved occurrence is not part of its series' ID.
     static func occurrenceID(item: String, occurrence: Date?, recurring: Bool) -> String {
         guard recurring, let occurrence else { return item }
         return "\(item)@\(Int(occurrence.timeIntervalSince1970))"
