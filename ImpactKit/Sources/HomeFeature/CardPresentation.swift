@@ -58,7 +58,7 @@ extension ActionKind {
         }
     }
 
-    /// Replaces the label once the action ran (UX.md → Card anatomy).
+    /// Replaces the label once the action is marked done (UX.md → Card anatomy).
     var doneLabel: String {
         switch self {
         case .joinMeeting: "Joined"

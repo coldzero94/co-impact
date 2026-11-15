@@ -1,5 +1,6 @@
 import CalendarSources
 import ImpactEngine
+import LiveSurfaces
 import os
 import SwiftUI
 
@@ -16,6 +17,8 @@ public struct LiveHome: View {
     @State private var noCalendars = false
     @State private var startFailure: String?
     @State private var requestFailed = false
+    /// A Live Activity's button opened Impact to run this card's primary action.
+    @State private var runCardID: String?
     @Environment(\.scenePhase) private var scenePhase
 
     public init() {}
@@ -27,7 +30,7 @@ public struct LiveHome: View {
                 if noCalendars {
                     NoCalendars()
                 } else if let model {
-                    HomeView(model: model)
+                    HomeView(model: model, runCardID: $runCardID)
                 } else if let startFailure {
                     Text(startFailure).padding()
                 } else {
@@ -58,10 +61,40 @@ public struct LiveHome: View {
             }
         }
         .onChange(of: scenePhase) {
+            // A run link waits only while Impact is coming to the front, never for a later visit.
+            if scenePhase == .background { runCardID = nil }
             guard scenePhase == .active else { return }
             access = EventKitCalendar.access // the user may have changed it in Settings
             refresh()
         }
+        .onOpenURL { url in
+            guard let id = LiveCard.cardID(fromRunURL: url) else { return }
+            // A Live Activity's button can resume Impact from hours ago: bring Home to the present first, so the
+            // action counts at the time it runs and finds the card as the calendar has it now.
+            refresh()
+            guard model != nil, !noCalendars else {
+                homeLog.notice("A Live Activity's run link arrived while Home cannot show; dropped")
+                return
+            }
+            runCardID = id
+        }
+        #if os(iOS)
+        // Scheduled Live Activities carry each card's one Now alert (PRODUCT.md → Interruptions). Unwanted ones end
+        // as soon as the wanted cards change, in front or not; missing ones are requested each time Impact comes to
+        // the front (so one that failed, e.g. while Live Activities were off, is tried again), never from the
+        // background, where ActivityKit refuses them.
+        .task(id: LiveSync(cards: wantedLiveCards, inFront: scenePhase == .active)) {
+            guard let cards = wantedLiveCards else { return }
+            await LiveActivities.sync(cards, request: scenePhase == .active)
+        }
+        #endif
+    }
+
+    /// The Live Activities to keep: none once Impact cannot read the calendar (so none starts for an event it no
+    /// longer sees), and nil (leave them be) until the first refresh has built Home.
+    private var wantedLiveCards: [LiveCard]? {
+        guard access == .granted, !noCalendars else { return [] }
+        return model?.liveCards
     }
 
     private func connect() async {
@@ -225,3 +258,10 @@ private struct MessageScreen<Message: View, Action: View>: View {
 #Preview("Access restricted") { AccessNeeded(restricted: true) }
 #Preview("No calendars") { NoCalendars() }
 #endif
+
+/// When live Home syncs Live Activities: whenever the wanted cards change, and whenever Impact enters or leaves
+/// the front.
+private struct LiveSync: Equatable {
+    let cards: [LiveCard]?
+    let inFront: Bool
+}

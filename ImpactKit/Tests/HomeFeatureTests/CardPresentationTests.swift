@@ -1,6 +1,7 @@
 import Foundation
 @testable import HomeFeature
 import ImpactEngine
+import LiveSurfaces
 import Testing
 
 private let start = Date(timeIntervalSince1970: 1_800_000_000)
@@ -88,6 +89,48 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         event.notes = nil; event.organizer = nil; event.attendees = []
         let bare = try #require(try ImpactEngine().card(for: event, now: start.addingTimeInterval(-3_600)))
         #expect(bare.organizer == nil && bare.attendees.isEmpty && bare.notes == nil)
+    }
+
+    @Test("A Live Activity carries the card's title, answer, primary action, and Now phase")
+    func liveCard() throws {
+        let zoom = try card(.onlineMeeting, link: "https://zoom.us/j/1")
+        let live = try #require(LiveCard(zoom))
+        #expect(live.cardID == zoom.id && live.title == zoom.title && live.answer == "Zoom link ready")
+        #expect(live.symbol == "video.fill" && live.actionLabel == "Join meeting" && live.start == zoom.start)
+        #expect(live.nowPhase == ImpactEngine.nowPhase(of: zoom))
+    }
+
+    @Test("A run link names its card, whatever the ID holds; other links name none", arguments: [
+        "AD37F411-AFC9@1800000000/x?y=1&z", "a+b%20c d#e", "회의 🗓️",
+    ])
+    func runLink(_ id: String) throws {
+        #expect(LiveCard.cardID(fromRunURL: LiveCard.runURL(cardID: id)) == id)
+        #expect(LiveCard.cardID(fromRunURL: try #require(URL(string: "impact://open?card=x"))) == nil)
+        #expect(LiveCard.cardID(fromRunURL: try #require(URL(string: "https://run?card=x"))) == nil)
+        #expect(LiveCard.cardID(fromRunURL: try #require(URL(string: "impact://run?card="))) == nil)
+    }
+
+    @Test("A Live Activity's card survives the encoding the system stores it in, and stays equal")
+    func liveCardCodable() throws {
+        let live = try #require(LiveCard(try card(.inPerson, place: clinic)))
+        #expect(try JSONDecoder().decode(LiveCard.self, from: JSONEncoder().encode(live)) == live)
+    }
+
+    @Test("A sync requests only cards without an activity: at once inside their Now phase, else scheduled")
+    func toRequest() throws {
+        let online = try #require(LiveCard(try card(.onlineMeeting, link: "https://zoom.us/j/1")))
+        let visit = try #require(LiveCard(try card(.inPerson, place: clinic)))
+        // Both cards start at `start`; their Now phase starts 10 minutes before.
+        let early = LiveCard.toRequest(wanted: [online, visit], existing: [visit], now: start.addingTimeInterval(-3_600))
+        #expect(early.startNow.isEmpty && early.schedule == [online])
+        let inNow = LiveCard.toRequest(wanted: [online, visit], existing: [], now: start.addingTimeInterval(-600))
+        #expect(inNow.startNow == [online, visit] && inNow.schedule.isEmpty)
+    }
+
+    @Test("Home wants Live Activities for the next two cards whose Now has not ended")
+    @MainActor func liveCards() throws {
+        let model = try HomeFixtures.sample(at: 9.8, calendar: losAngeles, today: sampleDate)
+        #expect(model.liveCards.map(\.cardID) == ["Design review", "Dentist"])
     }
 
     /// The states ImpactKit/AGENTS.md → UI documents for `-fixtureHour`, pinned so screenshots keep showing them.
