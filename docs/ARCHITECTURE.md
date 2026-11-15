@@ -93,7 +93,7 @@ iOS does not let an app run whenever it wants. The engine runs when:
 
 Consequence: results must be **scheduled ahead** at analysis time (notifications, widget timeline entries, scheduled Live Activities). If the user does not open the app for days, newly added events may not be analyzed. This is accepted for the MVP.
 
-Live Activities are started **without a server** by scheduling them at analysis time with `Activity.request(..., start: Date)` (iOS 26+). ActivityKit push-to-start needs APNs from a server and is out of scope.
+Live Activities are started **without a server** by scheduling them at analysis time with `Activity.request(..., pushType: nil, ..., start: Date)` (iOS 26+). ActivityKit push-to-start and push updates need APNs from a server and are out of scope. The `activitykit` skill's examples pass `.token` or `.channel` and its review checklist expects push tokens sent to a server; neither applies here (hard rule 1).
 
 ## Foundation Models
 
