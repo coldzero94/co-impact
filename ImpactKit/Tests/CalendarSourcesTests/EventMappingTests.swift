@@ -89,6 +89,8 @@ private func structured(_ title: String?, at coordinate: (Double, Double)? = (37
         let mina = try #require(URL(string: "mailto:mina@example.com"))
         #expect(CalendarEvent.organizerName(isCurrentUser: false, name: "Mina Park", url: mina) == "Mina Park")
         #expect(CalendarEvent.organizerName(isCurrentUser: true, name: "Mina Park", url: mina) == nil)
+        // An organizer with neither a name nor an email address is still an organizer, shown as an unnamed guest.
+        #expect(CalendarEvent.organizerName(isCurrentUser: false, name: nil, url: try #require(URL(string: "urn:uuid:x"))) == "")
     }
 
     @Test("A participant shows by name, else by email address, else as empty")
