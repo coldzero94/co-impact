@@ -42,12 +42,17 @@ public struct HomeView: View {
                         .id(next.id)
                         .dismissible { model.dismiss(next, similar: $0) }
                 } else {
-                    // shortcut: no "Next:" line until events past the horizon arrive (roadmap step 7).
-                    Text("Nothing needs you today.")
-                        .font(.title3.weight(.semibold))
-                        .padding(20)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.card, in: .rect(cornerRadius: 24))
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Nothing needs you today.")
+                            .font(.title3.weight(.semibold))
+                        if let next = snapshot.next {
+                            Text("Next: \(next.start, format: .dateTime.weekday(.abbreviated).hour().minute()) · \(next.title)")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(20)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.card, in: .rect(cornerRadius: 24))
                 }
             } header: {
                 // A header, not a row: rows clip the large title's first glyph at the cell's edge.
@@ -339,6 +344,7 @@ extension Color {
 #Preview("09:48, Next up in 12 min") { sampleHome(hour: 9.8) }
 #Preview("08:00, done row, clock countdown") { sampleHome(hour: 8) }
 #Preview("19:00, nothing left, Tomorrow morning") { sampleHome(hour: 19) }
+#Preview("21:00, Next line, done Tomorrow morning") { sampleHome(hour: 21) }
 
 @MainActor @ViewBuilder
 private func sampleHome(hour: Double) -> some View {

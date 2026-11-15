@@ -157,19 +157,57 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         #expect(card.title == "Untitled" && card.facts.first { $0.label == "Title" }?.value == "")
     }
 
-    @Test("The fetch horizon ends tomorrow at noon, and today ends at midnight")
+    @Test("Today ends at midnight, Tomorrow morning at noon, and the fetch at the end of the sixth day after today")
     func horizon() {
-        let (tomorrow, end) = ImpactEngine.horizon(now: at(19), calendar: calendar)
-        #expect(tomorrow == at(0, day: 1) && end == at(12, day: 1))
+        let (tomorrow, noon, end) = ImpactEngine.horizon(now: at(19), calendar: calendar)
+        #expect(tomorrow == at(0, day: 1) && noon == at(12, day: 1) && end == at(0, day: 7))
         // On 2027-03-14 clocks spring forward at 02:00 in Los Angeles, so that day is 23 hours long.
         let springForward = calendar.date(from: DateComponents(year: 2027, month: 3, day: 14, hour: 19))!
-        let (dstTomorrow, dstEnd) = ImpactEngine.horizon(now: springForward, calendar: calendar)
+        let (dstTomorrow, dstNoon, _) = ImpactEngine.horizon(now: springForward, calendar: calendar)
         #expect(dstTomorrow == calendar.date(from: DateComponents(year: 2027, month: 3, day: 15))!)
-        #expect(dstEnd == calendar.date(from: DateComponents(year: 2027, month: 3, day: 15, hour: 12))!)
+        #expect(dstNoon == calendar.date(from: DateComponents(year: 2027, month: 3, day: 15, hour: 12))!)
         // The evening before, tomorrow is the short day: noon is 11 hours after midnight, not 12.
         let eve = calendar.date(from: DateComponents(year: 2027, month: 3, day: 13, hour: 19))!
-        #expect(ImpactEngine.horizon(now: eve, calendar: calendar).end
+        #expect(ImpactEngine.horizon(now: eve, calendar: calendar).noon
                 == calendar.date(from: DateComponents(year: 2027, month: 3, day: 14, hour: 12))!)
+        // The week ahead spans the change: it ends at midnight, not at 23:00 or 01:00.
+        #expect(ImpactEngine.horizon(now: eve, calendar: calendar).end
+                == calendar.date(from: DateComponents(year: 2027, month: 3, day: 20))!)
+        // Where DST starts at midnight (Beirut, 2026-03-29), tomorrow starts at 01:00; the fetch still ends at
+        // midnight, so it never reaches today's weekday.
+        var beirut = Calendar(identifier: .gregorian)
+        beirut.timeZone = TimeZone(identifier: "Asia/Beirut")!
+        let saturday = beirut.date(from: DateComponents(year: 2026, month: 3, day: 28, hour: 19))!
+        #expect(ImpactEngine.horizon(now: saturday, calendar: beirut).end
+                == beirut.date(from: DateComponents(year: 2026, month: 4, day: 4))!)
+    }
+
+    @Test("With nothing listed left to do, the next card not done after them; none past the fetched week")
+    func next() {
+        let events = [
+            event("Today", 10),
+            event("Tomorrow", 9, day: 1),
+            event("Room only", 10, day: 2) { $0.location = "회의실 3A" },
+            event("Dismissed", 11, day: 2),
+            event("Done early", 12, day: 2),
+            event("Planning", 13, day: 2),
+        ]
+        #expect(home(events, at: at(9)).next == nil)
+        // Today's card is done but still listed, so Tomorrow morning is hidden and its card comes next.
+        #expect(home(events, at: at(10, 5), completed: ["Today"]).next?.id == "Tomorrow")
+        // From 18:00 tomorrow's card is listed: while it is to do there is no next.
+        #expect(home(events, at: at(19), completed: ["Today"]).next == nil)
+        let rest = home(events, at: at(19), completed: ["Today", "Tomorrow", "Done early"],
+                        suppressionRules: [.occurrence(id: "Dismissed")])
+        #expect(rest.next?.id == "Planning" && !ids(rest.cards).contains("Planning"))
+        // Nothing listed at all, the usual empty day: the week's first card, whatever order events arrive in.
+        #expect(home([event("Later", 9, day: 4), event("Sooner", 9, day: 2)], at: at(15)).next?.id == "Sooner")
+        // A third tomorrow-morning card is not listed, so it is next once the two listed ones are done.
+        let mornings = [event("M1", 8, day: 1), event("M2", 9, day: 1), event("M3", 10, day: 1), event("Later", 9, day: 3)]
+        #expect(home(mornings, at: at(19), completed: ["M1", "M2"]).next?.id == "M3")
+        // The fetched week ends at midnight: an event starting then is past it, one a minute earlier is not.
+        #expect(home([event("Day 7", 0, day: 7)], at: at(19)).next == nil)
+        #expect(home([event("Day 6", 23, 59, day: 6)], at: at(19)).next?.id == "Day 6")
     }
 
     @Test("Tomorrow morning ends before noon")

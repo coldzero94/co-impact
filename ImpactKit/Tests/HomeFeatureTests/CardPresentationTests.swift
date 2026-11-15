@@ -68,7 +68,7 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
     }
 
     /// The states ImpactKit/AGENTS.md → UI documents for `-fixtureHour`, pinned so screenshots keep showing them.
-    @Test("Sample day states", arguments: [9.8, 8, 19])
+    @Test("Sample day states", arguments: [9.8, 8, 19, 21])
     @MainActor func sampleDay(_ hour: Double) throws {
         let model = try HomeFixtures.sample(at: hour, calendar: losAngeles, today: sampleDate)
         let home = model.snapshot
@@ -79,7 +79,10 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
             #expect(home.doneCardIDs == ["Standup"])
         case 19:
             #expect(home.nextUp == nil && home.laterToday.isEmpty)
-            #expect(home.tomorrowMorning.map(\.id) == ["Client visit"])
+            #expect(home.tomorrowMorning.map(\.id) == ["Client visit"] && home.next == nil)
+        case 21:
+            #expect(home.nextUp == nil && home.doneCardIDs == ["Client visit"])
+            #expect(home.next?.id == "Quarterly planning" && home.impactsToday == 3 && home.ringSegments == 3)
         default:
             #expect(home.nextUp?.id == "Design review" && countdown == .minutes(12))
             #expect(home.impactsToday == 2 && home.ringSegments == 5)

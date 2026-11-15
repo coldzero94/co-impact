@@ -63,7 +63,7 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 - **Tomorrow morning** follows PRODUCT.md → Horizon.
 - Events that need nothing are counted but not listed; Home is not a calendar.
 - Tapping Next up opens the card's detail; its button runs the primary action in one tap.
-- Not built yet: goal-time and focus cards (steps 11–12); the ring tap and the "Today" row from 18:00, with the daily review (step 13). Leave-by times are not drawn: rows and answers show the place, which stays the fallback when no route exists (PRODUCT.md → Card timeline). Nor is the empty state's "Next:" line (it needs events past the horizon, step 7). Locations without coordinates are not geocoded yet (after a device check of Apple's geocoding, step 10), so only events with a structured location with coordinates get in-person cards. Calendars shared into the user's account are not marked in EventKit, so their events without attendees can get cards; delegated accounts are not filtered yet (PRODUCT.md D12).
+- Not built yet: goal-time and focus cards (steps 11–12); the ring tap and the "Today" row from 18:00, with the daily review (step 13). Leave-by times are not drawn: rows and answers show the place, which stays the fallback when no route exists (PRODUCT.md → Card timeline). Locations without coordinates are not geocoded yet (after a device check of Apple's geocoding, step 10), so only events with a structured location with coordinates get in-person cards. Calendars shared into the user's account are not marked in EventKit, so their events without attendees can get cards; delegated accounts are not filtered yet (PRODUCT.md D12).
 
 ### 3. Empty state
 
@@ -72,6 +72,7 @@ Often the most common state. It must feel like a result, not an error (P7).
 - "Nothing needs you today." with the summary line still showing ("0 of 4 events need you").
 - Below it, the next event that will need the user, if any: "Next: Mon 10:00 · Design review".
 - A goal-time card may still appear; an empty day is a good day for a goal.
+- Built in step 7: the line names the first card not done in the six days after today (within them a weekday names one day), and shows only when no listed card is left to do, since a listed one comes first.
 
 ### 4. Card detail
 
