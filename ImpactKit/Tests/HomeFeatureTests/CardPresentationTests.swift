@@ -104,8 +104,8 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
             #expect(home.nextUp == nil && home.laterToday.isEmpty)
             #expect(home.tomorrowMorning.map(\.id) == ["Client visit"] && home.next == nil)
         case 21:
-            #expect(home.nextUp == nil && home.doneCardIDs == ["Client visit"])
-            #expect(home.next?.id == "Quarterly planning" && home.impactsToday == 3 && home.ringSegments == 3)
+            #expect(home.nextUp == nil && home.tomorrowMorning.isEmpty)
+            #expect(home.next?.id == "Quarterly planning" && home.impactsToday == 2 && home.ringSegments == 2)
         default:
             #expect(home.nextUp?.id == "Design review" && countdown == .minutes(12))
             #expect(home.impactsToday == 2 && home.ringSegments == 5)

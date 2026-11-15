@@ -125,7 +125,9 @@ public struct HomeView: View {
                         .dismissible { model.dismiss(card, similar: $0) }
                 }
             } header: {
-                Text(title).font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
+                // The list already draws headers in the secondary color; another .secondary dimmed them below
+                // 4.5:1 contrast.
+                Text(title).font(.footnote.weight(.semibold))
                     .textCase(.uppercase)
                     .accessibilityAddTraits(.isHeader)
             }

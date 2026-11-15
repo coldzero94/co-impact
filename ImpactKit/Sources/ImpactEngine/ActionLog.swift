@@ -21,16 +21,20 @@ public struct ActionLog: Sendable {
     }
 
     /// Marks `action` done on `card`. The card's `primaryAction` also records the card's Impact, once.
-    /// Returns true when this call recorded the Impact. An action passed with the wrong card records nothing
-    /// in release builds instead of crashing (debug builds assert).
+    /// Returns true when this call recorded the Impact. A primary action before the card's Soon phase is
+    /// preparation, not doing it (PRODUCT.md → Completion semantics): it records nothing, so the card keeps Next
+    /// up and its Now alert. An action passed with the wrong card records nothing in release builds instead of
+    /// crashing (debug builds assert).
     @discardableResult
     public mutating func record(_ action: ImpactAction, on card: ImpactCard, at date: Date) -> Bool {
         guard card.actions.contains(action) else {
             assertionFailure("\(action.kind) is not an action of card \(card.id)")
             return false
         }
+        let primary = action == card.primaryAction
+        if primary, date < ImpactEngine.soonStart(of: card) { return false }
         done[card.id, default: []].insert(action.kind)
-        guard action == card.primaryAction, impacts[card.id] == nil else { return false }
+        guard primary, impacts[card.id] == nil else { return false }
         impacts[card.id] = date
         return true
     }

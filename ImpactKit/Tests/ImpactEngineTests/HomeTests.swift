@@ -70,11 +70,11 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         #expect(ids(home.laterToday) == ["A", "B", "Dentist", "Town hall"])
     }
 
-    @Test("A done card leaves Next up but stays listed and marked done")
+    @Test("A done card leaves Next up but stays listed and marked done, after the cards still to do")
     func doneCard() {
         let home = home(mockDay, at: at(10, 2), completed: ["Design review"], impacts: 1)
         #expect(home.nextUp?.id == "Dentist")
-        #expect(ids(home.laterToday) == ["Design review", "Town hall"])
+        #expect(ids(home.laterToday) == ["Town hall", "Design review"])
         #expect(home.doneCardIDs == ["Design review"])
         #expect(home.impactsToday == 1)
         #expect(home.ringSegments == 3)

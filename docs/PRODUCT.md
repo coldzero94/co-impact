@@ -266,6 +266,7 @@ AI is optional enrichment (P5, P6). Without Apple Intelligence the product is co
 
 - Executing an action marks it done. No confirmation step.
 - A card is **done** when its primary action is done.
+- A primary action run before the card's Soon phase (e.g. Directions previewed the evening before) is preparation: it opens its target but marks nothing and records no Impact, so the card keeps Next up and its Now alert (owner, 2026-11-15; [research/system-surfaces.md](research/system-surfaces.md)).
 - A card **expires** silently (see Card timeline). No "did you do it?" prompts.
 - Outcome metric: cards whose primary action was executed before the event started.
 - A goal-time card is done when Block time succeeds; Undo brings it back.

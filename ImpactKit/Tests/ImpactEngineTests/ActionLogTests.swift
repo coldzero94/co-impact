@@ -22,6 +22,24 @@ private func hybridCard() throws -> ImpactCard {
 }
 
 @Suite struct ActionLogTests {
+    @Test("Before Soon, a primary action is preparation: nothing is marked done and no Impact is recorded")
+    func earlyPrimary() throws {
+        let card = try hybridCard()
+        let primary = try #require(card.primaryAction)
+        var log = ActionLog()
+        // Online and hybrid Soon starts 15 minutes before; the evening before is long before that.
+        let eveningBefore = log.record(primary, on: card, at: start.addingTimeInterval(-14 * 3_600))
+        let justBeforeSoon = log.record(primary, on: card, at: start.addingTimeInterval(-15 * 60 - 1))
+        #expect(!eveningBefore && !justBeforeSoon)
+        #expect(!log.isDone(primary, on: card) && log.impacts.isEmpty)
+        // A secondary action is still marked done early; it never records an Impact.
+        _ = log.record(card.actions[1], on: card, at: start.addingTimeInterval(-3_600))
+        #expect(log.isDone(card.actions[1], on: card))
+        // From Soon on, the primary action counts.
+        let atSoon = log.record(primary, on: card, at: start.addingTimeInterval(-15 * 60))
+        #expect(atSoon && log.completedCardIDs == ["town-hall"])
+    }
+
     @Test("Only the primary action records an Impact, and only once per card")
     func primaryRecordsOnce() throws {
         let card = try hybridCard()
