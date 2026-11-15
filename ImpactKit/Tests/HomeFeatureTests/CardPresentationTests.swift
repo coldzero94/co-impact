@@ -124,6 +124,9 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         defer { defaults.removePersistentDomain(forName: suite) }
         let first = RunToken.load(defaults)
         #expect(!first.isEmpty && RunToken.load(defaults) == first)
+        // An empty stored value would make every run link fail: it is replaced.
+        defaults.set("", forKey: RunToken.key)
+        #expect(!RunToken.load(defaults).isEmpty)
     }
 
     @Test("A Live Activity's card survives the encoding the system stores it in, and stays equal")

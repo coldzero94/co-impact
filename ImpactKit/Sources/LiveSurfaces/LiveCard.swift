@@ -6,6 +6,9 @@ import Foundation
 /// The system keeps it with each pending or running activity across launches (ARCHITECTURE.md → Platform facts):
 /// renaming or adding a non-optional property could leave stored activities that no longer decode, which sync then
 /// cannot end or match.
+/// shortcut: the form still changes between builds (e.g. `runToken`), relying on installing a new build ending the
+/// stored activities (seen in the simulator, unverified on a device, step 10); decode new properties with defaults
+/// once Impact is released.
 public struct LiveCard: Codable, Hashable, Sendable {
     public let cardID: String
     public let title: String

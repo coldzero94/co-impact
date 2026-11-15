@@ -161,7 +161,7 @@ To verify before relying on it:
 - Current Live Activity duration limits and scheduled-start behavior on device.
 - Foundation Models availability in the Simulator on this Mac.
 - MapKit routing and ETA in South Korea (driving and transit). Leave-by times depend on it; see PRODUCT.md D15.
-- Whether the `alertConfiguration` of a scheduled Live Activity alerts the user when it starts, including under a Focus or the silent switch (PRODUCT.md → Interruptions relies on it), and whether `end` cancels a pending one on a device.
+- Whether the `alertConfiguration` of a scheduled Live Activity alerts the user when it starts, including under a Focus or the silent switch (PRODUCT.md → Interruptions relies on it), and whether `end` cancels a pending one on a device; whether installing an update ends stored activities on a device, as in the simulator (`LiveCard`'s stored form changes between builds until release).
 - Geocoding quality for Korean addresses and place names on a device in Korea, including whether results outside the user's area can be told apart (selection rule for physical places; the simulator check above found wrong or no places), with the request's `region` set and a non-Korean control address, and MapKit's geocoding rate limits.
 - How Impact recognizes the focus blocks it created after a sync changes `calendarItemIdentifier` (PRODUCT.md → Block time), on Google and Exchange accounts.
 - Journaling Suggestions: required entitlement, availability, and what the picker returns (PRODUCT.md → Daily log).
