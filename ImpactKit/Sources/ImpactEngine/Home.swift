@@ -30,9 +30,9 @@ public struct HomeSnapshot: Sendable, Hashable {
 extension ImpactEngine {
     /// `events` is the fetch (`horizon`); occurrence IDs must be unique (debug builds assert it on the listed
     /// cards). `completedCardIDs` holds cards whose primary action ran on any day, so a card done before
-    /// midnight (a 00:05 meeting joined at 23:55) or restored from storage stays done; among unlisted cards they only keep a done one from being `next`. `impactsToday`
-    /// counts every Impact recorded today and must not be negative. `calendar` sets the day boundaries and the
-    /// 18:00 and noon cut-offs.
+    /// midnight (a 00:05 meeting joined at 23:55) or restored from storage stays done; among unlisted cards
+    /// they only keep a done one from being `next`. `impactsToday` counts every Impact recorded today and must
+    /// not be negative. `calendar` sets the day boundaries and the 18:00 and noon cut-offs.
     public func home(
         events: [CalendarEvent], now: Date, calendar: Calendar, completedCardIDs: Set<String>, impactsToday: Int,
         suppressionRules: [SuppressionRule] = [], includedCalendarIDs: Set<String> = []
@@ -68,7 +68,7 @@ extension ImpactEngine {
                 $0.end > now && Self.isUsersTimedEvent($0, includedCalendarIDs: includedCalendarIDs)
             },
             nextUp: nextUp,
-            // Done rows follow the ones still to do, so a past, done event never heads the list.
+            // Done rows follow the ones still to do, so a past, done event never sits above one still to do.
             laterToday: toDo.filter { $0.id != nextUp?.id } + todayCards.filter { !notDone($0) },
             tomorrowMorning: tomorrowCards,
             next: next,

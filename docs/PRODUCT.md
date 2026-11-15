@@ -18,7 +18,7 @@ iPhone users with several calendar events a day (iCloud, Exchange, or a personal
 
 An **Impact** is one completed action toward something that matters:
 
-- the primary action of an event card (online, in-person, or hybrid), executed: joined the meeting, opened directions;
+- the primary action of an event card (online, in-person, or hybrid), executed from its Soon phase on (see Completion semantics): joined the meeting, opened directions;
 - a focus session of at least 10 minutes in a block the user set for a goal.
 
 Blocking time is a plan, not an Impact; the session that follows is.
@@ -295,7 +295,7 @@ AI is optional enrichment (P5, P6). Without Apple Intelligence the product is co
 |---|----------|------------------|--------|
 | D1 | Event selection rules | Selection rules v1 above | Proposed |
 | D2 | Action catalog | Join, Directions, Open linked document, Call; Block time and Start focus for goals | Proposed |
-| D3 | Completion semantics | Tap = done; silent expiry per Card timeline; Impacts recorded automatically | Proposed |
+| D3 | Completion semantics | Tap from the Soon phase on = done; earlier taps are preparation (owner, 2026-11-15); silent expiry per Card timeline; Impacts recorded automatically | Proposed |
 | D4 | MVP scenarios | Online, in-person, hybrid first; goal time and focus blocks next (ROADMAP.md) | Proposed |
 | D5 | Empty-state behavior | Calm "nothing needs you" plus the next event that will (see UX.md) | Proposed |
 | D6 | Dismiss feedback | "Not needed" plus optional "Don't suggest for events like this" | Proposed |
@@ -308,7 +308,7 @@ AI is optional enrichment (P5, P6). Without Apple Intelligence the product is co
 | D13 | Interruptions | One alert per card, plus one "Changed" alert | Proposed |
 | D14 | AI grounding | Max two next steps, each with a verbatim quote from notes | Proposed |
 | D15 | Directions app | Apple Maps. Korean users may prefer Naver Map or Kakao Map; decide after verifying MapKit routing in Korea | Open |
-| D16 | What counts as an Impact; north star | Executed primary action or a focus session of 10+ minutes; Impacts per week | Proposed |
+| D16 | What counts as an Impact; north star | Primary action executed from its Soon phase on, or a focus session of 10+ minutes; Impacts per week | Proposed |
 | D17 | Goals | One to three; title, times per week, Workday or Personal time; 60-minute sessions; default working hours Mon–Fri 09:00–18:00 | Proposed |
 | D18 | Calendar writes | Block time only, to a writable calendar, with Undo; never touch events Impact did not create | Proposed |
 | D19 | Focus session | In-app session with a Live Activity; no iOS Focus (no API) | Proposed |

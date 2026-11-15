@@ -3,9 +3,8 @@ import ImpactEngine
 import SwiftUI
 
 /// Home (UX.md → Home): summary and Impact ring, Next up, Later today, Tomorrow morning. Tapping a card
-/// opens its detail; running a primary action from its Soon phase on records an Impact and plays the Impact
-/// moment; swiping a card
-/// dismisses it (UX.md → Dismissing).
+/// opens its detail; running a primary action once it counts (`ActionLog.countsFrom`) records an Impact and
+/// plays the Impact moment; swiping a card dismisses it (UX.md → Dismissing).
 public struct HomeView: View {
     let model: HomeModel
     @State private var selected: ImpactCard?
@@ -126,8 +125,8 @@ public struct HomeView: View {
                         .dismissible { model.dismiss(card, similar: $0) }
                 }
             } header: {
-                // The list's secondary header color is about 3.3:1 on the light grouped background (1.8:1 with a
-                // second .secondary); 60% of the primary color is about 5.5:1 in light and 7:1 in dark mode.
+                // The list's secondary header color is about 3.3:1 on the light grouped background; 60% of the
+                // primary color is about 5.5:1 in light and over 7:1 in dark mode.
                 Text(title).font(.footnote.weight(.semibold)).foregroundStyle(Color.primary.opacity(0.6))
                     .textCase(.uppercase)
                     .accessibilityAddTraits(.isHeader)
