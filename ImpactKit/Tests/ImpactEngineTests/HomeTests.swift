@@ -161,6 +161,15 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
     func horizon() {
         let (tomorrow, end) = ImpactEngine.horizon(now: at(19), calendar: calendar)
         #expect(tomorrow == at(0, day: 1) && end == at(12, day: 1))
+        // On 2027-03-14 clocks spring forward at 02:00 in Los Angeles, so that day is 23 hours long.
+        let springForward = calendar.date(from: DateComponents(year: 2027, month: 3, day: 14, hour: 19))!
+        let (dstTomorrow, dstEnd) = ImpactEngine.horizon(now: springForward, calendar: calendar)
+        #expect(dstTomorrow == calendar.date(from: DateComponents(year: 2027, month: 3, day: 15))!)
+        #expect(dstEnd == calendar.date(from: DateComponents(year: 2027, month: 3, day: 15, hour: 12))!)
+        // The evening before, tomorrow is the short day: noon is 11 hours after midnight, not 12.
+        let eve = calendar.date(from: DateComponents(year: 2027, month: 3, day: 13, hour: 19))!
+        #expect(ImpactEngine.horizon(now: eve, calendar: calendar).end
+                == calendar.date(from: DateComponents(year: 2027, month: 3, day: 14, hour: 12))!)
     }
 
     @Test("Tomorrow morning ends before noon")

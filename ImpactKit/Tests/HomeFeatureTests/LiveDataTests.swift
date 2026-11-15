@@ -85,6 +85,44 @@ private func withFile(_ body: (ImpactFile) throws -> Void) throws {
         }
     }
 
+    @Test("On a fresh install the saver writes the first Impact; a merge keeps each card's first stamp")
+    func saverFreshAndMerge() throws {
+        try withFile { file in
+            let save = file.saver(stored: file.load())
+            save(["review": morning])
+            #expect(file.load() == ["review": morning])
+        }
+        try withFile { file in
+            try file.save(["review": morning])
+            let save = file.saver(stored: file.load())
+            save(["review": morning.addingTimeInterval(600)])
+            #expect(file.load() == ["review": morning])
+            save(["review": morning.addingTimeInterval(-600)])
+            #expect(file.load() == ["review": morning.addingTimeInterval(-600)])
+        }
+    }
+
+    @Test("Logged errors show domain and code, the underlying error's too, and never the description")
+    func loggedErrors() {
+        let cause = NSError(domain: NSPOSIXErrorDomain, code: 13)
+        let error = NSError(domain: "Domain", code: 1,
+                            userInfo: [NSUnderlyingErrorKey: cause, NSLocalizedDescriptionKey: "secret path"])
+        #expect(error.logged == "Domain 1 (NSPOSIXErrorDomain 13)")
+        #expect(NSError(domain: "D", code: 2).logged == "D 2")
+    }
+
+    @Test("Impacts read after launch join the session's own, and all are stored together")
+    @MainActor func restoreLateImpacts() throws {
+        var saved: [String: Date] = [:]
+        let events = [meeting("review", at: morning.addingTimeInterval(600)), meeting("sync", at: morning.addingTimeInterval(7_200))]
+        let model = try HomeModel(events: events, now: morning, calendar: losAngeles) { saved = $0 }
+        let review = try #require(model.snapshot.nextUp)
+        _ = model.record(try #require(review.primaryAction), on: review)
+        model.restore(["standup": morning.addingTimeInterval(-3_600), "sync": morning.addingTimeInterval(-60)])
+        #expect(model.snapshot.impactsToday == 3 && model.snapshot.nextUp == nil)
+        #expect(saved == ["review": morning, "standup": morning.addingTimeInterval(-3_600), "sync": morning.addingTimeInterval(-60)])
+    }
+
     @Test("Recording saves every Impact once; an update moves the clock and keeps them")
     @MainActor func recordAndUpdate() throws {
         var saved: [[String: Date]] = []

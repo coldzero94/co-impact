@@ -13,7 +13,7 @@ public final class HomeModel {
     private var events: [CalendarEvent]
     private let calendar: Calendar
     private let engine: ImpactEngine
-    /// Receives every recorded Impact after a new one, to store them.
+    /// Receives every Impact after one is recorded or restored, to store them.
     private let saveImpacts: ([String: Date]) -> Void
 
     public init(events: [CalendarEvent], now: Date, calendar: Calendar, log: ActionLog = ActionLog(),
@@ -33,6 +33,13 @@ public final class HomeModel {
         self.events = events
         self.now = now
         snapshot = Self.home(engine, events, now, calendar, log)
+    }
+
+    /// Adds Impacts read from storage after launch (it was unreadable then), and stores the union.
+    func restore(_ stored: [String: Date]) {
+        log.restore(stored)
+        snapshot = Self.home(engine, events, now, calendar, log)
+        saveImpacts(log.impacts)
     }
 
     /// Records an action the system accepted (PRODUCT.md → Completion semantics); true when it recorded an Impact.

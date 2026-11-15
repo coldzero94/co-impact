@@ -55,11 +55,12 @@ struct ImpactFile {
         return { impacts in
             if known == nil { known = load() }
             guard let earlier = known else {
-                homeLog.fault("Impacts not saved: the stored ones are still unreadable")
+                homeLog.fault("\(impacts.count, privacy: .public) Impacts not saved: the stored ones are still unreadable")
                 return
             }
             do {
-                try save(earlier.merging(impacts) { _, new in new })
+                // The earlier stamp wins, as in `ActionLog.restore`.
+                try save(earlier.merging(impacts) { stored, new in min(stored, new) })
             } catch {
                 homeLog.fault("Could not save Impacts: \(error.logged, privacy: .public)")
             }

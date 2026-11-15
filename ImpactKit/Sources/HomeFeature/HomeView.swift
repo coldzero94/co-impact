@@ -74,8 +74,9 @@ public struct HomeView: View {
         .sensoryFeedback(.success, trigger: landings)
         .onChange(of: scenePhase) { playPending() }
         .onChange(of: model.snapshot) { _, snapshot in
-            // An open detail follows its card as Home refreshes, and closes once the card is gone (canceled,
-            // no longer needing prep, given a new ID, or expired), so no action runs on a stale card.
+            // An open detail follows its card as Home refreshes, and closes once the card is gone (e.g. the event
+            // was canceled or deleted, no longer needs prep, got a new ID, or the card expired), so no action runs
+            // on a stale card.
             guard let shown = selected else { return }
             selected = snapshot.cards.first { $0.id == shown.id }
         }

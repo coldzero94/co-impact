@@ -15,6 +15,11 @@ public struct ActionLog: Sendable {
         self.impacts = impacts
     }
 
+    /// Merges in Impacts read later; for a card in both, the earlier stamp wins.
+    public mutating func restore(_ stored: [String: Date]) {
+        impacts.merge(stored) { recorded, stored in min(recorded, stored) }
+    }
+
     /// Marks `action` done on `card`. The card's `primaryAction` also records the card's Impact, once.
     /// Returns true when this call recorded the Impact. An action passed with the wrong card records nothing
     /// in release builds instead of crashing (debug builds assert).
