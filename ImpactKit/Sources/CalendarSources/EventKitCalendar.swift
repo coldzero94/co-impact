@@ -74,7 +74,7 @@ extension CalendarEvent {
     }
 
     /// One ID per occurrence: a recurring series shares its item ID, so its occurrences add their original
-    /// date, which stays put when one occurrence is moved.
+    /// date.
     /// shortcut: the item ID changes after a full sync, and a moved occurrence gets an item ID of its own with
     /// no recurrence rules (ARCHITECTURE.md → Platform facts), so after either a done card shows as not done
     /// again, and a moved occurrence is not part of its series' ID.
