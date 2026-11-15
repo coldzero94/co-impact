@@ -270,7 +270,7 @@ AI is optional enrichment (P5, P6). Without Apple Intelligence the product is co
 - A card **expires** silently (see Card timeline). No "did you do it?" prompts.
 - Outcome metric: cards whose primary action was executed before the event started.
 - A goal-time card is done when Block time succeeds; Undo brings it back.
-- Every executed primary action of an event card and every focus session of 10 minutes or more records one Impact, automatically (see Impact).
+- Every primary action of an event card executed from its Soon phase on (see above) and every focus session of 10 minutes or more records one Impact, automatically (see Impact).
 
 ## Success metrics (local only, never uploaded)
 

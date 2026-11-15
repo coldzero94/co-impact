@@ -112,6 +112,16 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         }
     }
 
+    @Test("Directions hours before an in-person card opens Maps but changes nothing on Home")
+    @MainActor func earlyPrimary() throws {
+        let model = try HomeFixtures.sample(at: 9.8, calendar: losAngeles, today: sampleDate)
+        let dentist = try #require(model.snapshot.laterToday.first { $0.id == "Dentist" })
+        let directions = try #require(dentist.primaryAction)
+        let before = model.snapshot
+        let recorded = model.record(directions, on: dentist)
+        #expect(!recorded && model.snapshot == before && !model.log.isDone(directions, on: dentist))
+    }
+
     @Test("Running Next up's primary action records one Impact and promotes the next card")
     @MainActor func recordPrimary() throws {
         let model = try HomeFixtures.sample(at: 9.8, calendar: losAngeles, today: sampleDate)

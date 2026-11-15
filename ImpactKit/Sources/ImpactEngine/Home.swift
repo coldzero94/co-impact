@@ -29,8 +29,8 @@ public struct HomeSnapshot: Sendable, Hashable {
 
 extension ImpactEngine {
     /// `events` is the fetch (`horizon`); occurrence IDs must be unique (debug builds assert it on the listed
-    /// cards). `completedCardIDs` holds cards whose primary action ran on any day, so a card done the evening
-    /// before stays done; among unlisted cards they only keep a done one from being `next`. `impactsToday`
+    /// cards). `completedCardIDs` holds cards whose primary action ran on any day, so a card done before
+    /// midnight (a 00:05 meeting joined at 23:55) or restored from storage stays done; among unlisted cards they only keep a done one from being `next`. `impactsToday`
     /// counts every Impact recorded today and must not be negative. `calendar` sets the day boundaries and the
     /// 18:00 and noon cut-offs.
     public func home(
@@ -93,8 +93,9 @@ extension ImpactEngine {
 
     /// When a card's Soon phase starts (PRODUCT.md → Card timeline): 15 minutes before an online or hybrid
     /// start, 30 minutes before an in-person one.
-    /// shortcut: in-person cards count from the event start until leave-by (routing/ETA) exists.
-    public static func soonStart(of card: ImpactCard) -> Date {
+    /// shortcut: in-person Soon and Now are measured from the event start instead of leave-by until routing/ETA
+    /// exists.
+    static func soonStart(of card: ImpactCard) -> Date {
         card.start.addingTimeInterval(card.kind == .inPerson ? -30 * 60 : -15 * 60)
     }
 

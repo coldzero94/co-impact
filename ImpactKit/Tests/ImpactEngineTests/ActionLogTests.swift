@@ -49,6 +49,7 @@ private func hybridCard() throws -> ImpactCard {
         let directions = try #require(card.primaryAction)
         var log = ActionLog()
         let preview = log.record(directions, on: card, at: start.addingTimeInterval(-2 * 3_600 - 1))
+        #expect(ActionLog.countsFrom(card) == start.addingTimeInterval(-2 * 3_600))
         // Leaving 50 minutes ahead for a long drive is the trip itself.
         let departure = log.record(directions, on: card, at: start.addingTimeInterval(-50 * 60))
         #expect(!preview && departure && log.completedCardIDs == ["dentist"])
