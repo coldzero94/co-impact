@@ -104,12 +104,22 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
             #expect(home.nextUp == nil && home.laterToday.isEmpty)
             #expect(home.tomorrowMorning.map(\.id) == ["Client visit"] && home.next == nil)
         case 21:
-            #expect(home.nextUp == nil && home.doneCardIDs == ["Client visit"])
-            #expect(home.next?.id == "Quarterly planning" && home.impactsToday == 3 && home.ringSegments == 3)
+            #expect(home.nextUp == nil && home.tomorrowMorning.isEmpty)
+            #expect(home.next?.id == "Quarterly planning" && home.impactsToday == 2 && home.ringSegments == 2)
         default:
             #expect(home.nextUp?.id == "Design review" && countdown == .minutes(12))
             #expect(home.impactsToday == 2 && home.ringSegments == 5)
         }
+    }
+
+    @Test("Directions hours before an in-person card records nothing on Home")
+    @MainActor func earlyPrimary() throws {
+        let model = try HomeFixtures.sample(at: 9.8, calendar: losAngeles, today: sampleDate)
+        let dentist = try #require(model.snapshot.laterToday.first { $0.id == "Dentist" })
+        let directions = try #require(dentist.primaryAction)
+        let before = model.snapshot
+        let recorded = model.record(directions, on: dentist)
+        #expect(!recorded && model.snapshot == before && !model.log.isDone(directions, on: dentist))
     }
 
     @Test("Running Next up's primary action records one Impact and promotes the next card")

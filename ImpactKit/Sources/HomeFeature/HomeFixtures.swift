@@ -48,20 +48,19 @@ public enum HomeFixtures {
             event("Client visit", 8.5, day: 1) { $0.structuredPlace = hall },
             event("Quarterly planning", 10, day: 2) { $0.url = URL(string: "https://zoom.us/j/222") },
         ]
-        // Joined at their start: Standup always, and 1:1 with Mina too from 09:30. From 20:00, Directions to
-        // tomorrow's Client visit has run (at 20:00), so the empty state names the next card.
-        var done = [(events[0], events[0].start)]
-        if hour >= 9.5 { done.append((events[1], events[1].start)) }
-        if hour >= 20 { done.append((events[6], at(20))) }
+        // Joined at their start: Standup always, and 1:1 with Mina too from 09:30. From 20:00, tomorrow's Client
+        // visit is dismissed as not needed, so the empty state names the next card.
         let engine = try ImpactEngine()
         var log = ActionLog()
-        for (event, time) in done {
-            guard let card = engine.card(for: event, now: time), let primary = card.primaryAction else {
+        for event in events.prefix(hour >= 9.5 ? 2 : 1) {
+            guard let card = engine.card(for: event, now: event.start), let primary = card.primaryAction else {
                 throw FixtureError.noCard(event.title)
             }
-            log.record(primary, on: card, at: time)
+            log.record(primary, on: card, at: event.start)
         }
-        return try HomeModel(events: events, now: at(hour), calendar: calendar, log: log)
+        var dismissals = Dismissals()
+        if hour >= 20 { dismissals.dismiss(events[6], at: at(20)) }
+        return try HomeModel(events: events, now: at(hour), calendar: calendar, log: log, dismissals: dismissals)
     }
 }
 #endif

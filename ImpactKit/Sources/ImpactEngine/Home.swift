@@ -7,8 +7,8 @@ public struct HomeSnapshot: Sendable, Hashable {
     /// UX.md → Home: the earliest card not done in its Soon or Now phase; otherwise the card not done
     /// that started most recently and is still running (the user may be late); otherwise the next one.
     public let nextUp: ImpactCard?
-    /// Today's other cards by start time: done cards until they expire, and running cards that Next up
-    /// has moved past, so a row can start before Next up.
+    /// Today's other cards by start time, those still to do first (including running cards that Next up has
+    /// moved past, so a row can start before Next up), then done cards until they expire.
     public let laterToday: [ImpactCard]
     /// PRODUCT.md → Horizon.
     public let tomorrowMorning: [ImpactCard]
@@ -29,10 +29,10 @@ public struct HomeSnapshot: Sendable, Hashable {
 
 extension ImpactEngine {
     /// `events` is the fetch (`horizon`); occurrence IDs must be unique (debug builds assert it on the listed
-    /// cards). `completedCardIDs` holds cards whose primary action ran on any day, so a card done the evening
-    /// before stays done; among unlisted cards they only keep a done one from being `next`. `impactsToday`
-    /// counts every Impact recorded today and must not be negative. `calendar` sets the day boundaries and the
-    /// 18:00 and noon cut-offs.
+    /// cards). `completedCardIDs` holds cards whose primary action ran on any day, so a card done before
+    /// midnight (a 00:05 meeting joined at 23:55) or restored from storage stays done; among unlisted cards
+    /// they only keep a done one from being `next`. `impactsToday` counts every Impact recorded today and must
+    /// not be negative. `calendar` sets the day boundaries and the 18:00 and noon cut-offs.
     public func home(
         events: [CalendarEvent], now: Date, calendar: Calendar, completedCardIDs: Set<String>, impactsToday: Int,
         suppressionRules: [SuppressionRule] = [], includedCalendarIDs: Set<String> = []
@@ -48,7 +48,8 @@ extension ImpactEngine {
 
         let todaysEvents = events.filter { $0.start < tomorrow }
         let todayCards = cards(todaysEvents)
-        let toDo = todayCards.filter { !completedCardIDs.contains($0.id) }
+        let notDone = { (card: ImpactCard) in !completedCardIDs.contains(card.id) }
+        let toDo = todayCards.filter(notDone)
         let nextUp = toDo.first { Self.isSoonOrNow($0, now: now) } ?? toDo.last { $0.start <= now } ?? toDo.first
         let showTomorrow = calendar.component(.hour, from: now) >= 18 || todayCards.isEmpty
         let tomorrowCards = showTomorrow
@@ -56,7 +57,6 @@ extension ImpactEngine {
         let listed = todayCards + tomorrowCards
         let listedIDs = Set(listed.map(\.id))
         assert(listedIDs.count == listed.count, "Duplicate occurrence IDs in \(listed.map(\.id))")
-        let notDone = { (card: ImpactCard) in !completedCardIDs.contains(card.id) }
         // A listed card still to do already leads. Otherwise every listed card is done, so the first card not
         // done from tomorrow on is unlisted; selection stops there instead of running on the whole week.
         let next = listed.contains(where: notDone) ? nil
@@ -68,7 +68,8 @@ extension ImpactEngine {
                 $0.end > now && Self.isUsersTimedEvent($0, includedCalendarIDs: includedCalendarIDs)
             },
             nextUp: nextUp,
-            laterToday: todayCards.filter { $0.id != nextUp?.id },
+            // Done rows follow the ones still to do, so a past, done event never sits above one still to do.
+            laterToday: toDo.filter { $0.id != nextUp?.id } + todayCards.filter { !notDone($0) },
             tomorrowMorning: tomorrowCards,
             next: next,
             doneCardIDs: completedCardIDs.intersection(listedIDs),
@@ -90,12 +91,16 @@ extension ImpactEngine {
         return (tomorrow, noon, end)
     }
 
-    /// Soon or Now (PRODUCT.md → Card timeline).
-    /// shortcut: in-person cards count from the event start until leave-by (routing/ETA) exists.
+    /// When a card's Soon phase starts (PRODUCT.md → Card timeline): 15 minutes before an online or hybrid
+    /// start, 30 minutes before an in-person one.
+    /// shortcut: in-person Soon and Now are measured from the event start instead of leave-by until routing/ETA
+    /// exists.
+    static func soonStart(of card: ImpactCard) -> Date {
+        card.start.addingTimeInterval(card.kind == .inPerson ? -30 * 60 : -15 * 60)
+    }
+
+    /// Soon or Now: in person until the start, online and hybrid until 10 minutes after it.
     static func isSoonOrNow(_ card: ImpactCard, now: Date) -> Bool {
-        let sinceStart = now.timeIntervalSince(card.start)
-        return card.kind == .inPerson
-            ? (-30 * 60 ..< 0).contains(sinceStart)
-            : (-15 * 60 ..< 10 * 60).contains(sinceStart)
+        now >= soonStart(of: card) && now < card.start.addingTimeInterval(card.kind == .inPerson ? 0 : 10 * 60)
     }
 }

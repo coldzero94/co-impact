@@ -70,11 +70,11 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         #expect(ids(home.laterToday) == ["A", "B", "Dentist", "Town hall"])
     }
 
-    @Test("A done card leaves Next up but stays listed and marked done")
+    @Test("A done card leaves Next up but stays listed and marked done, after the cards still to do")
     func doneCard() {
         let home = home(mockDay, at: at(10, 2), completed: ["Design review"], impacts: 1)
         #expect(home.nextUp?.id == "Dentist")
-        #expect(ids(home.laterToday) == ["Design review", "Town hall"])
+        #expect(ids(home.laterToday) == ["Town hall", "Design review"])
         #expect(home.doneCardIDs == ["Design review"])
         #expect(home.impactsToday == 1)
         #expect(home.ringSegments == 3)
@@ -229,9 +229,10 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         #expect(home.doneCardIDs == (shown ? ["Client visit"] : ["Last meeting"]))
     }
 
-    @Test("A card done the evening before stays done the next morning")
-    func doneTheEveningBefore() {
-        let home = home([event("Client visit", 8, 30) { $0.structuredPlace = clinic }], at: at(7, 30), completed: ["Client visit"])
+    @Test("A card done before midnight stays done after it")
+    func doneBeforeMidnight() {
+        // Directions to a 00:30 visit counts from 22:30 the day before (ActionLog.countsFrom).
+        let home = home([event("Client visit", 0, 30) { $0.structuredPlace = clinic }], at: at(0, 10), completed: ["Client visit"])
         #expect(home.nextUp == nil)
         #expect(ids(home.laterToday) == ["Client visit"])
         #expect(home.doneCardIDs == ["Client visit"])

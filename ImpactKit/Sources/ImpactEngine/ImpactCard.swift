@@ -43,7 +43,8 @@ public struct ImpactCard: Sendable, Hashable, Identifiable {
         actions.filter { if case .inferred = $0.provenance { false } else { true } }
     }
 
-    /// The card's one primary action (UX.md → Simplicity rules): the first confirmed one. Running it
-    /// makes the card done and records its Impact (PRODUCT.md → Completion semantics).
+    /// The card's one primary action (UX.md → Simplicity rules): the first confirmed one. Running it once it
+    /// counts (`ActionLog.countsFrom`: its Soon phase) makes the card done and records its Impact (PRODUCT.md →
+    /// Completion semantics).
     public var primaryAction: ImpactAction? { confirmedActions.first }
 }

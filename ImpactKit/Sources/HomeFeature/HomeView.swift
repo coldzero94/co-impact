@@ -3,8 +3,8 @@ import ImpactEngine
 import SwiftUI
 
 /// Home (UX.md → Home): summary and Impact ring, Next up, Later today, Tomorrow morning. Tapping a card
-/// opens its detail; running a primary action records an Impact and plays the Impact moment; swiping a card
-/// dismisses it (UX.md → Dismissing).
+/// opens its detail; running a primary action once it counts (`ActionLog.countsFrom`) records an Impact and
+/// plays the Impact moment; swiping a card dismisses it (UX.md → Dismissing).
 public struct HomeView: View {
     let model: HomeModel
     @State private var selected: ImpactCard?
@@ -125,7 +125,9 @@ public struct HomeView: View {
                         .dismissible { model.dismiss(card, similar: $0) }
                 }
             } header: {
-                Text(title).font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
+                // The list's secondary header color is about 3.3:1 on the light grouped background; 60% of the
+                // primary color is about 5.5:1 in light and over 7:1 in dark mode.
+                Text(title).font(.footnote.weight(.semibold)).foregroundStyle(Color.primary.opacity(0.6))
                     .textCase(.uppercase)
                     .accessibilityAddTraits(.isHeader)
             }
@@ -344,7 +346,7 @@ extension Color {
 #Preview("09:48, Next up in 12 min") { sampleHome(hour: 9.8) }
 #Preview("08:00, done row, clock countdown") { sampleHome(hour: 8) }
 #Preview("19:00, nothing left, Tomorrow morning") { sampleHome(hour: 19) }
-#Preview("21:00, Next line, done Tomorrow morning") { sampleHome(hour: 21) }
+#Preview("21:00, Next line") { sampleHome(hour: 21) }
 
 @MainActor @ViewBuilder
 private func sampleHome(hour: Double) -> some View {

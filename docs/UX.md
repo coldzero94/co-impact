@@ -58,7 +58,7 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 - **Summary line** counts the user's events left today and how many of them have a card, done or not. It tells the user the app looked at everything, so a short list feels trustworthy rather than incomplete.
 - **Next up** is the earliest card not done in its Soon or Now phase. If none is, the card that started most recently and is still running leads (the user may be late); otherwise the next card is promoted with its time. Done cards never lead.
 - Next up is drawn as an accent-colored card with a large countdown ("12 min", "Now", or the clock time from an hour out) and its primary action. The owner chose this layout from three drafts (PR #10). The accent is indigo, darkened behind white text in dark mode. A focus block in its Now phase shows here with **Start focus**.
-- **Later today** lists today's other cards by start time, including done cards until they expire and a running card that Next up has moved past. One line per card, like a departure board: time, title, and the one key fact (leave-by time or meeting provider). Tapping a row opens the card.
+- **Later today** lists today's other cards by start time, those still to do first (including a running card that Next up has moved past), then done cards until they expire, so a past, done event never sits above a card still to do (owner, 2026-11-15). One line per card, like a departure board: time, title, and the one key fact (leave-by time or meeting provider). Tapping a row opens the card.
 - **Goal-time card** sits below the time-bound cards, one at a time. **Block time** shows "Blocked · Undo" for 5 seconds; swiping offers **Not now**.
 - **Tomorrow morning** follows PRODUCT.md → Horizon.
 - Events that need nothing are counted but not listed; Home is not a calendar.
@@ -84,7 +84,7 @@ Often the most common state. It must feel like a result, not an error (P7).
 | Details | Place, organizer, attendees, notes excerpt | Calendar (a geocoded place: computed) |
 | Suggested | Up to two AI next steps, each with its source quote from the notes | Inferred |
 
-Executing an action marks it done in place (checkmark, subdued). No confirmation dialogs. Done actions stay tappable (to rejoin a meeting, for example). If the system cannot open an action, an alert says so ("Maps didn't open") and the action stays not done.
+Executing an action marks it done in place (checkmark, subdued), except a primary action before the card's Soon phase, which only opens its target (PRODUCT.md → Completion semantics). No confirmation dialogs. Done actions stay tappable (to rejoin a meeting, for example). If the system cannot open an action, an alert says so ("Maps didn't open") and the action stays not done.
 
 Built in step 7: below any place, Details shows the organizer unless it is the user, the other people invited (not rooms or equipment; up to three names, else two and a count; a guest with neither a name nor an email address shows as "Unnamed guest", and such an organizer as "Organized by an unnamed guest", owner 2026-11-15), and up to six lines of the notes, as the calendar has them. Not built yet: Suggested, with Foundation Models (step 8).
 
