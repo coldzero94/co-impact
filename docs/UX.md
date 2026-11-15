@@ -144,7 +144,7 @@ During a focus session, the Live Activity and Dynamic Island show the same ring 
 
 ## System surfaces
 
-Each surface shows the card's current phase (PRODUCT.md → Card timeline).
+Each surface shows the card's current phase (PRODUCT.md → Card timeline). Lock Screen surfaces (the Live Activity, the Lock Screen widget, notifications, the Watch) show the event's title (owner, 2026-11-15). Every action on these surfaces opens through Impact, which then opens the meeting, Maps, or the call: no system surface can open them directly ([research/system-surfaces.md](research/system-surfaces.md)).
 
 | Surface | Shows | Not for |
 |---------|-------|---------|
@@ -152,8 +152,11 @@ Each surface shows the card's current phase (PRODUCT.md → Card timeline).
 | Home Screen widget, small | Next up: time chip, title, primary action; otherwise the Impact ring | |
 | Home Screen widget, medium | Next up plus the next row | |
 | Lock Screen widget | Next time-bound fact ("Leave 14:05", "Zoom 10:00") | |
-| Siri / Shortcuts | "What's next in Impact", "Join my next meeting" | Open-ended chat |
+| Siri / Shortcuts | "What's next in Impact", "Join my next meeting"; Proposed: "Directions to my next appointment" | Open-ended chat |
+| Control (Proposed) | Control Center, Lock Screen, and Action button: Next up's symbol and clock time; runs its primary action through Impact | Lists |
 | Notifications | One alert per card at its Now phase, plus "Changed" (PRODUCT.md → Interruptions) | Digests, reminders to open the app, goal suggestions, the daily log |
+
+Further proposals, not yet decided, are ranked in [research/system-surfaces.md → Ranked proposals](research/system-surfaces.md#ranked-proposals).
 
 ## Accessibility (MVP requirements, P8)
 
