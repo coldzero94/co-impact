@@ -3,7 +3,7 @@ import os
 
 /// Recorded Impacts on disk (ARCHITECTURE.md → Storage): card IDs (an item ID, plus the original start of a
 /// recurring occurrence) and times; no titles, notes, places, or attendees.
-/// shortcut: one JSON file in Application Support, rewritten whole on each Impact; it moves to the App Group
+/// shortcut: one JSON file in Application Support, rewritten whole on each save; it moves to the App Group
 /// when widgets read it (step 9), and to a database if the daily log (step 13) needs one.
 struct ImpactFile {
     let url: URL

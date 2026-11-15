@@ -101,8 +101,7 @@ extension CalendarEvent {
     /// shortcut: the item ID changes after a full sync, and on a local calendar a moved occurrence gets an item
     /// ID of its own with no series ID (ARCHITECTURE.md → Platform facts). Either way the occurrence becomes a
     /// new card: a done one shows as not done again (its old Impact still counts today, so acting again counts
-    /// twice), and muting its series misses a moved one. Revisit with `calendarItemExternalIdentifier` before
-    /// dismissals rely on series IDs.
+    /// twice), and muting its series misses a moved one (see `Dismissals.mute`).
     static func occurrenceID(item: String, occurrence: Date?, recurring: Bool) -> String {
         guard recurring, let occurrence else { return item }
         return "\(item)@\(Int(occurrence.timeIntervalSince1970))"

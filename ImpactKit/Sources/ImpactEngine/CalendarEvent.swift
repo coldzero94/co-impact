@@ -73,9 +73,11 @@ public struct Place: Sendable, Hashable {
     }
 }
 
-public enum SuppressionRule: Sendable, Hashable {
+public enum SuppressionRule: Sendable, Hashable, Codable {
     case series(calendarID: String, seriesID: String)
     case title(calendarID: String, title: String)
+    /// One occurrence, by its ID ("Not needed").
+    case occurrence(id: String)
 
     func matches(_ event: CalendarEvent) -> Bool {
         switch self {
@@ -83,6 +85,8 @@ public enum SuppressionRule: Sendable, Hashable {
             event.calendarID == calendarID && event.seriesID == seriesID
         case let .title(calendarID, title):
             event.calendarID == calendarID && event.title == title
+        case let .occurrence(id):
+            event.id == id
         }
     }
 }

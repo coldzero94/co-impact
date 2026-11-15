@@ -1,8 +1,9 @@
 import Foundation
 import ImpactEngine
 import Observation
+import os
 
-/// Home's state: the fetched events, the clock, and the action log, with the snapshot built from them.
+/// Home's state: the fetched events, the clock, the action log, and dismissals, with the snapshot built from them.
 @Observable @MainActor
 public final class HomeModel {
     public private(set) var snapshot: HomeSnapshot
@@ -13,47 +14,79 @@ public final class HomeModel {
     private var events: [CalendarEvent]
     private let calendar: Calendar
     private let engine: ImpactEngine
+    private var dismissals: Dismissals
     /// Receives every Impact after one is recorded or restored, to store them.
     private let saveImpacts: ([String: Date]) -> Void
+    /// Receives the dismissals after each dismissal, to store them.
+    private let saveDismissals: (Dismissals) -> Void
 
     public init(events: [CalendarEvent], now: Date, calendar: Calendar, log: ActionLog = ActionLog(),
-                saveImpacts: @escaping ([String: Date]) -> Void = { _ in }) throws {
+                dismissals: Dismissals = Dismissals(),
+                saveImpacts: @escaping ([String: Date]) -> Void = { _ in },
+                saveDismissals: @escaping (Dismissals) -> Void = { _ in }) throws {
         let engine = try ImpactEngine()
-        snapshot = Self.home(engine, events, now, calendar, log)
+        snapshot = Self.home(engine, events, now, calendar, log, dismissals.pruned(now: now))
         self.now = now
         self.log = log
         self.events = events
         self.calendar = calendar
         self.engine = engine
+        self.dismissals = dismissals.pruned(now: now)
         self.saveImpacts = saveImpacts
+        self.saveDismissals = saveDismissals
     }
 
     /// Rebuilds the snapshot for newly fetched events at a new time.
     public func update(events: [CalendarEvent], now: Date) {
         self.events = events
         self.now = now
-        snapshot = Self.home(engine, events, now, calendar, log)
+        // Lapse dismissals as loading does, so the result never depends on whether the app was relaunched.
+        dismissals = dismissals.pruned(now: now)
+        rebuild()
     }
 
     /// Adds Impacts read from storage after launch (it was unreadable then), and stores the union.
     func restore(_ stored: [String: Date]) {
         log.restore(stored)
-        snapshot = Self.home(engine, events, now, calendar, log)
+        rebuild()
         saveImpacts(log.impacts)
+    }
+
+    /// "Not needed" hides this card's occurrence; with `similar`, "Don't suggest for events like this" mutes its
+    /// series or title instead, which hides this occurrence as well (UX.md → Dismissing). The card leaves Home at
+    /// once; a card still to do takes its ring segment with it, while a done card's Impact still counts.
+    func dismiss(_ card: ImpactCard, similar: Bool) {
+        guard let event = events.first(where: { $0.id == card.id }) else {
+            // A swipe on a card from before a refresh that dropped its event: nothing left to hide.
+            homeLog.error("Dismissed a card with no event; the next refresh shows whether it is still listed")
+            return
+        }
+        if similar {
+            dismissals.mute(like: event, at: now)
+        } else {
+            dismissals.dismiss(event, at: now)
+        }
+        rebuild()
+        saveDismissals(dismissals)
     }
 
     /// Records an action the system accepted (PRODUCT.md → Completion semantics); true when it recorded an Impact.
     func record(_ action: ImpactAction, on card: ImpactCard) -> Bool {
         let recorded = log.record(action, on: card, at: now)
-        snapshot = Self.home(engine, events, now, calendar, log)
+        rebuild()
         if recorded { saveImpacts(log.impacts) }
         return recorded
     }
 
+    private func rebuild() {
+        snapshot = Self.home(engine, events, now, calendar, log, dismissals)
+    }
+
     private static func home(
-        _ engine: ImpactEngine, _ events: [CalendarEvent], _ now: Date, _ calendar: Calendar, _ log: ActionLog
+        _ engine: ImpactEngine, _ events: [CalendarEvent], _ now: Date, _ calendar: Calendar, _ log: ActionLog,
+        _ dismissals: Dismissals
     ) -> HomeSnapshot {
         engine.home(events: events, now: now, calendar: calendar, completedCardIDs: log.completedCardIDs,
-                    impactsToday: log.impactCount(on: now, calendar: calendar))
+                    impactsToday: log.impactCount(on: now, calendar: calendar), suppressionRules: dismissals.rules)
     }
 }
