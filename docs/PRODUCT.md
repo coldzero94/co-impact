@@ -303,7 +303,7 @@ AI is optional enrichment (P5, P6). Without Apple Intelligence the product is co
 | D9 | License | Not chosen yet | Open |
 | D10 | Home horizon | Today, plus Tomorrow morning (see Horizon) | Proposed |
 | D11 | Location permission | Ask in context on the first in-person card; work without it | Proposed |
-| D12 | Subscribed and shared calendars | Excluded by default; user's own events only. EventKit marks no calendar as shared into the user's account (delegated accounts it does mark), so a shared event without attendees can still get a card (ARCHITECTURE.md → Platform facts) | Proposed |
+| D12 | Subscribed and shared calendars | Excluded by default; user's own events only. EventKit marks no calendar as shared into the user's account (delegated accounts it does mark, not used yet), so a shared event without attendees can still get a card (ARCHITECTURE.md → Platform facts) | Proposed |
 | D13 | Interruptions | One alert per card, plus one "Changed" alert | Proposed |
 | D14 | AI grounding | Max two next steps, each with a verbatim quote from notes | Proposed |
 | D15 | Directions app | Apple Maps. Korean users may prefer Naver Map or Kakao Map; decide after verifying MapKit routing in Korea | Open |

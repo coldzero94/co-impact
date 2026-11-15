@@ -85,6 +85,42 @@ private func withFile(_ body: (ImpactFile) throws -> Void) throws {
         }
     }
 
+    @Test("On a fresh install the saver writes the first Impact; a merge keeps each card's first stamp")
+    func saverFreshAndMerge() throws {
+        try withFile { file in
+            let save = file.saver(stored: file.load())
+            save(["review": morning])
+            #expect(file.load() == ["review": morning])
+        }
+        try withFile { file in
+            try file.save(["review": morning])
+            try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: file.url.path())
+            let save = file.saver(stored: file.load())
+            try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: file.url.path())
+            save(["review": morning.addingTimeInterval(600)])
+            #expect(file.load() == ["review": morning])
+        }
+    }
+
+    @Test("Logged errors show domain and code, the underlying error's too, and never the description")
+    func loggedErrors() {
+        let cause = NSError(domain: NSPOSIXErrorDomain, code: 13)
+        let error = NSError(domain: "Domain", code: 1,
+                            userInfo: [NSUnderlyingErrorKey: cause, NSLocalizedDescriptionKey: "secret path"])
+        #expect(error.logged == "Domain 1 (NSPOSIXErrorDomain 13)")
+    }
+
+    @Test("Impacts read after launch join Home's log and are stored together")
+    @MainActor func restoreLateImpacts() throws {
+        var saved: [String: Date] = [:]
+        let model = try HomeModel(events: [meeting("review", at: morning.addingTimeInterval(600))], now: morning,
+                                  calendar: losAngeles) { saved = $0 }
+        #expect(model.snapshot.impactsToday == 0)
+        model.restore(["standup": morning.addingTimeInterval(-3_600), "review": morning.addingTimeInterval(-60)])
+        #expect(model.snapshot.impactsToday == 2 && model.snapshot.nextUp == nil)
+        #expect(saved == ["standup": morning.addingTimeInterval(-3_600), "review": morning.addingTimeInterval(-60)])
+    }
+
     @Test("Recording saves every Impact once; an update moves the clock and keeps them")
     @MainActor func recordAndUpdate() throws {
         var saved: [[String: Date]] = []

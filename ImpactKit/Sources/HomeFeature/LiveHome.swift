@@ -9,6 +9,9 @@ public struct LiveHome: View {
     @State private var access = EventKitCalendar.access
     @State private var calendarSource = EventKitCalendar()
     @State private var model: HomeModel?
+    @State private var impactFile: ImpactFile?
+    /// The stored Impacts could not be read at launch; each refresh tries again until they can.
+    @State private var storedImpactsUnread = false
     /// Full access, but no calendar Impact reads (only subscriptions or Birthdays, or none).
     @State private var noCalendars = false
     @State private var startFailure: String?
@@ -87,6 +90,10 @@ public struct LiveHome: View {
         noCalendars = false
         if let model {
             model.update(events: events, now: now)
+            if storedImpactsUnread, let stored = impactFile?.load() {
+                storedImpactsUnread = false
+                model.restore(stored)
+            }
             return
         }
         // Storage never blocks Home: without a usable file, Impacts count until the app quits.
@@ -98,9 +105,13 @@ public struct LiveHome: View {
             file = nil
         }
         let stored = file?.load()
+        impactFile = file
+        storedImpactsUnread = file != nil && stored == nil
         do {
             model = try HomeModel(events: events, now: now, calendar: calendar, log: ActionLog(impacts: stored ?? [:]),
-                                  saveImpacts: file?.saver(stored: stored) ?? { _ in })
+                                  saveImpacts: file?.saver(stored: stored) ?? { impacts in
+                                      homeLog.fault("\(impacts.count, privacy: .public) Impacts not saved: no place to store them")
+                                  })
         } catch {
             homeLog.fault("Impact could not start: \(error.logged, privacy: .public)")
             startFailure = "Impact could not start: \(error.localizedDescription)"

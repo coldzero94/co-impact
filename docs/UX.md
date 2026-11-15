@@ -19,7 +19,7 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 - One screen (P5): what Impact does, in one sentence, plus a **Connect Calendar** button.
 - Request full calendar access. The usage string says events are analyzed on device only.
 - If denied: explain what the app needs and link to Settings. No demo data in release builds (mock data is for previews and debug only).
-- Built in step 7 (Home refreshes as ARCHITECTURE.md → Refresh and platform constraints lists). If access is restricted (device management or Screen Time), the screen says so without a Settings button. With access but no calendar of the user's own (only subscriptions or Birthdays), Home says "No calendars to read" instead of an empty day.
+- Built in step 7 (Home refreshes on the built triggers in ARCHITECTURE.md → Refresh and platform constraints). If access is restricted (device management or Screen Time), the screen says so without a Settings button. With access but no regular calendar (only subscriptions or Birthdays), Home says "No calendars to read" instead of an empty day.
 - Not built yet: the goal-setup row after the first Impact (step 11).
 - No other permission here. Notifications and location are asked in context (PRODUCT.md → Permissions).
 - No goal setup here. After the first Impact, Home offers it once as a quiet row under the cards ("Set up to three goals for this year"); afterwards it is in Settings.
@@ -63,7 +63,7 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 - **Tomorrow morning** follows PRODUCT.md → Horizon.
 - Events that need nothing are counted but not listed; Home is not a calendar.
 - Tapping Next up opens the card's detail; its button runs the primary action in one tap.
-- Not built yet: goal-time and focus cards (steps 11–12); swiping to dismiss (step 7, next); the ring tap and the "Today" row from 18:00, with the daily review (step 13). Leave-by times are not drawn: rows and answers show the place, which stays the fallback when no route exists (PRODUCT.md → Card timeline). Nor is the empty state's "Next:" line (it needs events past the horizon, step 7). Locations without coordinates are not geocoded, so only events with a structured location (coordinates) get in-person cards. Calendars shared into the user's account are not marked in EventKit, so their events without attendees can get cards; delegated accounts are not filtered yet (PRODUCT.md D12).
+- Not built yet: goal-time and focus cards (steps 11–12); swiping to dismiss (step 7, next); the ring tap and the "Today" row from 18:00, with the daily review (step 13). Leave-by times are not drawn: rows and answers show the place, which stays the fallback when no route exists (PRODUCT.md → Card timeline). Nor is the empty state's "Next:" line (it needs events past the horizon, step 7). Locations without coordinates are not geocoded yet (after a device check of Apple's geocoding, step 10), so only events with a structured location get in-person cards. Calendars shared into the user's account are not marked in EventKit, so their events without attendees can get cards; delegated accounts are not filtered yet (PRODUCT.md D12).
 
 ### 3. Empty state
 

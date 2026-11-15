@@ -53,6 +53,8 @@ public final class EventKitCalendar {
 
     /// Subscription and Birthdays calendars are not the user's own (PRODUCT.md → Exclusions, D12). A CalDAV
     /// subscription (e.g. on iCloud) has type CalDAV and is marked subscribed.
+    /// shortcut: calendars of a delegated account (`EKSource.isDelegate`) count as the user's own; exclude them
+    /// if the owner settles D12 that way.
     nonisolated static func kind(_ calendar: EKCalendar?) -> CalendarKind {
         kind(type: calendar?.type, isSubscribed: calendar?.isSubscribed ?? false)
     }
@@ -68,13 +70,14 @@ public final class EventKitCalendar {
 
 extension CalendarEvent {
     /// Normalizes one EventKit occurrence (ARCHITECTURE.md → Engine model and selection).
-    /// shortcut: places need coordinates and nothing geocodes yet, so a location without them (typed, or
-    /// synced as text) gives no in-person card; fill `geocodedPlace` once the owner settles geocoding.
+    /// shortcut: places need coordinates and nothing geocodes yet, so a location without them (typed, or synced
+    /// as text) gives no in-person card. Apple's geocoder gave wrong or no places in a simulator check (Platform
+    /// facts); add it after the device check in step 10 (owner decision, 2026-11-15).
     init(_ event: EKEvent) {
         let me = event.attendees?.first { $0.isCurrentUser }
         self.init(
-            // A detached occurrence (moved or edited on its own) gets its own item ID on a local calendar
-            // (Platform facts); the date keeps IDs unique if a server keeps the series' item ID (unverified).
+            // A moved occurrence gets its own item ID on a local calendar (Platform facts); the date keeps IDs
+            // unique for other detached occurrences, or if a server keeps the series' item ID (unverified).
             id: Self.occurrenceID(item: event.calendarItemIdentifier, occurrence: event.occurrenceDate as Date?,
                                   recurring: event.hasRecurrenceRules || event.isDetached),
             calendarID: event.calendar?.calendarIdentifier ?? "",

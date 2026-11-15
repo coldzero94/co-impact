@@ -35,6 +35,13 @@ public final class HomeModel {
         snapshot = Self.home(engine, events, now, calendar, log)
     }
 
+    /// Adds Impacts read from storage after launch (it was unreadable then), and stores the union.
+    func restore(_ stored: [String: Date]) {
+        log.restore(stored)
+        snapshot = Self.home(engine, events, now, calendar, log)
+        saveImpacts(log.impacts)
+    }
+
     /// Records an action the system accepted (PRODUCT.md → Completion semantics); true when it recorded an Impact.
     func record(_ action: ImpactAction, on card: ImpactCard) -> Bool {
         let recorded = log.record(action, on: card, at: now)
