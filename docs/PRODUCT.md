@@ -248,10 +248,10 @@ AI is optional enrichment (P5, P6). Without Apple Intelligence the product is co
 
 ## Interruptions
 
-- At most **one alert per card**, at the start of the Now phase. Preferred carrier: the scheduled Live Activity's start alert; fallback: a local notification at the same time.
+- At most **one alert per card**, at the start of the Now phase. The carrier is the scheduled Live Activity's start alert; a local notification at the same time only when the activity cannot be scheduled (owner, 2026-11-15; [research/system-surfaces.md](research/system-surfaces.md)).
 - **Exception (P4):** if a carded event's time or place changes after the alert was scheduled, one "Changed" alert. Limitation: the change is only detected when the app gets to run (foreground, background refresh).
 - No daily digest, no morning summary push, no streaks, no "you missed it" (P7).
-- Interruption level `timeSensitive` only for meeting start and leave-by; everything else is passive (Home, widgets).
+- Interruption level `timeSensitive` only for meeting start and leave-by (it applies to the fallback notification; a Live Activity's start alert has no interruption level); everything else is passive (Home, widgets).
 - Goals add no alert type. Goal-time cards and the daily log never notify; a focus block, like any card, gets at most one alert, at its start, at the default interruption level.
 
 ## Permissions
