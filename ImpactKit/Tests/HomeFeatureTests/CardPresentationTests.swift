@@ -71,7 +71,7 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         (["Mina"], "Mina"), (["Mina", "Joon", "Sara"], "Mina, Joon, and Sara"),
         (["Mina", "Joon", "Sara", "Alex"], "Mina, Joon, and 2 others"),
         (["Mina", "Joon", "Sara", "Alex", "Dana"], "Mina, Joon, and 3 others"),
-        (["Mina", ""], "Mina and Unnamed guest"),
+        (["", "Mina"], "Mina and Unnamed guest"), (["", "", "Joon", "Sara", "Alex"], "Joon, Sara, and 3 others"),
     ])
     func attendees(_ names: [String], _ line: String) {
         #expect(attendeeLine(names) == line)
