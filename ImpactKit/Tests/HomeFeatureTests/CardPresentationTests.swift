@@ -98,6 +98,8 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         #expect(live.cardID == zoom.id && live.title == zoom.title && live.answer == "Zoom link ready")
         #expect(live.symbol == "video.fill" && live.actionLabel == "Join meeting" && live.start == zoom.start)
         #expect(live.nowPhase == ImpactEngine.nowPhase(of: zoom))
+        // The activity's own button carries the token, so it runs the card.
+        #expect(LiveCard.cardID(fromRunURL: live.runURL, token: "secret") == zoom.id)
     }
 
     @Test("A run link names its card, whatever the ID holds, only with Impact's token", arguments: [
