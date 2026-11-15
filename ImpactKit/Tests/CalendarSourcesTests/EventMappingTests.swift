@@ -73,22 +73,32 @@ private func structured(_ title: String?, at coordinate: (Double, Double)? = (37
         (EKParticipantType.person, false, "mailto:joon@example.com", true), (.unknown, false, "mailto:joon@example.com", true),
         (.group, false, "mailto:team@example.com", true), (.room, false, "mailto:room-3a@example.com", false),
         (.resource, false, "mailto:projector@example.com", false), (.person, true, "mailto:me@example.com", false),
-        (.person, false, "mailto:mina@example.com", false),
+        (.person, false, "mailto:mina@example.com", false), (.person, false, "MAILTO:Mina@Example.com", false),
     ])
     func otherPeople(_ type: EKParticipantType, _ isUser: Bool, _ address: String, _ listed: Bool) throws {
         let organizer = try #require(URL(string: "mailto:mina@example.com"))
-        #expect(CalendarEvent.isOtherPerson(type: type, isCurrentUser: isUser, url: try #require(URL(string: address)),
-                                            organizer: organizer) == listed)
+        let url = try #require(URL(string: address))
+        #expect(CalendarEvent.isOtherPerson(type: type, isCurrentUser: isUser, url: url, organizer: organizer) == listed)
+        // Without an organizer, only the user, rooms, and equipment are left out.
+        #expect(CalendarEvent.isOtherPerson(type: type, isCurrentUser: isUser, url: url, organizer: nil)
+                == (!isUser && ![.room, .resource].contains(type)))
     }
 
-    @Test("A participant shows by name, else by email address; other addresses show whole")
+    @Test("The organizer is named unless it is the user")
+    func organizerName() throws {
+        let mina = try #require(URL(string: "mailto:mina@example.com"))
+        #expect(CalendarEvent.organizerName(isCurrentUser: false, name: "Mina Park", url: mina) == "Mina Park")
+        #expect(CalendarEvent.organizerName(isCurrentUser: true, name: "Mina Park", url: mina) == nil)
+    }
+
+    @Test("A participant shows by name, else by email address, else not at all")
     func displayNames() throws {
         let mail = try #require(URL(string: "mailto:mina.park%2Bwork@example.com"))
-        #expect(CalendarEvent.displayName(name: "Mina Park", url: mail) == "Mina Park")
-        #expect(CalendarEvent.displayName(name: " ", url: mail) == "mina.park+work@example.com")
+        #expect(CalendarEvent.displayName(name: " Mina Park\n", url: mail) == "Mina Park")
+        #expect(CalendarEvent.displayName(name: " \n", url: mail) == "mina.park+work@example.com")
         #expect(CalendarEvent.displayName(name: nil, url: try #require(URL(string: "MAILTO:joon@example.com"))) == "joon@example.com")
-        let other = try #require(URL(string: "urn:uuid:synthetic"))
-        #expect(CalendarEvent.displayName(name: nil, url: other) == "urn:uuid:synthetic")
+        #expect(CalendarEvent.displayName(name: nil, url: try #require(URL(string: "urn:uuid:synthetic"))) == nil)
+        #expect(CalendarEvent.displayName(name: nil, url: try #require(URL(string: "mailto:"))) == nil)
     }
 
     @Test("Only full access reads; restricted is told apart from denied and write-only")

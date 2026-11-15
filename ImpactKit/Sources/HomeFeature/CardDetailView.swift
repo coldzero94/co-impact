@@ -40,13 +40,14 @@ struct CardDetailView: View {
         .actionFailureAlert($failed)
     }
 
-    /// Place, organizer, attendees, and the start of the notes, all as the calendar has them.
+    /// The place (from the calendar or geocoded), then the organizer, attendees, and the start of the notes as the
+    /// calendar has them.
     /// shortcut: notes show as plain text; strip markup if synced notes carry HTML on a device (step 10).
     @ViewBuilder
     private var details: some View {
-        let organizer = card.values("Organizer").first
-        let attendees = card.values("Attendee")
-        let notes = card.values("Notes").first
+        let organizer = card.organizer
+        let attendees = card.attendees
+        let notes = card.notes
         if card.place != nil || organizer != nil || !attendees.isEmpty || notes != nil {
             VStack(alignment: .leading, spacing: 14) {
                 if let place = card.place {
@@ -73,7 +74,8 @@ struct CardDetailView: View {
 
     @ScaledMetric private var iconWidth = 24.0
 
-    /// A details line; icons of different widths share one column, so the texts line up.
+    /// A details line; icons of different widths share one column, so the texts line up. `text` stays a `String`:
+    /// other people wrote it, and a `LocalizedStringKey` would turn Markdown links in it into taps.
     private func detail(_ text: String, _ symbol: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: symbol).frame(width: iconWidth).accessibilityHidden(true)

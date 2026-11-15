@@ -54,7 +54,7 @@ public struct ImpactEngine: Sendable {
             actions.append(ImpactAction(kind: .directions(to: place), provenance: placeProvenance))
             facts.append(Fact(label: "Place", value: place.address ?? place.title, provenance: placeProvenance))
         }
-        // Details (UX.md → Card detail): the calendar's own text, shown as is.
+        // Details (UX.md → Card detail): calendar text, not interpreted; notes trimmed.
         if let organizer = event.organizer {
             facts.append(Fact(label: "Organizer", value: organizer, provenance: .calendar(field: "organizer")))
         }

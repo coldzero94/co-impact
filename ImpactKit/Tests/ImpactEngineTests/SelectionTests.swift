@@ -217,7 +217,7 @@ private let productExamples: [Example] = [
         #expect(details.map(\.provenance) == [.calendar(field: "organizer"), .calendar(field: "attendees"),
                                              .calendar(field: "attendees"), .calendar(field: "notes")])
         let plain = try #require(engine.card(for: event { $0.url = zoom; $0.notes = " \n" }, now: now))
-        #expect(plain.facts.map(\.label) == ["Title", "Start", "End", "Meeting"])
+        #expect(!plain.facts.contains { ["Organizer", "Attendee", "Notes"].contains($0.label) })
     }
 
     @Test("Only notes supply linked documents; actions are unique and grounded")

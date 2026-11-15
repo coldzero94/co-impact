@@ -69,10 +69,23 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
 
     @Test("Attendees: up to three names in full, else the first two and a count", arguments: [
         (["Mina"], "Mina"), (["Mina", "Joon", "Sara"], "Mina, Joon, and Sara"),
+        (["Mina", "Joon", "Sara", "Alex"], "Mina, Joon, and 2 others"),
         (["Mina", "Joon", "Sara", "Alex", "Dana"], "Mina, Joon, and 3 others"),
     ])
     func attendees(_ names: [String], _ line: String) {
         #expect(attendeeLine(names) == line)
+    }
+
+    @Test("Details read the engine's organizer, attendee, and notes facts")
+    func details() throws {
+        var event = CalendarEvent(id: "card", calendarID: "personal", title: "Card", start: start,
+                                  end: start.addingTimeInterval(3_600), url: URL(string: "https://zoom.us/j/1"),
+                                  notes: "Agenda", organizer: "Mina Park", attendees: ["Joon Lee", "Sara Kim"])
+        let card = try #require(try ImpactEngine().card(for: event, now: start.addingTimeInterval(-3_600)))
+        #expect(card.organizer == "Mina Park" && card.attendees == ["Joon Lee", "Sara Kim"] && card.notes == "Agenda")
+        event.notes = nil; event.organizer = nil; event.attendees = []
+        let bare = try #require(try ImpactEngine().card(for: event, now: start.addingTimeInterval(-3_600)))
+        #expect(bare.organizer == nil && bare.attendees.isEmpty && bare.notes == nil)
     }
 
     /// The states ImpactKit/AGENTS.md → UI documents for `-fixtureHour`, pinned so screenshots keep showing them.

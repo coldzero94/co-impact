@@ -81,12 +81,12 @@ Often the most common state. It must feel like a result, not an error (P7).
 | Header | Title, time, relative time ("in 12 min") | Calendar |
 | Answer | The card's question answered: "Leave by 14:05 · 18 min by car" or "Starts 10:00 · Zoom" | Calendar or computed |
 | Actions | Catalog actions, primary first, each one tap | Calendar or computed |
-| Details | Place, organizer, attendees, notes excerpt | Calendar |
+| Details | Place, organizer, attendees, notes excerpt | Calendar (a geocoded place: computed) |
 | Suggested | Up to two AI next steps, each with its source quote from the notes | Inferred |
 
 Executing an action marks it done in place (checkmark, subdued). No confirmation dialogs. Done actions stay tappable (to rejoin a meeting, for example). If the system cannot open an action, an alert says so ("Maps didn't open") and the action stays not done.
 
-Built in step 7: Details shows the place, the organizer unless it is the user, the other people invited (not rooms or equipment; three names, or two and a count), and up to six lines of the notes, all as the calendar has them. Not built yet: Suggested, with Foundation Models (step 8).
+Built in step 7: under the place, Details shows the organizer unless it is the user, the other people invited (not rooms or equipment; up to three names, else two and a count), and up to six lines of the notes, as the calendar has them. Not built yet: Suggested, with Foundation Models (step 8).
 
 ### 5. Goal setup (sheet)
 

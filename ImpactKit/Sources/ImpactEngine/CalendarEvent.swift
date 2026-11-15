@@ -19,9 +19,11 @@ public struct CalendarEvent: Sendable, Hashable, Identifiable {
     public var location: String?
     public var url: URL?
     public var notes: String?
-    /// Who organizes the event, unless it is the user, and the other people invited: display names (else email
-    /// addresses) shown in card detail, never stored.
+    /// Who organizes the event, unless it is the user: a name, else an email address. Shown in card detail,
+    /// never stored.
     public var organizer: String?
+    /// The other people invited, as names or email addresses (ARCHITECTURE.md → Engine model and selection).
+    /// Shown in card detail, never stored.
     public var attendees: [String]
     public var structuredPlace: Place?
     /// A successful address/POI lookup for this event's location, supplied by the caller.
