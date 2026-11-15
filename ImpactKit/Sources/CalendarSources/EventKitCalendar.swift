@@ -53,8 +53,7 @@ public final class EventKitCalendar {
 
     /// Subscription and Birthdays calendars are not the user's own (PRODUCT.md → Exclusions, D12). A CalDAV
     /// subscription (e.g. on iCloud) has type CalDAV and is marked subscribed.
-    /// shortcut: calendars of a delegated account (`EKSource.isDelegate`) count as the user's own; exclude them
-    /// if the owner settles D12 that way.
+    /// Calendars of a delegated account (`EKSource.isDelegate`) count as the user's own (owner, D12).
     nonisolated static func kind(_ calendar: EKCalendar?) -> CalendarKind {
         kind(type: calendar?.type, isSubscribed: calendar?.isSubscribed ?? false)
     }
@@ -101,7 +100,7 @@ extension CalendarEvent {
                     Self.isOtherPerson(type: $0.participantType, isCurrentUser: $0.isCurrentUser, url: $0.url,
                                        organizer: organizer?.url)
                 }
-                .compactMap { Self.displayName(name: $0.name, url: $0.url) },
+                .map { Self.displayName(name: $0.name, url: $0.url) },
             structuredPlace: event.structuredLocation.flatMap { Place($0, location: event.location) }
         )
     }
@@ -129,14 +128,13 @@ extension CalendarEvent {
         isCurrentUser ? nil : displayName(name: name, url: url)
     }
 
-    /// A participant's name, else their email address (decoded, without `mailto:`); nil with neither, so card
-    /// detail never shows a bare identifier.
-    static func displayName(name: String?, url: URL) -> String? {
+    /// A participant's name, else their email address (decoded, without `mailto:`); empty with neither, which card
+    /// detail shows as an unnamed guest rather than a bare identifier.
+    static func displayName(name: String?, url: URL) -> String {
         if let name = name?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty { return name }
-        guard url.scheme?.lowercased() == "mailto" else { return nil }
+        guard url.scheme?.lowercased() == "mailto" else { return "" }
         let address = url.absoluteString.dropFirst("mailto:".count)
-        let decoded = (address.removingPercentEncoding ?? String(address)).trimmingCharacters(in: .whitespacesAndNewlines)
-        return decoded.isEmpty ? nil : decoded
+        return (address.removingPercentEncoding ?? String(address)).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// The user's answer to an invitation; anything but accepted, declined, or tentative is unknown.

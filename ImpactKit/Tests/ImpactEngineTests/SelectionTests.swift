@@ -210,12 +210,18 @@ private let productExamples: [Example] = [
     @Test("Organizer, attendees, and trimmed notes become calendar facts; blank notes give none")
     func detailFacts() throws {
         let card = try #require(engine.card(for: event {
-            $0.url = zoom; $0.organizer = "Mina Park"; $0.attendees = ["Joon Lee", "Sara Kim"]; $0.notes = "\n Agenda \n"
+            $0.url = zoom; $0.hasAttendees = true; $0.isUserAttendee = true
+            $0.organizer = "Mina Park"; $0.attendees = ["Joon Lee", "Sara Kim"]; $0.notes = "\n Agenda \n"
         }, now: now))
         let details = card.facts.filter { ["Organizer", "Attendee", "Notes"].contains($0.label) }
         #expect(details.map(\.value) == ["Mina Park", "Joon Lee", "Sara Kim", "Agenda"])
         #expect(details.map(\.provenance) == [.calendar(field: "organizer"), .calendar(field: "attendees"),
                                              .calendar(field: "attendees"), .calendar(field: "notes")])
+        // Unnamed people stay facts with the calendar's empty value; card detail names them (owner, 2026-11-15).
+        let unnamed = try #require(engine.card(for: event {
+            $0.url = zoom; $0.hasAttendees = true; $0.isUserAttendee = true; $0.organizer = ""; $0.attendees = [""]
+        }, now: now))
+        #expect(unnamed.facts.filter { ["Organizer", "Attendee"].contains($0.label) }.map(\.value) == ["", ""])
         let plain = try #require(engine.card(for: event { $0.url = zoom; $0.notes = " \n" }, now: now))
         #expect(!plain.facts.contains { ["Organizer", "Attendee", "Notes"].contains($0.label) })
     }

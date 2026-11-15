@@ -60,7 +60,7 @@ struct CardDetailView: View {
                     .accessibilityElement(children: .combine)
                 }
                 if let organizer {
-                    detail("Organized by \(organizer)", "person")
+                    detail(organizer.isEmpty ? "Organized by an unnamed guest" : "Organized by \(organizer)", "person")
                 }
                 if !attendees.isEmpty {
                     detail(attendeeLine(attendees), "person.2").accessibilityLabel("Invited: " + attendeeLine(attendees))
