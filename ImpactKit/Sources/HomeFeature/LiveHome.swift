@@ -72,7 +72,7 @@ public struct LiveHome: View {
             // A Live Activity's button can resume Impact from hours ago: bring Home to the present first, so the
             // action counts at the time it runs and finds the card as the calendar has it now.
             refresh()
-            guard model != nil else {
+            guard model != nil, !noCalendars else {
                 homeLog.notice("A Live Activity's run link arrived while Home cannot show; dropped")
                 return
             }

@@ -3,8 +3,9 @@ import Foundation
 /// What a card's Live Activity shows (UX.md → System surfaces). It is the activity's `ActivityAttributes`, which
 /// cannot change once requested, and Impact sends no updates (nothing could schedule one while Impact does not
 /// run), so a card that changes gets a new activity: `LiveActivities.sync` tells activities apart by equality.
-/// The system stores it with each pending or running activity, across app updates: renaming or adding a
-/// non-optional property can leave old activities that no longer decode, which sync then cannot end or match.
+/// The system keeps it with each pending or running activity across launches (ARCHITECTURE.md → Platform facts):
+/// renaming or adding a non-optional property could leave stored activities that no longer decode, which sync then
+/// cannot end or match.
 public struct LiveCard: Codable, Hashable, Sendable {
     public let cardID: String
     public let title: String

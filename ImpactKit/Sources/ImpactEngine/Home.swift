@@ -72,9 +72,10 @@ extension ImpactEngine {
             : inOrder(events.filter { $0.start >= tomorrow && $0.start < end }).lazy.compactMap(select)
                 .first(where: notDone)
 
-        // Now starts 10 minutes before every kind of card (`nowPhase`), so start order is Now order.
-        let liveActivityCards = Array(inOrder(events.filter { $0.start < tomorrowNoon }).lazy.compactMap(select)
-            .filter { notDone($0) && Self.nowPhase(of: $0).upperBound > now }.prefix(2))
+        let liveActivityCards = cards(events.filter { $0.start < tomorrowNoon })
+            .filter { notDone($0) && Self.nowPhase(of: $0).upperBound > now }
+            .sorted { (Self.nowPhase(of: $0).lowerBound, $0.id) < (Self.nowPhase(of: $1).lowerBound, $1.id) }
+            .prefix(2)
 
         return HomeSnapshot(
             eventsLeftToday: todaysEvents.count {
@@ -88,7 +89,7 @@ extension ImpactEngine {
             doneCardIDs: completedCardIDs.intersection(listedIDs),
             impactsToday: impactsToday,
             ringSegments: impactsToday + toDo.count,
-            liveActivityCards: liveActivityCards
+            liveActivityCards: Array(liveActivityCards)
         )
     }
 
