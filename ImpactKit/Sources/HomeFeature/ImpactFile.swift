@@ -59,7 +59,7 @@ struct ImpactFile {
                 return
             }
             do {
-                // A card's first Impact wins, as in `ActionLog.record`.
+                // The earlier stamp wins, as in `ActionLog.restore`.
                 try save(earlier.merging(impacts) { stored, new in min(stored, new) })
             } catch {
                 homeLog.fault("Could not save Impacts: \(error.logged, privacy: .public)")

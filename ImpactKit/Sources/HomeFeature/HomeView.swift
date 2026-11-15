@@ -75,7 +75,8 @@ public struct HomeView: View {
         .onChange(of: scenePhase) { playPending() }
         .onChange(of: model.snapshot) { _, snapshot in
             // An open detail follows its card as Home refreshes, and closes once the card is gone (e.g. the event
-            // was canceled, deleted, or moved, or the card expired), so no action runs on a stale card.
+            // was canceled or deleted, no longer needs prep, got a new ID, or the card expired), so no action runs
+            // on a stale card.
             guard let shown = selected else { return }
             selected = snapshot.cards.first { $0.id == shown.id }
         }

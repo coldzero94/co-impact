@@ -112,7 +112,7 @@ Live Activities are started **without a server** by scheduling them at analysis 
 ## Privacy
 
 - Calendar access: full access is required to read events. It also allows writing; the only write is Block time (PRODUCT.md → Goals). The usage string (`INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription` in the app target) states on-device processing; the clause that Impact adds events only when the user taps Block time joins it with Block time (step 11).
-- No analytics SDKs, no network calls with calendar content. The owner has approved sending a location without coordinates to Apple's geocoder (MapKit) once its quality is checked on a device (step 10); until then nothing is sent.
+- No analytics SDKs, no network calls with calendar content. The owner has approved sending a location without coordinates to Apple's geocoder (MapKit) once its quality is checked on a device (step 10); until then no location is sent to it.
 - Google Calendar API (if ever added, D7): official OAuth via `ASWebAuthenticationSession`, tokens in Keychain, read-only scope.
 
 ## Testing
@@ -145,7 +145,7 @@ Verified facts only. Add the date and how each was verified.
 | `events(matching:)` expands recurring events into occurrences; `occurrenceDate` is the original date of a recurring occurrence, even after it is moved, and unset otherwise; `EKParticipant.isCurrentUser`, `EKEvent.status` (`.canceled`), `EKCalendar.type` (`.subscription`, `.birthday`), and `EKStructuredLocation.geoLocation` exist. A CalDAV subscribed calendar has type `.calDAV` with `isSubscribed` true. `EKCalendar` has no property marking a calendar shared into the user's account; calendars of an account delegated by another user can be told apart with `EKSource.isDelegate` (iOS 16+), not used yet | 2026-11-15 | iOS 27 SDK EventKit `EKEvent.h`, `EKParticipant.h`, `EKCalendar.h`, `EKSource.h`, `EKStructuredLocation.h`; occurrence expansion seen in a simulator run |
 | An `.ics` added through Safari ("Add All") keeps an event's location text as a structured location title but drops `X-APPLE-STRUCTURED-LOCATION` coordinates; opening an `.ics` URL with `simctl openurl` offers a subscription instead | 2026-11-15 | iOS 27 simulator run |
 | Moving one occurrence of a recurring event gives it a new `calendarItemIdentifier`, `hasRecurrenceRules` false, `isDetached` true, and `occurrenceDate` still the original date; its `calendarItemExternalIdentifier` became the series UID plus `/RID=<time>` on a local calendar (the format depends on the server) | 2026-11-15 | iOS 27 simulator run: one occurrence of a synthetic daily series moved with `save(_:span: .thisEvent)` |
-| `MKGeocodingRequest(addressString:)` (iOS 26.0+) and `MKLocalSearch` are unreliable for Korean places in the simulator (US region): "서울 중구 세종대로 110", "서울시청", "Café Onion Seongsu", "Apple Park", and multi-line "Name\nAddress" locations found nothing; "110 Sejong-daero" matched an address in Daegu, "Seoul City Hall" Hill City, SD, and "City Hall, 110 Sejong-daero" Jeonju City Hall | 2026-11-15 | iOS 27 simulator run |
+| In the simulator (US region, no `region` set on the request), `MKGeocodingRequest(addressString:)` (iOS 26.0+, addresses) found nothing for "서울 중구 세종대로 110", "Apple Park", or multi-line "Name\nAddress" locations, matched "110 Sejong-daero" to an address in Daegu and "Seoul City Hall" to Hill City, SD; `MKLocalSearch` (natural-language) found nothing for "서울 중구 세종대로 110", "서울시청", or "Café Onion Seongsu", and matched "City Hall, 110 Sejong-daero" to Jeonju City Hall. Wrong or no places, even for a US landmark, so the setup may be part of the cause | 2026-11-15 | iOS 27 simulator run |
 
 To verify before relying on it:
 
@@ -154,7 +154,7 @@ To verify before relying on it:
 - Foundation Models availability in the Simulator on this Mac.
 - MapKit routing and ETA in South Korea (driving and transit). Leave-by times depend on it; see PRODUCT.md D15.
 - Whether the `alertConfiguration` of a scheduled Live Activity alerts the user when it starts (PRODUCT.md → Interruptions relies on it).
-- Geocoding quality for Korean addresses and place names on a device in Korea, including whether results outside the user's area can be told apart (selection rule for physical places; the simulator check above failed), and MapKit's geocoding rate limits.
+- Geocoding quality for Korean addresses and place names on a device in Korea, including whether results outside the user's area can be told apart (selection rule for physical places; the simulator check above found wrong or no places), with the request's `region` set and a non-Korean control address, and MapKit's geocoding rate limits.
 - How Impact recognizes the focus blocks it created after a sync changes `calendarItemIdentifier` (PRODUCT.md → Block time), on Google and Exchange accounts.
 - Journaling Suggestions: required entitlement, availability, and what the picker returns (PRODUCT.md → Daily log).
 - Whether `OpenURLAction` reports a `tel:` URL as accepted before the user confirms the call prompt; if so, a cancelled call still shows "Call opened" (UX.md → Card detail). Check on a device (step 10).

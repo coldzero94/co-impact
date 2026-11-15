@@ -13,7 +13,7 @@ The one place for status. Update the row when a step starts or finishes, in the 
 | 7 | EventKit integration, with stored card state (done actions, Impacts, dismissals) | In progress: calendar access, live Home, stored Impacts (PR #12; a done card's primary action is restored from its Impact, other done actions are not stored); review follow-ups (PR #13); next: dismissals, the empty state's "Next:" line, organizer, attendees, and notes in card detail |
 | 8 | Foundation Models enrichment | |
 | 9 | Live Activities, widgets, Siri / Shortcuts | |
-| 10 | Background refresh, simulator and device testing | Includes: check Apple's geocoding with Korean addresses on a device, then geocode locations without coordinates (owner decision, 2026-11-15) |
+| 10 | Background refresh, simulator and device testing | Includes: check Apple's geocoding with Korean addresses on a device, then geocode locations without coordinates and reword the calendar usage string, which promises the calendar never leaves the device (owner decision, 2026-11-15) |
 | 11 | Goals: goal setup, goal-time rules in the engine (with tests), Block time | |
 | 12 | Focus blocks: Start focus and its Live Activity | |
 | 13 | Daily log and daily review | |

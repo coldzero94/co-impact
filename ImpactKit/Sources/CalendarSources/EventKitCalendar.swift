@@ -72,7 +72,8 @@ extension CalendarEvent {
     /// Normalizes one EventKit occurrence (ARCHITECTURE.md → Engine model and selection).
     /// shortcut: places need coordinates and nothing geocodes yet, so a location without them (typed, or synced
     /// as text) gives no in-person card. Apple's geocoder gave wrong or no places in a simulator check (Platform
-    /// facts); add it after the device check in step 10 (owner decision, 2026-11-15).
+    /// facts); fill `geocodedPlace` (for locations `canGeocode` accepts) once the device check passes
+    /// (ROADMAP.md, step 10).
     init(_ event: EKEvent) {
         let me = event.attendees?.first { $0.isCurrentUser }
         self.init(

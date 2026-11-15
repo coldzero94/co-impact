@@ -13,7 +13,7 @@ public final class HomeModel {
     private var events: [CalendarEvent]
     private let calendar: Calendar
     private let engine: ImpactEngine
-    /// Receives every recorded Impact after a new one, to store them.
+    /// Receives every Impact after one is recorded or restored, to store them.
     private let saveImpacts: ([String: Date]) -> Void
 
     public init(events: [CalendarEvent], now: Date, calendar: Calendar, log: ActionLog = ActionLog(),

@@ -15,7 +15,7 @@ public struct ActionLog: Sendable {
         self.impacts = impacts
     }
 
-    /// Adds stored Impacts read after launch. A card's first Impact wins, as in `record`.
+    /// Merges in Impacts read later; for a card in both, the earlier stamp wins.
     public mutating func restore(_ stored: [String: Date]) {
         impacts.merge(stored) { recorded, stored in min(recorded, stored) }
     }
