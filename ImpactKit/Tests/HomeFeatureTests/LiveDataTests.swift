@@ -24,25 +24,47 @@ private func withFile(_ body: (ImpactFile) throws -> Void) throws {
 }
 
 @Suite struct LiveDataTests {
-    @Test("Impacts survive a save and load; no file yet means none")
+    @Test("Impacts survive a save and load, to the sub-second; no file yet means none and leaves no file")
     func roundTrip() throws {
         try withFile { file in
-            #expect(file.load().isEmpty)
+            #expect(file.load() == [:])
+            #expect(!FileManager.default.fileExists(atPath: file.url.path()))
+            let stamp = morning.addingTimeInterval(0.123_456)
+            try file.save(["review": stamp])
+            #expect(file.load() == ["review": stamp])
+        }
+    }
+
+    @Test("The stored format stays readable: card IDs to seconds since 2001")
+    func format() throws {
+        try withFile { file in
+            try Data(#"{"review":800000000.5}"#.utf8).write(to: file.url)
+            #expect(file.load() == ["review": Date(timeIntervalSinceReferenceDate: 800_000_000.5)])
+        }
+    }
+
+    @Test("A file that does not decode is set aside with its bytes, not overwritten by the next save")
+    func undecodable() throws {
+        try withFile { file in
+            try Data("not json".utf8).write(to: file.url)
+            #expect(file.load() == [:])
+            let folder = file.url.deletingLastPathComponent()
+            let kept = try FileManager.default.contentsOfDirectory(atPath: folder.path())
+            #expect(kept.count == 1 && kept[0].hasPrefix("impacts.unreadable-"))
+            #expect(try Data(contentsOf: folder.appending(path: kept[0])) == Data("not json".utf8))
             try file.save(["review": morning])
             #expect(file.load() == ["review": morning])
         }
     }
 
-    @Test("An unreadable file is set aside, not overwritten by the next save")
-    func unreadable() throws {
+    @Test("A file that cannot be read now is left in place, and load says not to save over it")
+    func unreadableNow() throws {
         try withFile { file in
-            try Data("not json".utf8).write(to: file.url)
-            #expect(file.load().isEmpty)
-            let folder = file.url.deletingLastPathComponent()
-            let kept = try FileManager.default.contentsOfDirectory(atPath: folder.path())
-            #expect(kept.count == 1 && kept[0].hasPrefix("impacts.unreadable-"))
-            try file.save(["review": morning])
-            #expect(file.load() == ["review": morning])
+            // A folder at the file's path fails to read without being missing, like a locked file.
+            try FileManager.default.createDirectory(at: file.url, withIntermediateDirectories: false)
+            #expect(file.load() == nil)
+            var isFolder: ObjCBool = false
+            #expect(FileManager.default.fileExists(atPath: file.url.path(), isDirectory: &isFolder) && isFolder.boolValue)
         }
     }
 
@@ -64,5 +86,23 @@ private func withFile(_ body: (ImpactFile) throws -> Void) throws {
         #expect(model.now == later && model.snapshot.nextUp?.id == "sync" && model.snapshot.impactsToday == 2)
         model.update(events: [], now: later)
         #expect(model.snapshot.nextUp == nil && model.snapshot.impactsToday == 2)
+    }
+
+    @Test("Across midnight, yesterday's Impacts stop counting and a new one is stamped with the new day")
+    @MainActor func acrossMidnight() throws {
+        var saved: [String: Date] = [:]
+        let event = meeting("review", at: morning.addingTimeInterval(600))
+        let model = try HomeModel(events: [event], now: morning, calendar: losAngeles) { saved = $0 }
+        let review = try #require(model.snapshot.nextUp)
+        _ = model.record(try #require(review.primaryAction), on: review)
+        #expect(model.snapshot.impactsToday == 1)
+
+        let nextMorning = morning.addingTimeInterval(86_400)
+        let tomorrows = meeting("standup", at: nextMorning.addingTimeInterval(600))
+        model.update(events: [tomorrows], now: nextMorning)
+        #expect(model.snapshot.impactsToday == 0)
+        let standup = try #require(model.snapshot.nextUp)
+        _ = model.record(try #require(standup.primaryAction), on: standup)
+        #expect(saved["standup"] == nextMorning && saved["review"] == morning && model.snapshot.impactsToday == 1)
     }
 }

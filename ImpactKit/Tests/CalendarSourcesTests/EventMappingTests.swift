@@ -25,7 +25,7 @@ private func structured(_ title: String?, at coordinate: (Double, Double)? = (37
 }
 
 @Suite struct EventMappingTests {
-    @Test("Fields carry over, and an unsaved event on no calendar is regular, accepted by nobody")
+    @Test("Fields carry over; an unsaved event on no calendar is regular, with no attendees and unknown participation")
     func fields() throws {
         let zoom = try #require(URL(string: "https://zoom.us/j/1"))
         let mapped = CalendarEvent(event {
@@ -36,6 +36,43 @@ private func structured(_ title: String?, at coordinate: (Double, Double)? = (37
         #expect(mapped.calendarKind == .regular && mapped.participation == .unknown && !mapped.isCanceled)
         #expect(!mapped.hasAttendees && !mapped.isUserAttendee && !mapped.isUserOrganizer && mapped.seriesID == nil)
         #expect(CalendarEvent(event { $0.isAllDay = true }).isAllDay)
+        #expect(CalendarEvent(event { $0.title = "  " }).title == "Untitled")
+    }
+
+    @Test("A single event's ID is its item ID; a recurring occurrence's adds its date and names its series")
+    func mappedIDs() {
+        let single = event()
+        let mapped = CalendarEvent(single)
+        #expect(mapped.id == single.calendarItemIdentifier && mapped.seriesID == nil && mapped.calendarID == "")
+        let daily = event { $0.addRecurrenceRule(EKRecurrenceRule(recurrenceWith: .daily, interval: 1, end: nil)) }
+        let occurrence = CalendarEvent(daily)
+        #expect(occurrence.id == "\(daily.calendarItemIdentifier)@1800000000")
+        #expect(occurrence.seriesID == daily.calendarItemIdentifier)
+    }
+
+    @Test("Calendar kinds: subscribed CalDAV calendars and Birthdays are not the user's own", arguments: [
+        (EKCalendarType.local, false, CalendarKind.regular), (.calDAV, false, .regular), (.exchange, false, .regular),
+        (.calDAV, true, .subscription), (.subscription, false, .subscription), (.birthday, false, .birthdays),
+    ])
+    func kinds(_ type: EKCalendarType, _ subscribed: Bool, _ kind: CalendarKind) {
+        #expect(EventKitCalendar.kind(type: type, isSubscribed: subscribed) == kind)
+    }
+
+    @Test("Participation keeps accepted, declined, and tentative; anything else is unknown")
+    func participation() {
+        #expect(CalendarEvent.participation(.accepted) == .accepted)
+        #expect(CalendarEvent.participation(.declined) == .declined)
+        #expect(CalendarEvent.participation(.tentative) == .tentative)
+        for other: EKParticipantStatus? in [.pending, .delegated, .completed, .inProcess, .unknown, nil] {
+            #expect(CalendarEvent.participation(other) == .unknown)
+        }
+    }
+
+    @Test("Only full access reads; restricted is told apart from denied and write-only")
+    func access() {
+        #expect(CalendarAccess(.fullAccess) == .granted && CalendarAccess(.notDetermined) == .notDetermined)
+        #expect(CalendarAccess(.denied) == .denied && CalendarAccess(.writeOnly) == .denied)
+        #expect(CalendarAccess(.restricted) == .restricted)
     }
 
     @Test("A single event keeps its item ID; a recurring occurrence adds its original date")

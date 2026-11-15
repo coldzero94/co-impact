@@ -142,6 +142,12 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         #expect(ids(home.tomorrowMorning) == (shown ? ["T 8:30", "T 9:0"] : []))
     }
 
+    @Test("The fetch horizon ends tomorrow at noon, and today ends at midnight")
+    func horizon() {
+        let (tomorrow, end) = ImpactEngine.horizon(now: at(19), calendar: calendar)
+        #expect(tomorrow == at(0, day: 1) && end == at(12, day: 1))
+    }
+
     @Test("Tomorrow morning ends before noon")
     func tomorrowNoon() {
         let events = [event("Midnight", 0, day: 1), event("Noon", 12, day: 1), event("After noon", 13, day: 1)]

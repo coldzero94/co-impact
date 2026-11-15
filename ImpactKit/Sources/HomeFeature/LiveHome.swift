@@ -4,11 +4,13 @@ import os
 import SwiftUI
 
 /// The app outside debug fixtures (UX.md → Onboarding): asks for calendar access, then shows Home on the
-/// user's calendar, refreshed every minute, when the calendar changes, and when the app comes to the front.
+/// user's calendar, refreshed as ARCHITECTURE.md → Refresh and platform constraints lists.
 public struct LiveHome: View {
     @State private var access = EventKitCalendar.access
     @State private var calendarSource = EventKitCalendar()
     @State private var model: HomeModel?
+    /// Full access, but no calendar Impact reads (only subscriptions or Birthdays, or none).
+    @State private var noCalendars = false
     @State private var startFailure: String?
     @State private var requestFailed = false
     @Environment(\.scenePhase) private var scenePhase
@@ -19,7 +21,9 @@ public struct LiveHome: View {
         Group {
             switch access {
             case .granted:
-                if let model {
+                if noCalendars {
+                    NoCalendars()
+                } else if let model {
                     HomeView(model: model)
                 } else if let startFailure {
                     Text(startFailure).padding()
@@ -29,7 +33,9 @@ public struct LiveHome: View {
             case .notDetermined:
                 Onboarding(requestFailed: requestFailed) { await connect() }
             case .denied:
-                AccessNeeded()
+                AccessNeeded(restricted: false)
+            case .restricted:
+                AccessNeeded(restricted: true)
             }
         }
         .task(id: access) {
@@ -42,7 +48,8 @@ public struct LiveHome: View {
             }
         }
         .task {
-            // Iterated on the main actor whichever thread posts it.
+            // Runs on the view's main actor whichever thread posts; mapping to Void drops the non-Sendable
+            // Notification.
             for await _ in NotificationCenter.default.notifications(named: EventKitCalendar.changed).map({ _ in }) {
                 refresh()
             }
@@ -57,9 +64,10 @@ public struct LiveHome: View {
     private func connect() async {
         do {
             access = try await calendarSource.requestAccess()
-            requestFailed = false
+            // No prompt and no answer, e.g. the request was dropped: say so instead of doing nothing.
+            requestFailed = access == .notDetermined
         } catch {
-            homeLog.error("Calendar access request failed: \(error)")
+            homeLog.error("Calendar access request failed: \(error.logged, privacy: .public)")
             requestFailed = true
             access = EventKitCalendar.access
         }
@@ -70,23 +78,39 @@ public struct LiveHome: View {
         guard access == .granted else { return }
         let now = Date.now
         let calendar = Calendar.autoupdatingCurrent
-        let events = calendarSource.events(from: calendar.startOfDay(for: now),
-                                           to: ImpactEngine.horizon(now: now, calendar: calendar).end)
+        guard let events = calendarSource.events(from: calendar.startOfDay(for: now),
+                                                 to: ImpactEngine.horizon(now: now, calendar: calendar).end) else {
+            access = EventKitCalendar.access
+            noCalendars = access == .granted
+            return
+        }
+        noCalendars = false
         if let model {
             model.update(events: events, now: now)
             return
         }
+        // Storage never blocks Home: without a readable file, Impacts count until the app quits.
+        let file: ImpactFile?
         do {
-            let file = try ImpactFile.standard()
-            model = try HomeModel(events: events, now: now, calendar: calendar, log: ActionLog(impacts: file.load())) {
+            file = try ImpactFile.standard()
+        } catch {
+            homeLog.fault("No place to store Impacts: \(error.logged, privacy: .public)")
+            file = nil
+        }
+        let stored = file?.load()
+        do {
+            model = try HomeModel(events: events, now: now, calendar: calendar,
+                                  log: ActionLog(impacts: stored ?? [:])) { impacts in
+                guard let file, stored != nil else { return } // never overwrite a file that was not read
                 do {
-                    try file.save($0)
+                    try file.save(impacts)
                 } catch {
-                    // The Impact still counts until the app quits; only its record across launches is lost.
-                    homeLog.fault("Could not save Impacts: \(error)")
+                    // Each save writes every Impact, so the next one that succeeds stores this one too.
+                    homeLog.fault("Could not save Impacts: \(error.logged, privacy: .public)")
                 }
             }
         } catch {
+            homeLog.fault("Impact could not start: \(error.logged, privacy: .public)")
             startFailure = "Impact could not start: \(error.localizedDescription)"
         }
     }
@@ -101,7 +125,7 @@ struct Onboarding: View {
 
     var body: some View {
         MessageScreen {
-            Text("Impact").font(.largeTitle.bold())
+            Text("Impact").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
             Text("Impact finds the events in your calendar that need you, and gets you there in one tap.")
                 .font(.title3)
         } action: {
@@ -110,8 +134,8 @@ struct Onboarding: View {
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Button {
+                asking = true
                 Task {
-                    asking = true
                     await connect()
                     asking = false
                 }
@@ -128,18 +152,22 @@ struct Onboarding: View {
     }
 }
 
-/// Without full access: why Impact needs it, and the way to Settings (UX.md → Onboarding).
+/// Without full access: why Impact needs it, and the way to Settings (UX.md → Onboarding). When access is
+/// restricted the user cannot change it, so there is no Settings button (hard rule 8).
 struct AccessNeeded: View {
+    let restricted: Bool
     @Environment(\.openURL) private var openURL
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         MessageScreen {
-            Text("Impact needs your calendar").font(.title.bold())
-            Text("It reads your events on this iPhone to find the ones that need you. In Settings, give Impact Full Access to Calendars.")
+            Text("Impact needs your calendar").font(.title.bold()).accessibilityAddTraits(.isHeader)
+            Text(restricted
+                 ? "It reads your events on this iPhone to find the ones that need you. Calendar access is restricted on this iPhone, so Impact can't read it."
+                 : "It reads your events on this iPhone to find the ones that need you. In Settings, give Impact Full Access to Calendars.")
         } action: {
             #if os(iOS)
-            if let settings = URL(string: UIApplication.openSettingsURLString) {
+            if !restricted, let settings = URL(string: UIApplication.openSettingsURLString) {
                 Button {
                     openURL(settings)
                 } label: {
@@ -154,7 +182,19 @@ struct AccessNeeded: View {
     }
 }
 
-/// A message centered on screen with its button pinned below; at large text sizes the message scrolls.
+/// Full access, but no calendar Impact reads, so it never claims an empty day it did not read (hard rule 2).
+struct NoCalendars: View {
+    var body: some View {
+        MessageScreen {
+            Text("No calendars to read").font(.title.bold()).accessibilityAddTraits(.isHeader)
+            Text("Impact reads the calendars of your accounts on this iPhone, such as iCloud, Google, or Exchange. Subscribed calendars and Birthdays are skipped.")
+        } action: {
+            EmptyView()
+        }
+    }
+}
+
+/// A message vertically centered, with its button pinned below; at large text sizes the message scrolls.
 private struct MessageScreen<Message: View, Action: View>: View {
     @ViewBuilder let message: Message
     @ViewBuilder let action: Action
@@ -175,5 +215,7 @@ private struct MessageScreen<Message: View, Action: View>: View {
 
 #if DEBUG
 #Preview("Onboarding") { Onboarding(requestFailed: false) {} }
-#Preview("Access needed") { AccessNeeded() }
+#Preview("Access needed") { AccessNeeded(restricted: false) }
+#Preview("Access restricted") { AccessNeeded(restricted: true) }
+#Preview("No calendars") { NoCalendars() }
 #endif

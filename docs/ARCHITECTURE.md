@@ -64,7 +64,7 @@ The source of truth for the implemented types is [ImpactKit/Sources/ImpactEngine
 | `ActionLog` | Which actions ran, by card, and when each card's Impact was recorded (its primary action, once). Feeds `home(…)`'s completions and today's Impact count |
 | `HomeSnapshot` | What Home shows: Next up, later today, tomorrow morning, the summary count, the Impact ring, and which listed cards are done. Built by `home(events:now:calendar:completedCardIDs:impactsToday:…)` |
 
-`CalendarSources` maps each EventKit occurrence: the ID is `calendarItemIdentifier`, plus the original occurrence date for recurring events; the series ID is `calendarItemIdentifier` when the event recurs. A moved occurrence gets an item ID of its own (Platform facts), so it becomes a new card outside its series. Participation and membership come from the attendee marked as the current user and the organizer; subscription and Birthdays calendars keep their type. A structured location becomes a `Place` only with coordinates: its title's first line is the name and the rest, or else the location text after that name, the address. No geocoding happens yet, so a typed address gives no in-person card. Home fetches from the start of today to tomorrow noon, every minute, on `EKEventStoreChanged`, and when the app comes to the front.
+`CalendarSources` maps each EventKit occurrence: the ID is `calendarItemIdentifier`, plus the original occurrence date for recurring events; the series ID is `calendarItemIdentifier` when the event recurs. A moved occurrence gets an item ID of its own (Platform facts), so it becomes a new card outside its series. Participation and membership come from the attendee marked as the current user and the organizer. Subscription calendars (including CalDAV calendars marked subscribed, as iCloud syncs them) and Birthdays keep their kind, so selection skips them. An empty title reads "Untitled". A structured location becomes a `Place` only with coordinates: its title's first line is the name (or, with no title, the location text's first line) and the rest, or else the location text after that name, the address. No geocoding happens yet, so a location without coordinates gives no in-person card. Home fetches from the start of today to tomorrow noon (`ImpactEngine.horizon`), when the triggers under Refresh and platform constraints fire. Without full access, or with no calendar of the user's own, the fetch returns nothing at all rather than an empty list, and Home says so instead of showing an empty day.
 
 `CalendarEvent.id` must identify an occurrence, not just a recurring series. `CalendarSources` (above) supplies this ID and the self-organizer/self-attendee flags; unknown membership on an event with attendees is excluded. `seriesID` is separate and supports muting all occurrences. Re-enabling a subscription or Birthdays calendar through `includedCalendarIDs` removes only the calendar-type exclusion, not declined/foreign-event or other exclusions.
 
@@ -84,8 +84,9 @@ iOS does not let an app run whenever it wants. The engine runs when:
 
 | Trigger | Reliability |
 |---------|-------------|
-| App launch / foreground | Always |
-| `EKEventStoreChanged` notification | Only while the app is running |
+| App launch / foreground | Always (built, step 7) |
+| Every minute while Home is open | Always; countdowns move on the minute (built, step 7) |
+| `EKEventStoreChanged` notification | Only while the app is running (built, step 7) |
 | `BGAppRefreshTask` | Best effort; the system decides when, possibly not at all |
 | Widget timeline reload | Budgeted by the system |
 
@@ -100,12 +101,12 @@ Live Activities are started **without a server** by scheduling them at analysis 
 - Output only through `@Generable` types whose fields map to the catalog; never render free text as an action.
 - Never send calendar data anywhere else (no Private Cloud Compute, no third-party APIs).
 
-## Storage (Proposed)
+## Storage
 
-- Built (step 7): recorded Impacts, as card IDs and times, in one JSON file in the app's Application Support folder. Which secondary actions ran is not stored. An unreadable file is renamed aside, never overwritten.
-- Card and action state: SwiftData in an App Group container (shared with widgets). The Impact file moves there when widgets read it (step 9).
-- Goals, Impact records, daily-log lines, and the identifiers of events Impact created: SwiftData in the same container.
-- Settings and local rules (e.g. "don't suggest for events like this"): `UserDefaults` in the App Group.
+- Built (step 7): recorded Impacts, as card IDs and times, in one JSON file in the app's Application Support folder. Which secondary actions ran is not stored. A file that does not decode is renamed aside; one that cannot be read at the moment is left alone and not saved over for that session. Without a usable file, Impacts count until the app quits.
+- Proposed: card and action state in SwiftData in an App Group container (shared with widgets). The Impact file moves there when widgets read it (step 9).
+- Proposed: goals, Impact records, daily-log lines, and the identifiers of events Impact created, in SwiftData in the same container.
+- Proposed: settings and local rules (e.g. "don't suggest for events like this") in `UserDefaults` in the App Group.
 - No calendar content is persisted beyond what card state needs; re-read from EventKit instead.
 
 ## Privacy
@@ -118,7 +119,7 @@ Live Activities are started **without a server** by scheduling them at analysis 
 
 - `ImpactKit` engine: Swift Testing with synthetic `CalendarEvent` fixtures (one test per selection rule, plus skip cases).
 - `CalendarSources`: mapping tests on unsaved `EKEvent`s, which need no calendar access, so tests never read the machine's calendar.
-- UI: SwiftUI previews and debug builds use `HomeFixtures` (synthetic events run through the real engine, debug only; see UX.md → Onboarding for release builds). A UI change is checked by simulator screenshots (ImpactKit/AGENTS.md → UI).
+- UI: SwiftUI previews, and debug builds launched with `-fixtureHour` (ImpactKit/AGENTS.md → UI), use `HomeFixtures` (synthetic events run through the real engine, debug only); otherwise every build starts at Onboarding. A UI change is checked by simulator screenshots (ImpactKit/AGENTS.md → UI).
 - Device testing is required for Foundation Models and Live Activities.
 
 ## Platform facts
@@ -141,7 +142,7 @@ Verified facts only. Add the date and how each was verified.
 | `MKMapItem(location:address:)` exists from iOS 26.0 and macOS 26.0 (`init(placemark:)` is deprecated there), with `MKAddress(fullAddress:shortAddress:)` (failable); `openInMaps(launchOptions:)` returns whether Maps opened, on iOS and macOS | 2026-11-09 | iOS 27 SDK MapKit `MKMapItem.h` and `MKAddress.h` |
 | `OpenURLAction` calls back with whether the URL was accepted; `ButtonRole.close` exists from iOS 26.0 | 2026-11-09 | iOS 27 SDK `SwiftUICore` and `SwiftUI` `.swiftinterface` |
 | `requestFullAccessToEvents()` (iOS 17+) prompts once; `authorizationStatus(for: .event)` reports `.fullAccess`, `.writeOnly`, `.denied`, `.restricted`, or `.notDetermined`, and only full access reads events. The usage key is `NSCalendarsFullAccessUsageDescription` | 2026-11-15 | iOS 27 SDK EventKit `EKEventStore.h`, `EKTypes.h`; simulator run |
-| `events(matching:)` expands recurring events into occurrences; `occurrenceDate` is the original date of a recurring occurrence, even after it is moved, and unset otherwise; `EKParticipant.isCurrentUser`, `EKEvent.status` (`.canceled`), `EKCalendar.type` (`.subscription`, `.birthday`), and `EKStructuredLocation.geoLocation` exist | 2026-11-15 | iOS 27 SDK EventKit `EKEvent.h`, `EKParticipant.h`, `EKCalendar.h`, `EKStructuredLocation.h` |
+| `events(matching:)` expands recurring events into occurrences; `occurrenceDate` is the original date of a recurring occurrence, even after it is moved, and unset otherwise; `EKParticipant.isCurrentUser`, `EKEvent.status` (`.canceled`), `EKCalendar.type` (`.subscription`, `.birthday`), and `EKStructuredLocation.geoLocation` exist. A CalDAV subscribed calendar has type `.calDAV` with `isSubscribed` true. EventKit cannot tell a calendar shared with the user from their own | 2026-11-15 | iOS 27 SDK EventKit `EKEvent.h`, `EKParticipant.h`, `EKCalendar.h`, `EKStructuredLocation.h`; occurrence expansion seen in a simulator run |
 | An `.ics` added through Safari ("Add All") keeps an event's location text as a structured location title but drops `X-APPLE-STRUCTURED-LOCATION` coordinates; opening an `.ics` URL with `simctl openurl` offers a subscription instead | 2026-11-15 | iOS 27 simulator run |
 | Moving one occurrence of a recurring event gives it a new `calendarItemIdentifier`, `hasRecurrenceRules` false, `isDetached` true, and `occurrenceDate` still the original date; its `calendarItemExternalIdentifier` became the series UID plus `/RID=<time>` on a local calendar (the format depends on the server) | 2026-11-15 | iOS 27 simulator run: one occurrence of a synthetic daily series moved with `save(_:span: .thisEvent)` |
 
