@@ -85,7 +85,7 @@ private func withFile(_ body: (ImpactFile) throws -> Void) throws {
         }
     }
 
-    @Test("On a fresh install the saver writes the first Impact; a merge keeps each card's first stamp")
+    @Test("On a fresh install the saver writes the first Impact; a merge keeps each card's earlier stamp")
     func saverFreshAndMerge() throws {
         try withFile { file in
             let save = file.saver(stored: file.load())
@@ -121,6 +121,46 @@ private func withFile(_ body: (ImpactFile) throws -> Void) throws {
         model.restore(["standup": morning.addingTimeInterval(-3_600), "sync": morning.addingTimeInterval(-60)])
         #expect(model.snapshot.impactsToday == 3 && model.snapshot.nextUp == nil)
         #expect(saved == ["review": morning, "standup": morning.addingTimeInterval(-3_600), "sync": morning.addingTimeInterval(-60)])
+    }
+
+    @Test("Dismissing hides the card and its ring segment, stores the change, and survives an update")
+    @MainActor func dismiss() throws {
+        var saved: [Dismissals] = []
+        var weekly = meeting("standup-mon", at: morning.addingTimeInterval(600))
+        weekly.seriesID = "standup"
+        let tuesday = { var next = weekly; next.id = "standup-tue"; next.start += 86_400; next.end += 86_400; return next }()
+        let events = [weekly, meeting("review", at: morning.addingTimeInterval(3_600))]
+        let model = try HomeModel(events: events, now: morning, calendar: losAngeles, saveDismissals: { saved.append($0) })
+        #expect(model.snapshot.ringSegments == 2)
+
+        model.dismiss(try #require(model.snapshot.nextUp), similar: false)
+        #expect(model.snapshot.cards.map(\.id) == ["review"] && model.snapshot.ringSegments == 1)
+        #expect(saved.last?.occurrences.keys.sorted() == ["standup-mon"])
+        model.update(events: events, now: morning.addingTimeInterval(60))
+        #expect(model.snapshot.cards.map(\.id) == ["review"])
+
+        let muted = try HomeModel(events: [weekly, tuesday], now: morning.addingTimeInterval(13 * 3_600), calendar: losAngeles,
+                                  saveDismissals: { saved.append($0) })
+        model.dismiss(try #require(model.snapshot.nextUp), similar: true)
+        #expect(saved.last?.muted == [.title(calendarID: "work", title: "review")])
+        muted.dismiss(try #require(muted.snapshot.cards.first), similar: true)
+        #expect(muted.snapshot.cards.isEmpty && saved.last?.muted == [.series(calendarID: "work", seriesID: "standup")])
+    }
+
+    @Test("Dismissals survive the store, pruned; data that does not decode is kept aside")
+    func dismissalStore() throws {
+        let defaults = try #require(UserDefaults(suiteName: "impact-tests-\(UUID().uuidString)"))
+        let store = DismissalStore(defaults: defaults)
+        #expect(store.load(now: morning) == Dismissals())
+        var dismissals = Dismissals()
+        dismissals.dismiss(meeting("old", at: morning), at: morning.addingTimeInterval(-3 * 86_400))
+        dismissals.dismiss(meeting("new", at: morning), at: morning)
+        store.save(dismissals)
+        #expect(store.load(now: morning).occurrences.keys.sorted() == ["new"])
+
+        defaults.set(Data("not json".utf8), forKey: DismissalStore.key)
+        #expect(store.load(now: morning) == Dismissals())
+        #expect(defaults.data(forKey: "\(DismissalStore.key).unreadable") == Data("not json".utf8))
     }
 
     @Test("Recording saves every Impact once; an update moves the clock and keeps them")

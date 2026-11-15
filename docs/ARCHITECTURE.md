@@ -57,7 +57,8 @@ The source of truth for the implemented types is [ImpactKit/Sources/ImpactEngine
 |------|----------------|
 | `CalendarEvent` | Source-independent occurrence, calendar ID/type, dates, cancellation, participation, user membership, optional series ID, raw URL/location/notes, and resolved places |
 | `Place` | Title, optional address, and a required coordinate pair; invalid coordinates are rejected during selection |
-| `SuppressionRule` | Same recurring series on one calendar, or exact title on one calendar |
+| `SuppressionRule` | Same recurring series on one calendar, exact title on one calendar, or one occurrence |
+| `Dismissals` | Occurrences marked Not needed (with when, pruned after two days) and muted series or titles; its `rules` go to `home(suppressionRules:)` |
 | `Provenance`, `Fact` | Calendar field, computation, or inference attached to each displayed fact |
 | `ActionKind`, `ImpactAction` | Closed catalog from PRODUCT.md, with provenance; action identity is its kind and payload within a card |
 | `ImpactCard` | Event occurrence ID, title ("Untitled" when the calendar's is empty; the Title fact keeps it empty, and title rules match the event's title, never the displayed "Untitled"), dates, kind, facts, and ordered actions; the first calendar or computed one is the primary action (`primaryAction`), and inferred ones are never shown as buttons (`confirmedActions`) |
@@ -103,16 +104,17 @@ Live Activities are started **without a server** by scheduling them at analysis 
 
 ## Storage
 
-- Built (step 7): recorded Impacts, as card IDs and times, in one JSON file in the app's Application Support folder. Which secondary actions ran is not stored. A file that does not decode is renamed aside; one that cannot be read at the moment is left alone, each save first tries reading it again and skips until it can, and each refresh tries too and adds what it reads to Home. Merges keep each card's first Impact. Without a usable file, Impacts count until the app quits.
+- Built (step 7): recorded Impacts, as card IDs and times, in one JSON file in the app's Application Support folder. Which secondary actions ran is not stored. A file that does not decode is renamed aside; one that cannot be read at the moment is left alone, each save first tries reading it again and skips until it can, and each refresh tries too and adds what it reads to Home. Merges keep each card's earlier stamp. Without a usable file, Impacts count until the app quits.
 - Proposed: card and action state in SwiftData in an App Group container (shared with widgets). The Impact file moves there when widgets read it (step 9).
 - Proposed: goals, Impact records, daily-log lines, and the identifiers of events Impact created, in SwiftData in the same container.
+- Built (step 7): dismissals, as JSON in standard `UserDefaults`: occurrence IDs with when (pruned after two days) and muted series IDs or titles. Data that does not decode is kept under another key. They move to the App Group with the widgets (step 9).
 - Proposed: settings and local rules (e.g. "don't suggest for events like this") in `UserDefaults` in the App Group.
 - No calendar content is persisted beyond what card state needs; re-read from EventKit instead.
 
 ## Privacy
 
 - Calendar access: full access is required to read events. It also allows writing; the only write is Block time (PRODUCT.md → Goals). The usage string (`INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription` in the app target) states on-device processing; the clause that Impact adds events only when the user taps Block time joins it with Block time (step 11).
-- No analytics SDKs, no network calls with calendar content. The owner has approved sending a location without coordinates to Apple's geocoder (MapKit) once its quality is checked on a device (step 10); until then no location is sent to it.
+- No analytics SDKs, no network calls with calendar content. The owner has approved sending a location without coordinates to Apple's geocoder (MapKit) once its quality is checked on a device (step 10); until then no location is sent to it. Shipping it means rewording the usage string, PRODUCT.md → Principles ("never leaves it"), and UX.md → Onboarding.
 - Google Calendar API (if ever added, D7): official OAuth via `ASWebAuthenticationSession`, tokens in Keychain, read-only scope.
 
 ## Testing
@@ -145,7 +147,7 @@ Verified facts only. Add the date and how each was verified.
 | `events(matching:)` expands recurring events into occurrences; `occurrenceDate` is the original date of a recurring occurrence, even after it is moved, and unset otherwise; `EKParticipant.isCurrentUser`, `EKEvent.status` (`.canceled`), `EKCalendar.type` (`.subscription`, `.birthday`), and `EKStructuredLocation.geoLocation` exist. A CalDAV subscribed calendar has type `.calDAV` with `isSubscribed` true. `EKCalendar` has no property marking a calendar shared into the user's account; calendars of an account delegated by another user can be told apart with `EKSource.isDelegate` (iOS 16+), not used yet | 2026-11-15 | iOS 27 SDK EventKit `EKEvent.h`, `EKParticipant.h`, `EKCalendar.h`, `EKSource.h`, `EKStructuredLocation.h`; occurrence expansion seen in a simulator run |
 | An `.ics` added through Safari ("Add All") keeps an event's location text as a structured location title but drops `X-APPLE-STRUCTURED-LOCATION` coordinates; opening an `.ics` URL with `simctl openurl` offers a subscription instead | 2026-11-15 | iOS 27 simulator run |
 | Moving one occurrence of a recurring event gives it a new `calendarItemIdentifier`, `hasRecurrenceRules` false, `isDetached` true, and `occurrenceDate` still the original date; its `calendarItemExternalIdentifier` became the series UID plus `/RID=<time>` on a local calendar (the format depends on the server) | 2026-11-15 | iOS 27 simulator run: one occurrence of a synthetic daily series moved with `save(_:span: .thisEvent)` |
-| In the simulator (US region, no `region` set on the request), `MKGeocodingRequest(addressString:)` (iOS 26.0+, addresses) found nothing for "서울 중구 세종대로 110", "Apple Park", or multi-line "Name\nAddress" locations, matched "110 Sejong-daero" to an address in Daegu and "Seoul City Hall" to Hill City, SD; `MKLocalSearch` (natural-language) found nothing for "서울 중구 세종대로 110", "서울시청", or "Café Onion Seongsu", and matched "City Hall, 110 Sejong-daero" to Jeonju City Hall. Wrong or no places, even for a US landmark, so the setup may be part of the cause | 2026-11-15 | iOS 27 simulator run |
+| In the simulator (US region, no `region` set on the request), `MKGeocodingRequest(addressString:)` (iOS 26.0+, addresses) found nothing for "서울 중구 세종대로 110", "Apple Park", or multi-line "Name\nAddress" locations, matched "110 Sejong-daero" to an address in Daegu and "Seoul City Hall" to Hill City, SD; `MKLocalSearch` (natural-language) found nothing for "서울 중구 세종대로 110", "서울시청", or "Café Onion Seongsu", and matched "City Hall, 110 Sejong-daero" to Jeonju City Hall. ("Apple Park" is a place name, which the address API may not cover) | 2026-11-15 | iOS 27 simulator run |
 
 To verify before relying on it:
 

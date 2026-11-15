@@ -62,7 +62,7 @@ private func hybridCard() throws -> ImpactCard {
         #expect(!log.isDone(card.actions[1], on: card) && log.completedCardIDs == ["town-hall"])
     }
 
-    @Test("Restoring stored Impacts keeps each card's first one")
+    @Test("Restoring stored Impacts keeps each card's earlier stamp")
     func restoreKeepsFirst() throws {
         let card = try hybridCard()
         var log = ActionLog()

@@ -63,7 +63,7 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 - **Tomorrow morning** follows PRODUCT.md → Horizon.
 - Events that need nothing are counted but not listed; Home is not a calendar.
 - Tapping Next up opens the card's detail; its button runs the primary action in one tap.
-- Not built yet: goal-time and focus cards (steps 11–12); swiping to dismiss (step 7, next); the ring tap and the "Today" row from 18:00, with the daily review (step 13). Leave-by times are not drawn: rows and answers show the place, which stays the fallback when no route exists (PRODUCT.md → Card timeline). Nor is the empty state's "Next:" line (it needs events past the horizon, step 7). Locations without coordinates are not geocoded yet (after a device check of Apple's geocoding, step 10), so only events with a structured location with coordinates get in-person cards. Calendars shared into the user's account are not marked in EventKit, so their events without attendees can get cards; delegated accounts are not filtered yet (PRODUCT.md D12).
+- Not built yet: goal-time and focus cards (steps 11–12); the ring tap and the "Today" row from 18:00, with the daily review (step 13). Leave-by times are not drawn: rows and answers show the place, which stays the fallback when no route exists (PRODUCT.md → Card timeline). Nor is the empty state's "Next:" line (it needs events past the horizon, step 7). Locations without coordinates are not geocoded yet (after a device check of Apple's geocoding, step 10), so only events with a structured location with coordinates get in-person cards. Calendars shared into the user's account are not marked in EventKit, so their events without attendees can get cards; delegated accounts are not filtered yet (PRODUCT.md D12).
 
 ### 3. Empty state
 
@@ -118,6 +118,7 @@ Not built yet: Details shows the place only; organizer, attendees, and the notes
 - Swipe a card or row → **Not needed**. It disappears with no confirmation.
 - Same menu: **Don't suggest for events like this** (mutes the recurring series, or the same title on the same calendar).
 - Goal-time cards offer **Not now** instead (hidden until tomorrow).
+- Built in step 7: the swipe shows two icon buttons, Not needed (red, a full swipe runs it) and Don't suggest (gray); VoiceOver reads both as actions with their full names. A dismissed card's ring segment disappears with it. Not built yet: Not now (step 11), and a way to unmute in Settings.
 
 ## Motion (Proposed)
 

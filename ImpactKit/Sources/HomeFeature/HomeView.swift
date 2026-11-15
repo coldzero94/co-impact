@@ -3,15 +3,13 @@ import ImpactEngine
 import SwiftUI
 
 /// Home (UX.md → Home): summary and Impact ring, Next up, Later today, Tomorrow morning. Tapping a card
-/// opens its detail; running a primary action records an Impact and plays the Impact moment.
+/// opens its detail; running a primary action records an Impact and plays the Impact moment; swiping a card
+/// dismisses it (UX.md → Dismissing).
 public struct HomeView: View {
     let model: HomeModel
     @State private var selected: ImpactCard?
     @State private var failed: ActionKind?
-    /// Card frames by card ID in the content's coordinate space: where a moment starts.
-    @State private var frames: [String: CGRect] = [:]
-    /// The ring's frame in the same space: where a moment lands; nil skips the flight.
-    @State private var ringFrame: CGRect?
+    @State private var momentFrames = MomentFrames()
     /// An Impact recorded when its action ran; it plays once Home is in front again with no sheet open.
     @State private var pending: Moment?
     @State private var flying: Moment?
@@ -22,17 +20,14 @@ public struct HomeView: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @ScaledMetric(relativeTo: .title) private var ringSize = 46.0
 
-    nonisolated static let space = "home"
-
     public init(model: HomeModel) {
         self.model = model
     }
 
     public var body: some View {
         let snapshot = model.snapshot
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                header(snapshot)
+        List {
+            Section {
                 if let next = snapshot.nextUp {
                     NextUpCard(card: next, now: model.now, details: { selected = next }, primary: { action in
                         // Within a second of an Impact, Next up already shows the next card, so a tap is
@@ -42,9 +37,10 @@ public struct HomeView: View {
                         playPending()
                         run(action, on: next) { failed = $0 }
                     })
-                        .recordingFrame { frames[next.id] = $0 }
+                        .recordingFrame { momentFrames.cards[next.id] = $0 }
                         // A new view per card, so the promoted card records its own frame.
                         .id(next.id)
+                        .dismissible { model.dismiss(next, similar: $0) }
                 } else {
                     // shortcut: no "Next:" line until events past the horizon arrive (roadmap step 7).
                     Text("Nothing needs you today.")
@@ -53,19 +49,30 @@ public struct HomeView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(Color.card, in: .rect(cornerRadius: 24))
                 }
-                section("Later today", snapshot.laterToday, done: snapshot.doneCardIDs)
-                section("Tomorrow morning", snapshot.tomorrowMorning, done: snapshot.doneCardIDs)
+            } header: {
+                // A header, not a row: rows clip the large title's first glyph at the cell's edge.
+                header(snapshot).textCase(nil).foregroundStyle(.primary).padding(.bottom, 16)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .overlay {
-                if let flying, let from = flying.from, let to = ringFrame {
-                    ImpactToken(symbol: flying.symbol, from: from, to: to, onLanded: land).id(flying.id)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+            section("Later today", snapshot.laterToday, done: snapshot.doneCardIDs)
+            section("Tomorrow morning", snapshot.tomorrowMorning, done: snapshot.doneCardIDs)
+        }
+        .homeListStyle()
+        .contentMargins(.top, 8, for: .scrollContent)
+        .scrollContentBackground(.hidden)
+        .background(Color.page)
+        .overlay {
+            GeometryReader { proxy in
+                let origin = proxy.frame(in: .global).origin
+                if let flying, let from = flying.from, let to = momentFrames.ring {
+                    ImpactToken(symbol: flying.symbol, from: from.offsetBy(dx: -origin.x, dy: -origin.y),
+                                to: to.offsetBy(dx: -origin.x, dy: -origin.y), onLanded: land)
+                        .id(flying.id)
                 }
             }
-            .coordinateSpace(.named(Self.space))
+            .allowsHitTesting(false)
         }
-        .background(Color.page)
         .sheet(item: $selected, onDismiss: playPending) { card in
             CardDetailView(card: card, model: model) { action, failed in run(action, on: card, failed: failed) }
                 .presentationDetents(typeSize.isAccessibilitySize ? [.large] : [.medium, .large])
@@ -75,8 +82,8 @@ public struct HomeView: View {
         .onChange(of: scenePhase) { playPending() }
         .onChange(of: model.snapshot) { _, snapshot in
             // An open detail follows its card as Home refreshes, and closes once the card is gone (e.g. the event
-            // was canceled or deleted, no longer needs prep, got a new ID, or the card expired), so no action runs
-            // on a stale card.
+            // was canceled, deleted, or moved out of what Home lists, no longer needs prep, got a new ID, or the
+            // card expired), so no action runs on a stale card.
             guard let shown = selected else { return }
             selected = snapshot.cards.first { $0.id == shown.id }
         }
@@ -98,34 +105,33 @@ public struct HomeView: View {
             let unshown = (pending == nil ? 0 : 1) + (flying == nil ? 0 : 1)
             ImpactRing(filled: max(0, snapshot.impactsToday - unshown), segments: snapshot.ringSegments)
                 .frame(width: ringSize, height: ringSize)
-                .recordingFrame { ringFrame = $0 }
+                .recordingFrame { momentFrames.ring = $0 }
         }
     }
 
     @ViewBuilder
     private func section(_ title: String, _ cards: [ImpactCard], done: Set<String>) -> some View {
         if !cards.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(title).font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
-                    .textCase(.uppercase).padding(.leading, 4)
-                    .accessibilityAddTraits(.isHeader)
-                VStack(spacing: 0) {
-                    ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
-                        if index > 0 { Divider().padding(.leading, 16) }
-                        Button { selected = card } label: { CardRow(card: card, done: done.contains(card.id)) }
-                            .buttonStyle(RowButtonStyle())
-                            .recordingFrame { frames[card.id] = $0 }
-                    }
+            Section {
+                ForEach(cards) { card in
+                    Button { selected = card } label: { CardRow(card: card, done: done.contains(card.id)) }
+                        .buttonStyle(RowButtonStyle())
+                        .recordingFrame { momentFrames.cards[card.id] = $0 }
+                        .dismissible { model.dismiss(card, similar: $0) }
                 }
-                .background(Color.card, in: .rect(cornerRadius: 18))
-                .clipShape(.rect(cornerRadius: 18))
+            } header: {
+                Text(title).font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .accessibilityAddTraits(.isHeader)
             }
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.card)
         }
     }
 
     /// Runs the action and, when it records an Impact, queues the moment from the card's current frame.
     private func run(_ action: ImpactAction, on card: ImpactCard, failed: @escaping (ActionKind) -> Void) {
-        let from = frames[card.id]
+        let from = momentFrames.cards[card.id]
         action.kind.run(with: openURL) { opened in
             guard opened else { return failed(action.kind) }
             if model.record(action, on: card) { pending = Moment(symbol: card.symbol, from: from) }
@@ -137,7 +143,7 @@ public struct HomeView: View {
     /// plays it.
     private func playPending() {
         guard scenePhase == .active, selected == nil, flying == nil, let moment = pending else { return }
-        if reduceMotion || moment.from == nil || ringFrame == nil {
+        if reduceMotion || moment.from == nil || momentFrames.ring == nil {
             land()
         } else {
             pending = nil
@@ -160,6 +166,15 @@ public struct HomeView: View {
     }
 }
 
+/// Where Impact moments start (card frames, by card ID) and land (the ring), in global coordinates. A plain
+/// reference rather than SwiftUI state: scrolling moves these frames all the time, and nothing has to redraw
+/// for that.
+@MainActor
+private final class MomentFrames {
+    var cards: [String: CGRect] = [:]
+    var ring: CGRect?
+}
+
 private struct RowButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.background(configuration.isPressed ? Color.primary.opacity(0.08) : .clear)
@@ -167,9 +182,27 @@ private struct RowButtonStyle: ButtonStyle {
 }
 
 extension View {
-    /// Reports this view's frame in Home's content space, which scrolling does not change.
+    /// Reports this view's frame in global coordinates.
     fileprivate func recordingFrame(_ action: @escaping (CGRect) -> Void) -> some View {
-        onGeometryChange(for: CGRect.self, of: { $0.frame(in: .named(HomeView.space)) }, action: action)
+        onGeometryChange(for: CGRect.self, of: { $0.frame(in: .global) }, action: action)
+    }
+
+    /// Grouped cards on the page background, 28 points between sections (the macOS build is for tests only).
+    fileprivate func homeListStyle() -> some View {
+        #if os(iOS)
+        listStyle(.insetGrouped).listSectionSpacing(28)
+        #else
+        listStyle(.inset)
+        #endif
+    }
+
+    /// UX.md → Dismissing: a full swipe means Not needed; the second button mutes events like this one.
+    fileprivate func dismissible(_ dismiss: @escaping (_ similar: Bool) -> Void) -> some View {
+        swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button("Not needed", systemImage: "xmark", role: .destructive) { dismiss(false) }
+            Button("Don't suggest for events like this", systemImage: "bell.slash") { dismiss(true) }
+                .tint(.gray)
+        }
     }
 }
 
@@ -266,12 +299,14 @@ struct CardRow: View {
                 Label("Done", systemImage: "checkmark.circle.fill").labelStyle(.iconOnly).foregroundStyle(.tint)
             } else {
                 Label(card.keyFact, systemImage: card.symbol).font(.subheadline).foregroundStyle(.secondary)
+                    .labelStyle(.titleAndIcon) // not List's icon column
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 15)
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(.rect)
+        .alignmentGuide(.listRowSeparatorLeading) { _ in 16 } // separators start at the row's text, as before
         .accessibilityElement(children: .combine)
     }
 }
