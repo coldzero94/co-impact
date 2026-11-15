@@ -1,9 +1,8 @@
 import ImpactEngine
 import SwiftUI
 
-/// Card detail (UX.md → Card detail): header, answer, the card's actions, and the place.
-/// shortcut: no organizer, attendees, or notes excerpt until the card carries them (EventKit, step 7), and
-/// no Suggested section until Foundation Models (step 8).
+/// Card detail (UX.md → Card detail): header, answer, the card's actions, and details.
+/// shortcut: no Suggested section until Foundation Models (step 8).
 struct CardDetailView: View {
     let card: ImpactCard
     let model: HomeModel
@@ -27,15 +26,7 @@ struct CardDetailView: View {
                             actionButton(action, primary: action == card.primaryAction)
                         }
                     }
-                    if let place = card.place {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Label(place.title, systemImage: "mappin").fontWeight(.medium)
-                            if let address = place.address {
-                                Text(address).font(.subheadline).foregroundStyle(.secondary).padding(.leading, 30)
-                            }
-                        }
-                        .accessibilityElement(children: .combine)
-                    }
+                    details
                 }
                 .padding(20)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -47,6 +38,51 @@ struct CardDetailView: View {
             }
         }
         .actionFailureAlert($failed)
+    }
+
+    /// The place (from the calendar or geocoded), then the organizer, attendees, and the start of the notes as the
+    /// calendar has them.
+    /// shortcut: notes show as plain text; strip markup if synced notes carry HTML on a device (step 10).
+    @ViewBuilder
+    private var details: some View {
+        let organizer = card.organizer
+        let attendees = card.attendees
+        let notes = card.notes
+        if card.place != nil || organizer != nil || !attendees.isEmpty || notes != nil {
+            VStack(alignment: .leading, spacing: 14) {
+                if let place = card.place {
+                    VStack(alignment: .leading, spacing: 2) {
+                        detail(place.title, "mappin").fontWeight(.medium)
+                        if let address = place.address {
+                            Text(address).font(.subheadline).foregroundStyle(.secondary).padding(.leading, iconWidth + 8)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+                if let organizer {
+                    detail("Organized by \(organizer)", "person")
+                }
+                if !attendees.isEmpty {
+                    detail(attendeeLine(attendees), "person.2").accessibilityLabel("Invited: " + attendeeLine(attendees))
+                }
+                if let notes {
+                    detail(notes, "note.text").lineLimit(6).font(.subheadline).foregroundStyle(.secondary)
+                        .accessibilityLabel("Notes: " + notes)
+                }
+            }
+        }
+    }
+
+    @ScaledMetric private var iconWidth = 24.0
+
+    /// A details line; icons of different widths share one column, so the texts line up. `text` stays a `String`:
+    /// other people wrote it, and a `LocalizedStringKey` would turn Markdown links in it into taps.
+    private func detail(_ text: String, _ symbol: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: symbol).frame(width: iconWidth).accessibilityHidden(true)
+            Text(text)
+        }
+        .accessibilityElement(children: .combine)
     }
 
     /// "10:00 – 11:00 AM · in 12 min": the time chip (UX.md → Card anatomy) only while it adds to the range.

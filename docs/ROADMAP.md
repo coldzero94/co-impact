@@ -10,10 +10,10 @@ The one place for status. Update the row when a step starts or finishes, in the 
 | 4 | Impact Engine data model + selection rules, with tests; add `swift test` to CI | Done (2026-11-08) |
 | 5 | Home screen with mock calendar data and the Impact ring: two or three SwiftUI preview drafts, then pick one | Done (2026-11-09, PR #10) |
 | 6 | Impact Card detail, actions, and the Impact moment | Done (2026-11-09, PR #11) |
-| 7 | EventKit integration, with stored card state (done actions, Impacts, dismissals) | In progress: calendar access, live Home, stored Impacts (PR #12; a done card's primary action is restored from its Impact, other done actions are not stored); review follow-ups (PR #13); dismissals (PR #14); the empty state's "Next:" line (PR #15); next: organizer, attendees, and notes in card detail |
+| 7 | EventKit integration, with stored card state (done actions, Impacts, dismissals) | Done (2026-11-15, PRs #12–#16): calendar access, live Home, stored Impacts (a done card's primary action is restored from its Impact, other done actions are not stored), dismissals, the empty state's "Next:" line, and organizer, attendees, and notes in card detail |
 | 8 | Foundation Models enrichment | |
 | 9 | Live Activities, widgets, Siri / Shortcuts | |
-| 10 | Background refresh, simulator and device testing | Includes: check Apple's geocoding with Korean addresses on a device, then geocode locations without coordinates (owner decision, 2026-11-15) and reword what promises the calendar never leaves the device (ARCHITECTURE.md → Privacy) |
+| 10 | Background refresh, simulator and device testing | Includes: check whether synced notes carry HTML (card detail shows them as plain text); check Apple's geocoding with Korean addresses on a device, then geocode locations without coordinates (owner decision, 2026-11-15) and reword what promises the calendar never leaves the device (ARCHITECTURE.md → Privacy) |
 | 11 | Goals: goal setup, goal-time rules in the engine (with tests), Block time | |
 | 12 | Focus blocks: Start focus and its Live Activity | |
 | 13 | Daily log and daily review | |

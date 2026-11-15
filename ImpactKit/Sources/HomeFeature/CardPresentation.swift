@@ -13,6 +13,11 @@ extension ImpactCard {
 
     var provider: String? { meetingURL.flatMap(ImpactEngine.meetingProvider) }
 
+    /// Details (UX.md → Card detail), from the facts `ImpactEngine.card(for:now:)` labels.
+    var organizer: String? { facts.first { $0.label == "Organizer" }?.value }
+    var attendees: [String] { facts.filter { $0.label == "Attendee" }.map(\.value) }
+    var notes: String? { facts.first { $0.label == "Notes" }?.value }
+
     /// The answer to the card's question (P1).
     /// shortcut: in-person answers show the place; once routing exists they show the leave-by time,
     /// keeping the place when no route exists (PRODUCT.md → Card timeline).
@@ -112,4 +117,12 @@ enum Countdown: Equatable {
 func summaryLine(cards: Int, eventsLeft: Int) -> String {
     guard eventsLeft > 0 else { return "No events left today" }
     return "\(cards) of \(eventsLeft) \(eventsLeft == 1 ? "event" : "events") \(cards == 1 ? "needs" : "need") you"
+}
+
+/// "Mina, Joon, and Sara", or with more than three people "Mina, Joon, and 4 others". English, like the rest of
+/// the app's text, whatever the region.
+func attendeeLine(_ names: [String]) -> String {
+    let list = ListFormatStyle<StringStyle, [String]>.list(type: .and).locale(Locale(identifier: "en_US"))
+    guard names.count > 3 else { return names.formatted(list) }
+    return (names.prefix(2) + ["\(names.count - 2) others"]).formatted(list)
 }

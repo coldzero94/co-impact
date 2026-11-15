@@ -54,6 +54,14 @@ public struct ImpactEngine: Sendable {
             actions.append(ImpactAction(kind: .directions(to: place), provenance: placeProvenance))
             facts.append(Fact(label: "Place", value: place.address ?? place.title, provenance: placeProvenance))
         }
+        // Details (UX.md → Card detail): calendar text, not interpreted; notes trimmed.
+        if let organizer = event.organizer {
+            facts.append(Fact(label: "Organizer", value: organizer, provenance: .calendar(field: "organizer")))
+        }
+        facts += event.attendees.map { Fact(label: "Attendee", value: $0, provenance: .calendar(field: "attendees")) }
+        if let notes = event.notes?.trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty {
+            facts.append(Fact(label: "Notes", value: notes, provenance: .calendar(field: "notes")))
+        }
         for url in noteLinks {
             if !Self.isMeetingURL(url) {
                 let action = ImpactAction(kind: .openLink(url), provenance: .calendar(field: "notes"))

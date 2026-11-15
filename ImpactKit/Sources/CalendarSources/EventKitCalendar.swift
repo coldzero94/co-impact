@@ -76,6 +76,7 @@ extension CalendarEvent {
     /// (ROADMAP.md, step 10).
     init(_ event: EKEvent) {
         let me = event.attendees?.first { $0.isCurrentUser }
+        let organizer = event.organizer
         self.init(
             // A moved occurrence gets its own item ID on a local calendar (Platform facts); the date keeps IDs
             // unique for other detached occurrences, or if a server keeps the series' item ID (unverified).
@@ -88,10 +89,19 @@ extension CalendarEvent {
             isAllDay: event.isAllDay, isCanceled: event.status == .canceled,
             participation: Self.participation(me?.participantStatus),
             hasAttendees: event.hasAttendees,
-            isUserOrganizer: event.organizer?.isCurrentUser ?? false,
+            isUserOrganizer: organizer?.isCurrentUser ?? false,
             isUserAttendee: me != nil,
             seriesID: event.hasRecurrenceRules ? event.calendarItemIdentifier : nil,
             location: event.location, url: event.url, notes: event.notes,
+            organizer: organizer.flatMap {
+                Self.organizerName(isCurrentUser: $0.isCurrentUser, name: $0.name, url: $0.url)
+            },
+            attendees: (event.attendees ?? [])
+                .filter {
+                    Self.isOtherPerson(type: $0.participantType, isCurrentUser: $0.isCurrentUser, url: $0.url,
+                                       organizer: organizer?.url)
+                }
+                .compactMap { Self.displayName(name: $0.name, url: $0.url) },
             structuredPlace: event.structuredLocation.flatMap { Place($0, location: event.location) }
         )
     }
@@ -105,6 +115,28 @@ extension CalendarEvent {
     static func occurrenceID(item: String, occurrence: Date?, recurring: Bool) -> String {
         guard recurring, let occurrence else { return item }
         return "\(item)@\(Int(occurrence.timeIntervalSince1970))"
+    }
+
+    /// Whether card detail lists this attendee: not the user, a room, or equipment, and not the organizer again
+    /// (same address in any letter case, as calendar addresses compare).
+    static func isOtherPerson(type: EKParticipantType, isCurrentUser: Bool, url: URL, organizer: URL?) -> Bool {
+        !isCurrentUser && ![.room, .resource].contains(type)
+            && url.absoluteString.lowercased() != organizer?.absoluteString.lowercased()
+    }
+
+    /// The organizer card detail names: nobody when it is the user.
+    static func organizerName(isCurrentUser: Bool, name: String?, url: URL) -> String? {
+        isCurrentUser ? nil : displayName(name: name, url: url)
+    }
+
+    /// A participant's name, else their email address (decoded, without `mailto:`); nil with neither, so card
+    /// detail never shows a bare identifier.
+    static func displayName(name: String?, url: URL) -> String? {
+        if let name = name?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty { return name }
+        guard url.scheme?.lowercased() == "mailto" else { return nil }
+        let address = url.absoluteString.dropFirst("mailto:".count)
+        let decoded = (address.removingPercentEncoding ?? String(address)).trimmingCharacters(in: .whitespacesAndNewlines)
+        return decoded.isEmpty ? nil : decoded
     }
 
     /// The user's answer to an invitation; anything but accepted, declined, or tentative is unknown.

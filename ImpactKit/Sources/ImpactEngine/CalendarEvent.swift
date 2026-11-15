@@ -19,6 +19,12 @@ public struct CalendarEvent: Sendable, Hashable, Identifiable {
     public var location: String?
     public var url: URL?
     public var notes: String?
+    /// Who organizes the event, unless it is the user: a name, else an email address. Shown in card detail,
+    /// never stored.
+    public var organizer: String?
+    /// The other people invited, as names or email addresses (ARCHITECTURE.md → Engine model and selection).
+    /// Shown in card detail, never stored.
+    public var attendees: [String]
     public var structuredPlace: Place?
     /// A successful address/POI lookup for this event's location, supplied by the caller.
     public var geocodedPlace: Place?
@@ -29,6 +35,7 @@ public struct CalendarEvent: Sendable, Hashable, Identifiable {
         participation: Participation = .unknown, hasAttendees: Bool = false,
         isUserOrganizer: Bool = false, isUserAttendee: Bool = false, seriesID: String? = nil,
         location: String? = nil, url: URL? = nil, notes: String? = nil,
+        organizer: String? = nil, attendees: [String] = [],
         structuredPlace: Place? = nil, geocodedPlace: Place? = nil
     ) {
         self.id = id
@@ -47,6 +54,8 @@ public struct CalendarEvent: Sendable, Hashable, Identifiable {
         self.location = location
         self.url = url
         self.notes = notes
+        self.organizer = organizer
+        self.attendees = attendees
         self.structuredPlace = structuredPlace
         self.geocodedPlace = geocodedPlace
     }

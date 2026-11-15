@@ -96,7 +96,7 @@ private let productExamples: [Example] = [
         #expect(card.kind == .onlineMeeting)
         #expect(card.actions.first?.kind == .joinMeeting(URL(string: link)!))
         #expect(card.actions.first?.provenance == .calendar(field: field))
-        #expect(card.facts.last?.provenance == .calendar(field: field))
+        #expect(card.facts.first { $0.label == "Meeting" }?.provenance == .calendar(field: field))
     }
 
     @Test("Unrecognized hosts, paths and schemes never create a meeting", arguments: [
@@ -190,10 +190,10 @@ private let productExamples: [Example] = [
         }, now: now))
         #expect(structured.actions.first?.kind == .directions(to: place))
         #expect(structured.actions.first?.provenance == .calendar(field: "structuredLocation"))
-        #expect(structured.facts.last?.provenance == .calendar(field: "structuredLocation"))
+        #expect(structured.facts.first { $0.label == "Place" }?.provenance == .calendar(field: "structuredLocation"))
         let computed = try #require(engine.card(for: event { $0.location = "110 Test Street"; $0.geocodedPlace = place }, now: now))
         #expect(computed.actions.first?.provenance == .computed(by: "geocoding"))
-        #expect(computed.facts.last?.provenance == .computed(by: "geocoding"))
+        #expect(computed.facts.first { $0.label == "Place" }?.provenance == .computed(by: "geocoding"))
         #expect(engine.canGeocode(nil) == false)
         #expect(engine.card(for: event { $0.geocodedPlace = place }, now: now) == nil)
     }
@@ -205,6 +205,19 @@ private let productExamples: [Example] = [
     func invalidCoordinates(_ invalid: Place) {
         #expect(engine.card(for: event { $0.structuredPlace = invalid }, now: now) == nil)
         #expect(engine.card(for: event { $0.location = "110 Test Street"; $0.geocodedPlace = invalid }, now: now) == nil)
+    }
+
+    @Test("Organizer, attendees, and trimmed notes become calendar facts; blank notes give none")
+    func detailFacts() throws {
+        let card = try #require(engine.card(for: event {
+            $0.url = zoom; $0.organizer = "Mina Park"; $0.attendees = ["Joon Lee", "Sara Kim"]; $0.notes = "\n Agenda \n"
+        }, now: now))
+        let details = card.facts.filter { ["Organizer", "Attendee", "Notes"].contains($0.label) }
+        #expect(details.map(\.value) == ["Mina Park", "Joon Lee", "Sara Kim", "Agenda"])
+        #expect(details.map(\.provenance) == [.calendar(field: "organizer"), .calendar(field: "attendees"),
+                                             .calendar(field: "attendees"), .calendar(field: "notes")])
+        let plain = try #require(engine.card(for: event { $0.url = zoom; $0.notes = " \n" }, now: now))
+        #expect(!plain.facts.contains { ["Organizer", "Attendee", "Notes"].contains($0.label) })
     }
 
     @Test("Only notes supply linked documents; actions are unique and grounded")
