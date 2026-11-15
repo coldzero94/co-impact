@@ -41,7 +41,7 @@ CalendarSource ──▶ [CalendarEvent] ──▶ Rules ──▶ [ImpactCard] 
                                                      Surfaces: Home, widgets, notifications, Live Activity
 ```
 
-1. **Fetch**: events in the horizon (today, plus tomorrow morning; PRODUCT.md → Horizon) from a `CalendarSource`.
+1. **Fetch**: events from the start of today through the six days after it, from a `CalendarSource`. Home lists today and tomorrow morning (PRODUCT.md → Horizon); the empty state names the next card from the rest (UX.md → Empty state).
 2. **Normalize** into `CalendarEvent` (source-independent).
 3. **Select** with deterministic rules (PRODUCT.md, event selection rules). Output: cards with confirmed facts and catalog actions.
 4. **Compute**: travel time / leave-by (MapKit) for in-person cards.
@@ -75,7 +75,7 @@ Meeting URLs are checked against one host/path allowlist. Text detection uses th
 
 Physical selection first uses valid `structuredPlace` coordinates (calendar provenance). Otherwise `canGeocode(_:)` rejects empty, URL, room, and floor labels before the caller requests a lookup. `geocodedPlace` must be the successful address/POI result for that event's location; the engine checks the candidate again and marks its result computed. Failed or missing lookups produce no physical signal. No place or travel time is invented: the Dentist example currently produces Directions without a leave-by time, as PRODUCT.md specifies when no route is available.
 
-`home(…)` runs selection on today's events in the fetched horizon, sorts cards by start, then ID, and applies [UX.md → Home](UX.md#2-home) (Next up, summary, ring) and [PRODUCT.md → Horizon](PRODUCT.md#horizon) in the given calendar. Soon and Now come from PRODUCT.md → Card timeline; until leave-by exists, in-person cards count from the event start. Completions are passed for any day, so a card done the evening before stays done; the caller also passes today's Impact count, which the ring adds to the cards still to do. Tomorrow's events are selected only while Tomorrow morning shows. Occurrence IDs must be unique (debug builds assert it on the listed cards).
+`home(…)` runs selection on today's events in the fetched horizon, sorts cards by start, then ID, and applies [UX.md → Home](UX.md#2-home) (Next up, summary, ring) and [PRODUCT.md → Horizon](PRODUCT.md#horizon) in the given calendar. Soon and Now come from PRODUCT.md → Card timeline; until leave-by exists, in-person cards count from the event start. Completions are passed for any day, so a card done the evening before stays done; the caller also passes today's Impact count, which the ring adds to the cards still to do. Events after today are selected only while Tomorrow morning shows or, for the empty state's next card, while no listed card is left to do. Occurrence IDs must be unique (debug builds assert it on the listed cards).
 
 The model deliberately omits the earlier draft's unused answer string, anchor, phase, and suggestions. `ActionLog` keeps which actions ran in memory, and Home stores its Impacts and `Dismissals` (Storage); routing/ETA, geocoding, and AI grounding belong to later work. Presentation lives in `HomeFeature`: `HomeModel` rebuilds the snapshot after each recorded action or dismissal, and views run actions through SwiftUI's `openURL` (Join, Open link, Call) and MapKit (Directions). Product proposals are not approved by this implementation.
 

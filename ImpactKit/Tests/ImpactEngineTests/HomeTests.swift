@@ -157,19 +157,43 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         #expect(card.title == "Untitled" && card.facts.first { $0.label == "Title" }?.value == "")
     }
 
-    @Test("The fetch horizon ends tomorrow at noon, and today ends at midnight")
+    @Test("Today ends at midnight, Tomorrow morning at noon, and the fetch six days later")
     func horizon() {
-        let (tomorrow, end) = ImpactEngine.horizon(now: at(19), calendar: calendar)
-        #expect(tomorrow == at(0, day: 1) && end == at(12, day: 1))
+        let (tomorrow, noon, end) = ImpactEngine.horizon(now: at(19), calendar: calendar)
+        #expect(tomorrow == at(0, day: 1) && noon == at(12, day: 1) && end == at(0, day: 7))
         // On 2027-03-14 clocks spring forward at 02:00 in Los Angeles, so that day is 23 hours long.
         let springForward = calendar.date(from: DateComponents(year: 2027, month: 3, day: 14, hour: 19))!
-        let (dstTomorrow, dstEnd) = ImpactEngine.horizon(now: springForward, calendar: calendar)
+        let (dstTomorrow, dstNoon, _) = ImpactEngine.horizon(now: springForward, calendar: calendar)
         #expect(dstTomorrow == calendar.date(from: DateComponents(year: 2027, month: 3, day: 15))!)
-        #expect(dstEnd == calendar.date(from: DateComponents(year: 2027, month: 3, day: 15, hour: 12))!)
+        #expect(dstNoon == calendar.date(from: DateComponents(year: 2027, month: 3, day: 15, hour: 12))!)
         // The evening before, tomorrow is the short day: noon is 11 hours after midnight, not 12.
         let eve = calendar.date(from: DateComponents(year: 2027, month: 3, day: 13, hour: 19))!
-        #expect(ImpactEngine.horizon(now: eve, calendar: calendar).end
+        #expect(ImpactEngine.horizon(now: eve, calendar: calendar).noon
                 == calendar.date(from: DateComponents(year: 2027, month: 3, day: 14, hour: 12))!)
+        // The week ahead spans the change: it ends at midnight, not at 23:00 or 01:00.
+        #expect(ImpactEngine.horizon(now: eve, calendar: calendar).end
+                == calendar.date(from: DateComponents(year: 2027, month: 3, day: 20))!)
+    }
+
+    @Test("With nothing listed left to do, the next card not done after them; none past the fetched week")
+    func next() {
+        let events = [
+            event("Today", 10),
+            event("Tomorrow", 9, day: 1),
+            event("Room only", 10, day: 2) { $0.location = "회의실 3A" },
+            event("Dismissed", 11, day: 2),
+            event("Done early", 12, day: 2),
+            event("Planning", 13, day: 2),
+        ]
+        #expect(home(events, at: at(9)).next == nil)
+        // Today's card is done but still listed, so Tomorrow morning is hidden and its card comes next.
+        #expect(home(events, at: at(10, 5), completed: ["Today"]).next?.id == "Tomorrow")
+        // From 18:00 tomorrow's card is listed: while it is to do there is no next.
+        #expect(home(events, at: at(19), completed: ["Today"]).next == nil)
+        let rest = home(events, at: at(19), completed: ["Today", "Tomorrow", "Done early"],
+                        suppressionRules: [.occurrence(id: "Dismissed")])
+        #expect(rest.next?.id == "Planning" && !ids(rest.cards).contains("Planning"))
+        #expect(home([event("Next week", 9, day: 7)], at: at(19)).next == nil)
     }
 
     @Test("Tomorrow morning ends before noon")

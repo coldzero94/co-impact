@@ -76,7 +76,7 @@ public struct LiveHome: View {
         }
     }
 
-    /// Fetches today through tomorrow noon (PRODUCT.md → Horizon) and rebuilds Home at the current time.
+    /// Fetches today and the six days after it (`ImpactEngine.horizon`) and rebuilds Home at the current time.
     private func refresh() {
         guard access == .granted else { return }
         let now = Date.now
