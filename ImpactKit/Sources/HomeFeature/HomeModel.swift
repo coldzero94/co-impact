@@ -54,11 +54,11 @@ public final class HomeModel {
 
     /// "Not needed" hides this card's occurrence; with `similar`, "Don't suggest for events like this" mutes its
     /// series or title instead, which hides this occurrence as well (UX.md → Dismissing). The card leaves Home at
-    /// once; a card still to do takes its ring segment with it, while a done card's Impact still counts.
+    /// once; a card still to do today takes its ring segment with it, while a done card's Impact still counts.
     func dismiss(_ card: ImpactCard, similar: Bool) {
         guard let event = events.first(where: { $0.id == card.id }) else {
             // A swipe on a card from before a refresh that dropped its event: nothing left to hide.
-            homeLog.error("Dismissed a card with no event; the next refresh shows whether it is still listed")
+            homeLog.error("Dismissed card \(card.id, privacy: .private) (similar: \(similar, privacy: .public)) has no event; the next refresh shows whether it is still listed")
             return
         }
         if similar {

@@ -153,14 +153,39 @@ private func withFile(_ body: (ImpactFile) throws -> Void) throws {
         #expect(model.snapshot.cards.isEmpty && saved.last?.muted == [.series(calendarID: "work", seriesID: "sync")])
     }
 
-    @Test("Stored dismissals hide their cards from the first snapshot")
+    @Test("Stored dismissals hide their cards from the first snapshot, after updates, and stay in later saves")
     @MainActor func startsWithStoredDismissals() throws {
+        var saved: [Dismissals] = []
         var dismissals = Dismissals()
-        let events = [meeting("standup", at: morning.addingTimeInterval(600)), meeting("review", at: morning.addingTimeInterval(3_600))]
+        let events = [meeting("standup", at: morning.addingTimeInterval(600)), meeting("review", at: morning.addingTimeInterval(3_600)),
+                      meeting("sync", at: morning.addingTimeInterval(7_200))]
         dismissals.dismiss(events[0], at: morning.addingTimeInterval(-60))
         dismissals.mute(like: events[1], at: morning.addingTimeInterval(-60))
-        let model = try HomeModel(events: events, now: morning, calendar: losAngeles, dismissals: dismissals)
-        #expect(model.snapshot.cards.isEmpty)
+        let model = try HomeModel(events: events, now: morning, calendar: losAngeles, dismissals: dismissals,
+                                  saveDismissals: { saved.append($0) })
+        #expect(model.snapshot.cards.map(\.id) == ["sync"])
+        model.update(events: events, now: morning.addingTimeInterval(60))
+        #expect(model.snapshot.cards.map(\.id) == ["sync"])
+        model.dismiss(try #require(model.snapshot.nextUp), similar: false)
+        let last = try #require(saved.last)
+        #expect(Set(last.occurrences.keys) == ["standup", "sync"] && last.muted == dismissals.muted)
+    }
+
+    @Test("Dismissing a done card keeps its Impact; a card with no event left changes and saves nothing")
+    @MainActor func dismissDoneOrGone() throws {
+        var saved: [Dismissals] = []
+        let events = [meeting("standup", at: morning.addingTimeInterval(-300)), meeting("review", at: morning.addingTimeInterval(3_600))]
+        let model = try HomeModel(events: events, now: morning, calendar: losAngeles, saveDismissals: { saved.append($0) })
+        let standup = try #require(model.snapshot.nextUp)
+        _ = model.record(try #require(standup.primaryAction), on: standup)
+        model.dismiss(standup, similar: false)
+        #expect(model.snapshot.cards.map(\.id) == ["review"])
+        #expect(model.snapshot.impactsToday == 1 && model.snapshot.ringSegments == 2)
+
+        let review = try #require(model.snapshot.nextUp)
+        model.update(events: [], now: morning.addingTimeInterval(60))
+        model.dismiss(review, similar: true)
+        #expect(saved.count == 1 && model.snapshot.cards.isEmpty)
     }
 
     @Test("A dismissed event moved past the lapse comes back in a running app, as after a relaunch")
@@ -196,9 +221,14 @@ private func withFile(_ body: (ImpactFile) throws -> Void) throws {
         store.save(dismissals)
         #expect(store.load(now: morning).occurrences.keys.sorted() == ["recent"])
 
-        defaults.set(Data("not json".utf8), forKey: DismissalStore.key)
+        // The key and format users have stored; if either changes, an update sets every user's dismissals aside.
+        let json = #"{"occurrences":{"recent":900000000},"muted":[{"title":{"calendarID":"work","title":"Review"}}]}"#
+        defaults.set(Data(json.utf8), forKey: "dismissals")
+        #expect(store.load(now: morning).muted == [.title(calendarID: "work", title: "Review")])
+
+        defaults.set(Data("not json".utf8), forKey: "dismissals")
         #expect(store.load(now: morning) == Dismissals())
-        #expect(defaults.data(forKey: "\(DismissalStore.key).unreadable") == Data("not json".utf8))
+        #expect(defaults.data(forKey: "dismissals.unreadable") == Data("not json".utf8))
     }
 
     @Test("Recording saves every Impact once; an update moves the clock and keeps them")

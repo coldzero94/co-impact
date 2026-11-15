@@ -49,12 +49,16 @@ private func event(_ id: String, series: String? = nil, title: String = "Standup
         #expect(dismissals.pruned(now: now.addingTimeInterval(3 * 86_400)).occurrences.isEmpty)
     }
 
-    @Test("Don't suggest on an untitled one-off only dismisses it; other untitled events still show")
-    func untitledOneOff() {
+    @Test("Don't suggest on an untitled one-off only dismisses it; an untitled series is still muted")
+    func untitled() {
         var dismissals = Dismissals()
         dismissals.mute(like: event("blank", title: ""), at: now)
         #expect(dismissals.muted.isEmpty && Array(dismissals.occurrences.keys) == ["blank"])
         #expect(engine.card(for: event("other blank", title: ""), now: now, suppressionRules: dismissals.rules) != nil)
+
+        var series = Dismissals()
+        series.mute(like: event("mon", series: "s", title: ""), at: now)
+        #expect(series.muted == [.series(calendarID: "work", seriesID: "s")] && series.occurrences.isEmpty)
     }
 
     /// The JSON users have stored today. If this stops decoding, an update would set every user's mutes aside.
