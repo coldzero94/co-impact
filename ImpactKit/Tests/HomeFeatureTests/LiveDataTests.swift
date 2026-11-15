@@ -71,16 +71,17 @@ private func withFile(_ body: (ImpactFile) throws -> Void) throws {
     @Test("The saver skips while stored Impacts are unreadable, then merges them in once they read")
     func saverWaitsForStoredImpacts() throws {
         try withFile { file in
-            try FileManager.default.createDirectory(at: file.url, withIntermediateDirectories: false)
+            let earlier = morning.addingTimeInterval(-3_600)
+            try file.save(["standup": earlier])
+            // Unreadable but replaceable, as a locked file can be: only the saver's guard keeps it.
+            try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: file.url.path())
             let save = file.saver(stored: file.load())
             save(["review": morning])
-            var isFolder: ObjCBool = false
-            #expect(FileManager.default.fileExists(atPath: file.url.path(), isDirectory: &isFolder) && isFolder.boolValue)
+            try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: file.url.path())
+            #expect(file.load() == ["standup": earlier])
 
-            try FileManager.default.removeItem(at: file.url)
-            try file.save(["standup": morning.addingTimeInterval(-3_600)])
             save(["review": morning])
-            #expect(file.load() == ["standup": morning.addingTimeInterval(-3_600), "review": morning])
+            #expect(file.load() == ["standup": earlier, "review": morning])
         }
     }
 

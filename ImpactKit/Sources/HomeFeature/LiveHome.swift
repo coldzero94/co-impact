@@ -89,7 +89,7 @@ public struct LiveHome: View {
             model.update(events: events, now: now)
             return
         }
-        // Storage never blocks Home: if the file can't be created or read, Impacts count until the app quits.
+        // Storage never blocks Home: without a usable file, Impacts count until the app quits.
         let file: ImpactFile?
         do {
             file = try ImpactFile.standard()
