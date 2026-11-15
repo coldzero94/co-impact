@@ -268,7 +268,7 @@ AI is optional enrichment (P5, P6). Without Apple Intelligence the product is co
 - A card is **done** when its primary action is done.
 - A primary action run before the card's Soon phase (e.g. Directions previewed the evening before) is preparation: it opens its target but marks nothing and records no Impact, so the card keeps Next up and its Now alert (owner, 2026-11-15; [research/system-surfaces.md](research/system-surfaces.md)). Until routing gives leave-by, an in-person card's primary action counts from 2 hours before the start, so a trip of up to 90 minutes still counts.
 - A card **expires** silently (see Card timeline). No "did you do it?" prompts.
-- Outcome metric: cards whose primary action was executed before the event started.
+- Outcome metric: cards done (Completion semantics) before the event started.
 - A goal-time card is done when Block time succeeds; Undo brings it back.
 - Every primary action of an event card executed from its Soon phase on (see above) and every focus session of 10 minutes or more records one Impact, automatically (see Impact).
 
@@ -276,7 +276,7 @@ AI is optional enrichment (P5, P6). Without Apple Intelligence the product is co
 
 - **Impacts per week** (north star).
 - Share of goals whose sessions are blocked this week; focus minutes kept.
-- Share of cards whose primary action was executed (usefulness).
+- Share of cards done (usefulness).
 - Share of cards dismissed as "not needed" (over-generation signal; should be low).
 - Time from opening the app to the first action (target: under 5 seconds).
 

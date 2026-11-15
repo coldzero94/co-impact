@@ -29,7 +29,7 @@ public struct HomeSnapshot: Sendable, Hashable {
 
 extension ImpactEngine {
     /// `events` is the fetch (`horizon`); occurrence IDs must be unique (debug builds assert it on the listed
-    /// cards). `completedCardIDs` holds cards whose primary action ran on any day, so a card done before
+    /// cards). `completedCardIDs` holds cards whose primary action counted, on any day, so a card done before
     /// midnight (a 00:05 meeting joined at 23:55) or restored from storage stays done; among unlisted cards
     /// they only keep a done one from being `next`. `impactsToday` counts every Impact recorded today and must
     /// not be negative. `calendar` sets the day boundaries and the 18:00 and noon cut-offs.
@@ -99,8 +99,23 @@ extension ImpactEngine {
         card.start.addingTimeInterval(card.kind == .inPerson ? -30 * 60 : -15 * 60)
     }
 
+    /// The Now phase (PRODUCT.md → Card timeline), when a card's Live Activity runs: online and hybrid from 10
+    /// minutes before the start until 10 minutes after it, in person from 10 minutes before leave-by until the start.
+    /// shortcut: in person, leave-by is the start until routing exists (as in `soonStart`).
+    public static func nowPhase(of card: ImpactCard) -> Range<Date> {
+        card.start.addingTimeInterval(-10 * 60) ..< card.start.addingTimeInterval(card.kind == .inPerson ? 0 : 10 * 60)
+    }
+
+    /// The cards whose Live Activity should be scheduled or running (PRODUCT.md → Interruptions): the first two
+    /// listed cards still to do whose Now phase has not ended, by Now start. Two, so back-to-back events both get
+    /// one while Impact does not run in between; every scheduled start alerts, so no more.
+    public static func liveActivityCards(in snapshot: HomeSnapshot, now: Date) -> [ImpactCard] {
+        let open = snapshot.cards.filter { !snapshot.doneCardIDs.contains($0.id) && nowPhase(of: $0).upperBound > now }
+        return Array(open.sorted { (nowPhase(of: $0).lowerBound, $0.id) < (nowPhase(of: $1).lowerBound, $1.id) }.prefix(2))
+    }
+
     /// Soon or Now: in person until the start, online and hybrid until 10 minutes after it.
     static func isSoonOrNow(_ card: ImpactCard, now: Date) -> Bool {
-        now >= soonStart(of: card) && now < card.start.addingTimeInterval(card.kind == .inPerson ? 0 : 10 * 60)
+        now >= soonStart(of: card) && now < nowPhase(of: card).upperBound
     }
 }

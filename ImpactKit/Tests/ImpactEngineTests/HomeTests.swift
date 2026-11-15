@@ -210,6 +210,28 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         #expect(home([event("Day 6", 23, 59, day: 6)], at: at(19)).next?.id == "Day 6")
     }
 
+    @Test("Now runs from 10 minutes before an online start to 10 after it, and in person until the start")
+    func nowPhase() throws {
+        let online = try #require(engine.card(for: event("Online", 10), now: at(9)))
+        let visit = try #require(engine.card(for: event("Visit", 10) { $0.structuredPlace = clinic }, now: at(9)))
+        #expect(ImpactEngine.nowPhase(of: online) == at(9, 50) ..< at(10, 10))
+        #expect(ImpactEngine.nowPhase(of: visit) == at(9, 50) ..< at(10))
+    }
+
+    @Test("Live Activities go to the next two cards still to do whose Now has not ended, by Now start")
+    func liveActivityCards() {
+        let events = [
+            event("Done", 9, 30), event("Running", 9), event("Visit", 10) { $0.structuredPlace = clinic },
+            event("Review", 10, 5), event("Later", 14),
+        ]
+        let home = home(events, at: at(9, 15), completed: ["Done"])
+        // Running's Now (8:50–9:10) has ended; Done is done; Visit's Now starts 9:50, Review's 9:55.
+        #expect(ids(ImpactEngine.liveActivityCards(in: home, now: at(9, 15))) == ["Visit", "Review"])
+        // Inside Visit's Now it still counts; once it ends, Later moves up.
+        #expect(ids(ImpactEngine.liveActivityCards(in: home, now: at(9, 55))) == ["Visit", "Review"])
+        #expect(ids(ImpactEngine.liveActivityCards(in: home, now: at(10))) == ["Review", "Later"])
+    }
+
     @Test("Tomorrow morning ends before noon")
     func tomorrowNoon() {
         let events = [event("Midnight", 0, day: 1), event("Noon", 12, day: 1), event("After noon", 13, day: 1)]
