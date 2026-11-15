@@ -39,6 +39,8 @@ public final class HomeModel {
     public func update(events: [CalendarEvent], now: Date) {
         self.events = events
         self.now = now
+        // Lapse dismissals as loading does, so the result never depends on whether the app was relaunched.
+        dismissals = dismissals.pruned(now: now)
         rebuild()
     }
 

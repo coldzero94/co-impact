@@ -147,6 +147,19 @@ private func withFile(_ body: (ImpactFile) throws -> Void) throws {
         #expect(muted.snapshot.cards.isEmpty && saved.last?.muted == [.series(calendarID: "work", seriesID: "standup")])
     }
 
+    @Test("A dismissed event moved past the lapse comes back in a running app, as after a relaunch")
+    @MainActor func dismissalLapsesWhileRunning() throws {
+        var event = meeting("review", at: morning.addingTimeInterval(3_600))
+        let model = try HomeModel(events: [event], now: morning, calendar: losAngeles)
+        model.dismiss(try #require(model.snapshot.nextUp), similar: false)
+        // Moved, same ID, to three days later; seen the evening before, after the two-day lapse.
+        event.start += 3 * 86_400
+        event.end += 3 * 86_400
+        let eve = morning.addingTimeInterval(2 * 86_400 + 10 * 3_600)
+        model.update(events: [event], now: eve)
+        #expect(model.snapshot.tomorrowMorning.map(\.id) == ["review"])
+    }
+
     @Test("Dismissals survive the store, without lapsed ones; data that does not decode is kept aside")
     func dismissalStore() throws {
         let suite = "impact-tests-\(UUID().uuidString)"
