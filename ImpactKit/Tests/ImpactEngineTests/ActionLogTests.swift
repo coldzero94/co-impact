@@ -54,6 +54,14 @@ private func hybridCard() throws -> ImpactCard {
         #expect(!fromGuess && fromJoin && log.completedCardIDs == ["review"])
     }
 
+    @Test("A restored Impact marks its card's primary action done, and only that action")
+    func restored() throws {
+        let card = try hybridCard()
+        let log = ActionLog(impacts: ["town-hall": start])
+        #expect(log.isDone(try #require(card.primaryAction), on: card))
+        #expect(!log.isDone(card.actions[1], on: card) && log.completedCardIDs == ["town-hall"])
+    }
+
     @Test("Impacts count on the day they were recorded, in the given calendar")
     func countsByDay() throws {
         let card = try hybridCard()

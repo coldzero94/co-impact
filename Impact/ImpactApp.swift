@@ -4,32 +4,30 @@ import SwiftUI
 @main
 struct ImpactApp: App {
     #if DEBUG
-    // shortcut: a sample day frozen at -fixtureHour; real events replace it in roadmap step 7.
-    @State private var home = Result { try HomeFixtures.sample(at: Self.fixtureHour) }
+    @State private var fixture = Self.fixtureHour.map { hour in Result { try HomeFixtures.sample(at: hour) } }
     #endif
 
     var body: some Scene {
         WindowGroup {
             #if DEBUG
-            switch home {
-            case .success(let model):
+            switch fixture {
+            case .success(let model)?:
                 HomeView(model: model)
-            case .failure(let error):
+            case .failure(let error)?:
                 Text("Impact could not start: \(error.localizedDescription)").padding()
+            case nil:
+                LiveHome()
             }
             #else
-            // shortcut: release builds show only the name until EventKit (roadmap step 7); they never
-            // claim an empty day they did not read (hard rule 2) and never show demo data.
-            Text("Impact")
+            LiveHome()
             #endif
         }
     }
 
     #if DEBUG
-    /// `-fixtureHour <hour>` sets the sample day's clock; 0 or unset means 09:48.
-    private static var fixtureHour: Double {
-        let hour = UserDefaults.standard.double(forKey: "fixtureHour")
-        return hour > 0 ? hour : 9.8
+    /// `-fixtureHour <hour>` shows the synthetic sample day frozen at that hour instead of the calendar.
+    private static var fixtureHour: Double? {
+        UserDefaults.standard.object(forKey: "fixtureHour") == nil ? nil : UserDefaults.standard.double(forKey: "fixtureHour")
     }
     #endif
 }

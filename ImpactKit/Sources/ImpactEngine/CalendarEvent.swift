@@ -1,7 +1,8 @@
 import Foundation
 
 public struct CalendarEvent: Sendable, Hashable, Identifiable {
-    /// A source identifier plus occurrence start, so recurring occurrences stay distinct.
+    /// Identifies one occurrence: recurring occurrences must stay distinct (`CalendarSources` adds the
+    /// original occurrence date).
     public var id: String
     public var calendarID: String
     public var calendarKind: CalendarKind

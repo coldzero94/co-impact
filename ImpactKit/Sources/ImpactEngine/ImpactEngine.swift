@@ -72,7 +72,8 @@ public struct ImpactEngine: Sendable {
             }
         }
         return ImpactCard(
-            id: event.id, title: event.title, start: event.start, end: event.end,
+            // The Title fact keeps the calendar's (empty) title; only the displayed card title is app text.
+            id: event.id, title: event.title.isEmpty ? "Untitled" : event.title, start: event.start, end: event.end,
             kind: meeting == nil ? .inPerson : (place == nil ? .onlineMeeting : .hybrid),
             facts: facts, actions: actions
         )

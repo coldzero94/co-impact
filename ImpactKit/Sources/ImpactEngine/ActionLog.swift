@@ -1,13 +1,19 @@
 import Foundation
 
 /// The actions the user ran and the Impacts they recorded (PRODUCT.md → Completion semantics and Impact).
-/// shortcut: memory only, so a relaunch forgets it; persist it (ARCHITECTURE.md → Storage) with real events in step 7.
+/// shortcut: only `impacts` is stored across launches (ARCHITECTURE.md → Storage), so after a relaunch only
+/// a card's primary action shows as done (from its Impact); store the rest if card detail should keep them.
 public struct ActionLog: Sendable {
     /// When each card's Impact was recorded, by card ID: at most one per card.
     public private(set) var impacts: [String: Date] = [:]
     private var done: [String: Set<ActionKind>] = [:]
 
     public init() {}
+
+    /// Restores stored Impacts; their cards count as done.
+    public init(impacts: [String: Date]) {
+        self.impacts = impacts
+    }
 
     /// Marks `action` done on `card`. The card's `primaryAction` also records the card's Impact, once.
     /// Returns true when this call recorded the Impact. An action passed with the wrong card records nothing
@@ -24,8 +30,10 @@ public struct ActionLog: Sendable {
         return true
     }
 
+    /// Whether `action` ran on `card`; a primary action also counts as done when the card's Impact was
+    /// restored from storage.
     public func isDone(_ action: ImpactAction, on card: ImpactCard) -> Bool {
-        done[card.id]?.contains(action.kind) ?? false
+        (done[card.id]?.contains(action.kind) ?? false) || (action == card.primaryAction && impacts[card.id] != nil)
     }
 
     /// Cards whose primary action ran, on any day: `home(completedCardIDs:)`.

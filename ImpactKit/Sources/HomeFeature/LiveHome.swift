@@ -1,0 +1,213 @@
+import CalendarSources
+import ImpactEngine
+import os
+import SwiftUI
+
+/// The app outside debug fixtures (UX.md → Onboarding): asks for calendar access, then shows Home on the
+/// user's calendar, refreshed on the built triggers in ARCHITECTURE.md → Refresh and platform constraints.
+public struct LiveHome: View {
+    @State private var access = EventKitCalendar.access
+    @State private var calendarSource = EventKitCalendar()
+    @State private var model: HomeModel?
+    /// Full access, but no calendar Impact reads (only subscriptions or Birthdays, or none).
+    @State private var noCalendars = false
+    @State private var startFailure: String?
+    @State private var requestFailed = false
+    @Environment(\.scenePhase) private var scenePhase
+
+    public init() {}
+
+    public var body: some View {
+        Group {
+            switch access {
+            case .granted:
+                if noCalendars {
+                    NoCalendars()
+                } else if let model {
+                    HomeView(model: model)
+                } else if let startFailure {
+                    Text(startFailure).padding()
+                } else {
+                    ProgressView()
+                }
+            case .notDetermined:
+                Onboarding(requestFailed: requestFailed) { await connect() }
+            case .denied:
+                AccessNeeded(restricted: false)
+            case .restricted:
+                AccessNeeded(restricted: true)
+            }
+        }
+        .task(id: access) {
+            guard access == .granted else { return }
+            while !Task.isCancelled {
+                refresh()
+                // Wake at the next minute, when a countdown changes.
+                let second = Date.now.timeIntervalSince1970.truncatingRemainder(dividingBy: 60)
+                try? await Task.sleep(for: .seconds(60 - second))
+            }
+        }
+        .task {
+            // Runs on the view's main actor whichever thread posts; mapping to Void drops the non-Sendable
+            // Notification.
+            for await _ in NotificationCenter.default.notifications(named: EventKitCalendar.changed).map({ _ in }) {
+                refresh()
+            }
+        }
+        .onChange(of: scenePhase) {
+            guard scenePhase == .active else { return }
+            access = EventKitCalendar.access // the user may have changed it in Settings
+            refresh()
+        }
+    }
+
+    private func connect() async {
+        do {
+            access = try await calendarSource.requestAccess()
+            // No prompt and no answer, e.g. the request was dropped: say so instead of doing nothing.
+            requestFailed = access == .notDetermined
+        } catch {
+            homeLog.error("Calendar access request failed: \(error.logged, privacy: .public)")
+            requestFailed = true
+            access = EventKitCalendar.access
+        }
+    }
+
+    /// Fetches today through tomorrow noon (PRODUCT.md → Horizon) and rebuilds Home at the current time.
+    private func refresh() {
+        guard access == .granted else { return }
+        let now = Date.now
+        let calendar = Calendar.autoupdatingCurrent
+        guard let events = calendarSource.events(from: calendar.startOfDay(for: now),
+                                                 to: ImpactEngine.horizon(now: now, calendar: calendar).end) else {
+            access = EventKitCalendar.access
+            noCalendars = access == .granted
+            return
+        }
+        noCalendars = false
+        if let model {
+            model.update(events: events, now: now)
+            return
+        }
+        // Storage never blocks Home: without a usable file, Impacts count until the app quits.
+        let file: ImpactFile?
+        do {
+            file = try ImpactFile.standard()
+        } catch {
+            homeLog.fault("No place to store Impacts: \(error.logged, privacy: .public)")
+            file = nil
+        }
+        let stored = file?.load()
+        do {
+            model = try HomeModel(events: events, now: now, calendar: calendar, log: ActionLog(impacts: stored ?? [:]),
+                                  saveImpacts: file?.saver(stored: stored) ?? { _ in })
+        } catch {
+            homeLog.fault("Impact could not start: \(error.logged, privacy: .public)")
+            startFailure = "Impact could not start: \(error.localizedDescription)"
+        }
+    }
+}
+
+/// UX.md → Onboarding: what Impact does in one sentence, and Connect Calendar.
+struct Onboarding: View {
+    let requestFailed: Bool
+    let connect: () async -> Void
+    @State private var asking = false
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        MessageScreen {
+            Text("Impact").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
+            Text("Impact finds the events in your calendar that need you, and gets you there in one tap.")
+                .font(.title3)
+        } action: {
+            if requestFailed {
+                Text("Calendar access could not be requested. Try again.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+            Button {
+                asking = true
+                Task {
+                    await connect()
+                    asking = false
+                }
+            } label: {
+                Label("Connect Calendar", systemImage: "calendar")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+            }
+            .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.capsule)
+            .tint(.accentFill(colorScheme))
+            .disabled(asking)
+        }
+    }
+}
+
+/// Without full access: why Impact needs it, and the way to Settings (UX.md → Onboarding). When access is
+/// restricted the user cannot change it, so there is no Settings button (hard rule 8).
+struct AccessNeeded: View {
+    let restricted: Bool
+    @Environment(\.openURL) private var openURL
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        MessageScreen {
+            Text("Impact needs your calendar").font(.title.bold()).accessibilityAddTraits(.isHeader)
+            Text(restricted
+                 ? "It reads your events on this iPhone to find the ones that need you. Calendar access is restricted on this iPhone, so Impact can't read it."
+                 : "It reads your events on this iPhone to find the ones that need you. In Settings, give Impact Full Access to Calendars.")
+        } action: {
+            #if os(iOS)
+            if !restricted, let settings = URL(string: UIApplication.openSettingsURLString) {
+                Button {
+                    openURL(settings)
+                } label: {
+                    Text("Open Settings").font(.headline).frame(maxWidth: .infinity, minHeight: 50)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .tint(.accentFill(colorScheme))
+            }
+            #endif
+        }
+    }
+}
+
+/// Full access, but no calendar Impact reads, so it never claims an empty day it did not read (hard rule 2).
+struct NoCalendars: View {
+    var body: some View {
+        MessageScreen {
+            Text("No calendars to read").font(.title.bold()).accessibilityAddTraits(.isHeader)
+            Text("Impact reads the calendars of your accounts on this iPhone, such as iCloud, Google, or Exchange. Subscribed calendars and Birthdays are skipped.")
+        } action: {
+            EmptyView()
+        }
+    }
+}
+
+/// A message vertically centered, with its button pinned below; at large text sizes the message scrolls.
+private struct MessageScreen<Message: View, Action: View>: View {
+    @ViewBuilder let message: Message
+    @ViewBuilder let action: Action
+
+    var body: some View {
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) { message }
+                    .frame(maxWidth: .infinity, minHeight: geometry.size.height, alignment: .leading)
+                    .padding(.horizontal, 24)
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            VStack(spacing: 8) { action }.padding(24).background(.background)
+        }
+    }
+}
+
+#if DEBUG
+#Preview("Onboarding") { Onboarding(requestFailed: false) {} }
+#Preview("Access needed") { AccessNeeded(restricted: false) }
+#Preview("Access restricted") { AccessNeeded(restricted: true) }
+#Preview("No calendars") { NoCalendars() }
+#endif

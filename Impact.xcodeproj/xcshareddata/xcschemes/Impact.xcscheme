@@ -61,6 +61,17 @@
                ReferencedContainer = "container:ImpactKit">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "CalendarSourcesTests"
+               BuildableName = "CalendarSourcesTests"
+               BlueprintName = "CalendarSourcesTests"
+               ReferencedContainer = "container:ImpactKit">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
       <CommandLineArguments>
       </CommandLineArguments>
