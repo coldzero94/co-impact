@@ -96,7 +96,7 @@ private let productExamples: [Example] = [
         #expect(card.kind == .onlineMeeting)
         #expect(card.actions.first?.kind == .joinMeeting(URL(string: link)!))
         #expect(card.actions.first?.provenance == .calendar(field: field))
-        #expect(card.facts.last?.provenance == .calendar(field: field))
+        #expect(card.facts.first { $0.label == "Meeting" }?.provenance == .calendar(field: field))
     }
 
     @Test("Unrecognized hosts, paths and schemes never create a meeting", arguments: [
@@ -190,10 +190,10 @@ private let productExamples: [Example] = [
         }, now: now))
         #expect(structured.actions.first?.kind == .directions(to: place))
         #expect(structured.actions.first?.provenance == .calendar(field: "structuredLocation"))
-        #expect(structured.facts.last?.provenance == .calendar(field: "structuredLocation"))
+        #expect(structured.facts.first { $0.label == "Place" }?.provenance == .calendar(field: "structuredLocation"))
         let computed = try #require(engine.card(for: event { $0.location = "110 Test Street"; $0.geocodedPlace = place }, now: now))
         #expect(computed.actions.first?.provenance == .computed(by: "geocoding"))
-        #expect(computed.facts.last?.provenance == .computed(by: "geocoding"))
+        #expect(computed.facts.first { $0.label == "Place" }?.provenance == .computed(by: "geocoding"))
         #expect(engine.canGeocode(nil) == false)
         #expect(engine.card(for: event { $0.geocodedPlace = place }, now: now) == nil)
     }

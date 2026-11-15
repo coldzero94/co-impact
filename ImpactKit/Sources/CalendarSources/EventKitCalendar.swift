@@ -93,9 +93,11 @@ extension CalendarEvent {
             seriesID: event.hasRecurrenceRules ? event.calendarItemIdentifier : nil,
             location: event.location, url: event.url, notes: event.notes,
             organizer: event.organizer.flatMap { $0.isCurrentUser ? nil : Self.displayName(name: $0.name, url: $0.url) },
-            // Rooms and equipment are not people; the organizer is often listed again.
             attendees: (event.attendees ?? [])
-                .filter { !$0.isCurrentUser && ![.room, .resource].contains($0.participantType) && $0.url != event.organizer?.url }
+                .filter {
+                    Self.isOtherPerson(type: $0.participantType, isCurrentUser: $0.isCurrentUser, url: $0.url,
+                                       organizer: event.organizer?.url)
+                }
                 .map { Self.displayName(name: $0.name, url: $0.url) },
             structuredPlace: event.structuredLocation.flatMap { Place($0, location: event.location) }
         )
@@ -110,6 +112,11 @@ extension CalendarEvent {
     static func occurrenceID(item: String, occurrence: Date?, recurring: Bool) -> String {
         guard recurring, let occurrence else { return item }
         return "\(item)@\(Int(occurrence.timeIntervalSince1970))"
+    }
+
+    /// An attendee card detail lists: not the user, not a room or equipment, and not the organizer listed again.
+    static func isOtherPerson(type: EKParticipantType, isCurrentUser: Bool, url: URL, organizer: URL?) -> Bool {
+        !isCurrentUser && ![.room, .resource].contains(type) && url != organizer
     }
 
     /// A participant's name, else their address (an email address without `mailto:`).

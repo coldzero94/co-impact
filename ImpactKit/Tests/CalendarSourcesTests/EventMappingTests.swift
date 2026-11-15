@@ -69,6 +69,18 @@ private func structured(_ title: String?, at coordinate: (Double, Double)? = (37
         }
     }
 
+    @Test("Card detail lists other people: not the user, rooms, equipment, or the organizer again", arguments: [
+        (EKParticipantType.person, false, "mailto:joon@example.com", true), (.unknown, false, "mailto:joon@example.com", true),
+        (.group, false, "mailto:team@example.com", true), (.room, false, "mailto:room-3a@example.com", false),
+        (.resource, false, "mailto:projector@example.com", false), (.person, true, "mailto:me@example.com", false),
+        (.person, false, "mailto:mina@example.com", false),
+    ])
+    func otherPeople(_ type: EKParticipantType, _ isUser: Bool, _ address: String, _ listed: Bool) throws {
+        let organizer = try #require(URL(string: "mailto:mina@example.com"))
+        #expect(CalendarEvent.isOtherPerson(type: type, isCurrentUser: isUser, url: try #require(URL(string: address)),
+                                            organizer: organizer) == listed)
+    }
+
     @Test("A participant shows by name, else by email address; other addresses show whole")
     func displayNames() throws {
         let mail = try #require(URL(string: "mailto:mina.park%2Bwork@example.com"))
