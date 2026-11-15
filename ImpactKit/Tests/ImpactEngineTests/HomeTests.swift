@@ -148,7 +148,7 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         #expect(ids(home(events, at: at(9, 48)).cards) == ["Design review", "Early sync", "Dentist", "Town hall"])
         let afterDone = home(events, at: at(10, 2), completed: ["Design review"])
         #expect(ids(afterDone.cards).contains("Design review"))
-        #expect(!ids(home(events, at: at(19)).cards).contains("Design review"))
+        #expect(ids(home(events, at: at(19)).cards) == ["Tomorrow standup"])
     }
 
     @Test("An untitled event's card reads Untitled; its Title fact keeps the calendar's empty title")
