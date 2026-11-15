@@ -56,7 +56,7 @@ public final class HomeModel {
         if similar {
             dismissals.mute(like: event)
         } else {
-            dismissals.dismiss(event)
+            dismissals.dismiss(event, at: now)
         }
         rebuild()
         saveDismissals(dismissals)
