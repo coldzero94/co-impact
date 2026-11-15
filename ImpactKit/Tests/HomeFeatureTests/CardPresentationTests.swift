@@ -100,13 +100,31 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         #expect(live.nowPhase == ImpactEngine.nowPhase(of: zoom))
     }
 
-    @Test("A run link names its card, whatever the ID holds; other links name none")
-    func runLink() throws {
-        let id = "AD37F411-AFC9@1800000000/x?y=1&z"
+    @Test("A run link names its card, whatever the ID holds; other links name none", arguments: [
+        "AD37F411-AFC9@1800000000/x?y=1&z", "a+b%20c d#e", "회의 🗓️",
+    ])
+    func runLink(_ id: String) throws {
         #expect(LiveCard.cardID(fromRunURL: LiveCard.runURL(cardID: id)) == id)
         #expect(LiveCard.cardID(fromRunURL: try #require(URL(string: "impact://open?card=x"))) == nil)
         #expect(LiveCard.cardID(fromRunURL: try #require(URL(string: "https://run?card=x"))) == nil)
         #expect(LiveCard.cardID(fromRunURL: try #require(URL(string: "impact://run?card="))) == nil)
+    }
+
+    @Test("A Live Activity's card survives the encoding the system stores it in, and stays equal")
+    func liveCardCodable() throws {
+        let live = try #require(LiveCard(try card(.inPerson, place: clinic)))
+        #expect(try JSONDecoder().decode(LiveCard.self, from: JSONEncoder().encode(live)) == live)
+    }
+
+    @Test("A sync requests only cards without an activity: at once inside their Now phase, else scheduled")
+    func toRequest() throws {
+        let online = try #require(LiveCard(try card(.onlineMeeting, link: "https://zoom.us/j/1")))
+        let visit = try #require(LiveCard(try card(.inPerson, place: clinic)))
+        // Both cards start at `start`; their Now phase starts 10 minutes before.
+        let early = LiveCard.toRequest(wanted: [online, visit], existing: [visit], now: start.addingTimeInterval(-3_600))
+        #expect(early.startNow.isEmpty && early.schedule == [online])
+        let inNow = LiveCard.toRequest(wanted: [online, visit], existing: [], now: start.addingTimeInterval(-600))
+        #expect(inNow.startNow == [online, visit] && inNow.schedule.isEmpty)
     }
 
     @Test("Home wants Live Activities for the next two cards whose Now has not ended")

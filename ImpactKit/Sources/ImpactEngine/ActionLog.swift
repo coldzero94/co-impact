@@ -46,8 +46,8 @@ public struct ActionLog: Sendable {
         card.kind == .inPerson ? card.start.addingTimeInterval(-2 * 3_600) : ImpactEngine.soonStart(of: card)
     }
 
-    /// Whether `action` was marked done on `card` (a primary action only once it counts); a primary action also counts as done when the card's Impact was
-    /// restored from storage.
+    /// Whether `action` was marked done on `card` (a primary action only from `countsFrom` on); a primary action
+    /// is also done when the card's Impact was restored from storage.
     public func isDone(_ action: ImpactAction, on card: ImpactCard) -> Bool {
         (done[card.id]?.contains(action.kind) ?? false) || (action == card.primaryAction && impacts[card.id] != nil)
     }

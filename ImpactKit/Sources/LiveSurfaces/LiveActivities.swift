@@ -4,47 +4,51 @@ import Foundation
 import os
 
 extension LiveCard: ActivityAttributes {
-    /// Empty: the activity shows only what it was scheduled with, and timer text moves on its own.
+    /// Empty: the activity shows only what it was requested with, and timer text moves on its own.
     public struct ContentState: Codable, Hashable, Sendable {}
 }
 
-/// Keeps Impact's Live Activities equal to the cards that should have one (`ImpactEngine.liveActivityCards`).
+/// Keeps Impact's Live Activities equal to the cards that should have one (`HomeSnapshot.liveActivityCards`).
 @MainActor
 public enum LiveActivities {
-    /// Ends activities no longer wanted (done, dismissed, changed, or past), and schedules the missing ones to
-    /// start with their Now phase, which alerts once (PRODUCT.md → Interruptions); one already in its Now phase
-    /// starts at once, without an alert, since Impact is open.
-    /// shortcut: when scheduling fails, nothing else alerts yet; the fallback notification (PRODUCT.md →
+    /// Ends the activities no longer wanted (done, dismissed, changed, past, or pushed out by an earlier card),
+    /// which works from the background too. With `request`, which needs Impact in front, also requests the missing
+    /// ones (`LiveCard.toRequest`): scheduled ones start with their Now phase and alert then (PRODUCT.md →
+    /// Interruptions; whether the alert shows under a Focus is unverified, ARCHITECTURE.md → To verify).
+    /// shortcut: when a request fails, nothing else alerts yet; the fallback notification (PRODUCT.md →
     /// Interruptions) comes with notification permission.
-    /// shortcut: an activity the user swiped away is scheduled again once the system forgets it.
-    public static func sync(_ cards: [LiveCard], now: Date) async {
-        var kept: Set<LiveCard> = []
+    /// shortcut: an activity the user swiped away is requested again once the system forgets it.
+    public static func sync(_ cards: [LiveCard], request: Bool) async {
+        var existing: Set<LiveCard> = []
         for activity in Activity<LiveCard>.activities where activity.activityState != .ended {
             if cards.contains(activity.attributes) {
-                kept.insert(activity.attributes)
+                existing.insert(activity.attributes)
             } else {
                 await activity.end(nil, dismissalPolicy: .immediate)
             }
         }
-        // A newer sync replaced this one while it waited: nothing below waits, so only one sync schedules.
-        guard !Task.isCancelled else { return }
+        // A newer sync replaced this one, or Impact left the front, while it waited: nothing below waits, so only
+        // one sync requests, and only in front.
+        guard request, !Task.isCancelled else { return }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-            liveLog.info("Live Activities are off for Impact; none scheduled")
+            liveLog.notice("Live Activities are off for Impact: \(cards.count, privacy: .public) cards get no Now alert")
             return
         }
-        for card in cards where !kept.contains(card) {
+        let (startNow, schedule) = LiveCard.toRequest(wanted: cards, existing: existing, now: .now)
+        for card in startNow + schedule {
             let content = ActivityContent(state: LiveCard.ContentState(), staleDate: card.nowPhase.upperBound)
+            let scheduled = schedule.contains(card)
             do {
-                if now >= card.nowPhase.lowerBound {
-                    _ = try Activity.request(attributes: card, content: content, pushType: nil)
-                } else {
+                if scheduled {
                     _ = try Activity.request(
                         attributes: card, content: content, pushType: nil, style: .standard,
                         alertConfiguration: AlertConfiguration(title: "\(card.title)", body: "\(card.answer)", sound: .default),
                         start: card.nowPhase.lowerBound)
+                } else {
+                    _ = try Activity.request(attributes: card, content: content, pushType: nil)
                 }
             } catch {
-                liveLog.fault("Could not schedule a Live Activity: \(String(describing: type(of: error)), privacy: .public) \((error as NSError).code, privacy: .public)")
+                liveLog.fault("Could not \(scheduled ? "schedule" : "start", privacy: .public) the Live Activity for \(card.cardID, privacy: .private): \(String(describing: type(of: error)), privacy: .public) \((error as NSError).code, privacy: .public)")
             }
         }
     }

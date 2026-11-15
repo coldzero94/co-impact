@@ -218,18 +218,26 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         #expect(ImpactEngine.nowPhase(of: visit) == at(9, 50) ..< at(10))
     }
 
-    @Test("Live Activities go to the next two cards still to do whose Now has not ended, by Now start")
+    @Test("Live Activities go to the next two cards still to do whose Now has not ended, by start")
     func liveActivityCards() {
         let events = [
             event("Done", 9, 30), event("Running", 9), event("Visit", 10) { $0.structuredPlace = clinic },
             event("Review", 10, 5), event("Later", 14),
         ]
-        let home = home(events, at: at(9, 15), completed: ["Done"])
         // Running's Now (8:50–9:10) has ended; Done is done; Visit's Now starts 9:50, Review's 9:55.
-        #expect(ids(ImpactEngine.liveActivityCards(in: home, now: at(9, 15))) == ["Visit", "Review"])
+        #expect(ids(home(events, at: at(9, 15), completed: ["Done"]).liveActivityCards) == ["Visit", "Review"])
         // Inside Visit's Now it still counts; once it ends, Later moves up.
-        #expect(ids(ImpactEngine.liveActivityCards(in: home, now: at(9, 55))) == ["Visit", "Review"])
-        #expect(ids(ImpactEngine.liveActivityCards(in: home, now: at(10))) == ["Review", "Later"])
+        #expect(ids(home(events, at: at(9, 55), completed: ["Done"]).liveActivityCards) == ["Visit", "Review"])
+        #expect(ids(home(events, at: at(10), completed: ["Done"]).liveActivityCards) == ["Review", "Later"])
+        let dismissed = home(events, at: at(9, 15), completed: ["Done"], suppressionRules: [.occurrence(id: "Visit")])
+        #expect(ids(dismissed.liveActivityCards) == ["Review", "Later"])
+    }
+
+    @Test("Tomorrow morning's first card gets a Live Activity before Tomorrow morning shows; after noon none")
+    func liveActivityTomorrow() {
+        let events = [event("Today", 16), event("Tomorrow", 8, day: 1), event("Afternoon", 14, day: 1)]
+        let afternoon = home(events, at: at(15), completed: ["Today"])
+        #expect(afternoon.tomorrowMorning.isEmpty && ids(afternoon.liveActivityCards) == ["Tomorrow"])
     }
 
     @Test("Tomorrow morning ends before noon")

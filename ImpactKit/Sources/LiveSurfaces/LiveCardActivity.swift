@@ -4,7 +4,8 @@ import SwiftUI
 import WidgetKit
 
 /// A card's Live Activity (UX.md → System surfaces): the Now phase only. Its one button opens Impact, which runs
-/// the primary action. The same layouts serve StandBy, the Watch Smart Stack, and CarPlay.
+/// the primary action. StandBy shows the Lock Screen layout; the Watch Smart Stack and CarPlay show the compact
+/// pair, where the button is missing or does nothing.
 public struct LiveCardActivity: Widget {
     public init() {}
 
@@ -34,7 +35,7 @@ public struct LiveCardActivity: Widget {
             } compactLeading: {
                 Image(systemName: card.symbol).foregroundStyle(.indigo).accessibilityLabel(card.title)
             } compactTrailing: {
-                // When the system slows updates it writes "8 minutes": shrink rather than truncate.
+                // A dimmed screen showed "8 minutes" here in the simulator: shrink rather than truncate.
                 Countdown(card: card, stale: context.isStale).lineLimit(1).minimumScaleFactor(0.6).frame(maxWidth: 64)
             } minimal: {
                 Image(systemName: card.symbol).foregroundStyle(.indigo).accessibilityLabel(card.title)
@@ -66,7 +67,7 @@ private struct LockScreenView: View {
     }
 }
 
-/// Minutes to the start, then minutes since it, drawn by the system so it moves without updates. Once the Now
+/// Time to the start, then time since it (m:ss), drawn by the system so it moves without updates. Once the Now
 /// phase has passed (stale), the start time instead.
 private struct Countdown: View {
     let card: LiveCard

@@ -156,7 +156,7 @@ Each surface shows the card's current phase (PRODUCT.md → Card timeline). Lock
 | Control (Proposed) | Control Center, Lock Screen, and Action button: Next up's symbol and clock time; runs its primary action through Impact | Lists |
 | Notifications | One alert per card at its Now phase, plus "Changed" (PRODUCT.md → Interruptions) | Digests, reminders to open the app, goal suggestions, the daily log |
 
-Built in step 9: the Live Activity, as in the table (Lock Screen: symbol, title, answer, and a countdown that counts on past the start; then a full-width button for the primary action). Its button opens Impact, which runs the action at once. Once the Now phase has passed, it shows the start time instead of the countdown until Impact ends it. Not built yet: the widgets, Siri / Shortcuts, the fallback notification when a Live Activity cannot be scheduled, and an in-app switch for Live Activities.
+Built in step 9: the Live Activity, as in the table (Lock Screen: symbol, title, answer, and a countdown that, for online and hybrid cards, counts on past the start; then a full-width button for the primary action). Its button opens Impact, which runs the action at once. Once the Now phase has passed, it shows the start time instead of the countdown until Impact ends it. Not built yet: the widgets, Siri / Shortcuts, and the fallback notification when a Live Activity cannot be scheduled.
 
 Further proposals, not yet decided, are ranked in [research/system-surfaces.md → Ranked proposals](research/system-surfaces.md#ranked-proposals).
 
