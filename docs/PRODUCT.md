@@ -224,7 +224,7 @@ Cards move through phases (P3). Times are relative to the event start, or to the
 | Upcoming | From the start of the horizon | Same | Listed as a row under "Later today" |
 | Soon | T − 15 min | Leave-by − 30 min | Becomes "Next up" if it is the earliest |
 | Now | T − 10 min until T + 10 min | Leave-by − 10 min until event start | Live Activity shown (scheduled ahead); one alert |
-| Done | Join tapped | Directions tapped | Card subdued with a checkmark, moves out of "Next up" |
+| Done | Join tapped from Soon on | Directions tapped from Soon on | Card subdued with a checkmark, moves out of "Next up" |
 | Expired | Event end | Event start + 15 min | Removed silently (P7) |
 
 Goal-time cards have no phases: they leave when the block is created, when the slot starts, or on Not now. Focus blocks: see Goals → Focus blocks.
@@ -266,7 +266,7 @@ AI is optional enrichment (P5, P6). Without Apple Intelligence the product is co
 
 - Executing an action marks it done. No confirmation step.
 - A card is **done** when its primary action is done.
-- A primary action run before the card's Soon phase (e.g. Directions previewed the evening before) is preparation: it opens its target but marks nothing and records no Impact, so the card keeps Next up and its Now alert (owner, 2026-11-15; [research/system-surfaces.md](research/system-surfaces.md)).
+- A primary action run before the card's Soon phase (e.g. Directions previewed the evening before) is preparation: it opens its target but marks nothing and records no Impact, so the card keeps Next up and its Now alert (owner, 2026-11-15; [research/system-surfaces.md](research/system-surfaces.md)). Until routing gives leave-by, an in-person card's primary action counts from 2 hours before the start, so a trip of up to 90 minutes still counts.
 - A card **expires** silently (see Card timeline). No "did you do it?" prompts.
 - Outcome metric: cards whose primary action was executed before the event started.
 - A goal-time card is done when Block time succeeds; Undo brings it back.

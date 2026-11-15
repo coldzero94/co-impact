@@ -40,6 +40,20 @@ private func hybridCard() throws -> ImpactCard {
         #expect(atSoon && log.completedCardIDs == ["town-hall"])
     }
 
+    @Test("In person, Directions counts from 2 hours before the start until leave-by exists")
+    func earlyDirections() throws {
+        var event = CalendarEvent(id: "dentist", calendarID: "personal", title: "Dentist", start: start,
+                                  end: start.addingTimeInterval(3_600))
+        event.structuredPlace = Place(title: "Synthetic clinic", latitude: 37.5, longitude: 127)
+        let card = try #require(try ImpactEngine().card(for: event, now: start.addingTimeInterval(-3 * 3_600)))
+        let directions = try #require(card.primaryAction)
+        var log = ActionLog()
+        let preview = log.record(directions, on: card, at: start.addingTimeInterval(-2 * 3_600 - 1))
+        // Leaving 50 minutes ahead for a long drive is the trip itself.
+        let departure = log.record(directions, on: card, at: start.addingTimeInterval(-50 * 60))
+        #expect(!preview && departure && log.completedCardIDs == ["dentist"])
+    }
+
     @Test("Only the primary action records an Impact, and only once per card")
     func primaryRecordsOnce() throws {
         let card = try hybridCard()

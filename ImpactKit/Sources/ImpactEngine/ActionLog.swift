@@ -32,11 +32,18 @@ public struct ActionLog: Sendable {
             return false
         }
         let primary = action == card.primaryAction
-        if primary, date < ImpactEngine.soonStart(of: card) { return false }
+        if primary, date < Self.countsFrom(card) { return false }
         done[card.id, default: []].insert(action.kind)
         guard primary, impacts[card.id] == nil else { return false }
         impacts[card.id] = date
         return true
+    }
+
+    /// When a card's primary action starts to count: its Soon phase. In person that starts 30 minutes before
+    /// leave-by, which needs routing, so until then a trip of up to 90 minutes counts: from 2 hours before the start.
+    /// shortcut: use leave-by − 30 minutes (PRODUCT.md → Card timeline) once routing gives leave-by.
+    static func countsFrom(_ card: ImpactCard) -> Date {
+        card.kind == .inPerson ? card.start.addingTimeInterval(-2 * 3_600) : ImpactEngine.soonStart(of: card)
     }
 
     /// Whether `action` ran on `card`; a primary action also counts as done when the card's Impact was
