@@ -92,6 +92,11 @@ extension CalendarEvent {
             isUserAttendee: me != nil,
             seriesID: event.hasRecurrenceRules ? event.calendarItemIdentifier : nil,
             location: event.location, url: event.url, notes: event.notes,
+            organizer: event.organizer.flatMap { $0.isCurrentUser ? nil : Self.displayName(name: $0.name, url: $0.url) },
+            // Rooms and equipment are not people; the organizer is often listed again.
+            attendees: (event.attendees ?? [])
+                .filter { !$0.isCurrentUser && ![.room, .resource].contains($0.participantType) && $0.url != event.organizer?.url }
+                .map { Self.displayName(name: $0.name, url: $0.url) },
             structuredPlace: event.structuredLocation.flatMap { Place($0, location: event.location) }
         )
     }
@@ -105,6 +110,14 @@ extension CalendarEvent {
     static func occurrenceID(item: String, occurrence: Date?, recurring: Bool) -> String {
         guard recurring, let occurrence else { return item }
         return "\(item)@\(Int(occurrence.timeIntervalSince1970))"
+    }
+
+    /// A participant's name, else their address (an email address without `mailto:`).
+    static func displayName(name: String?, url: URL) -> String {
+        if let name = name?.trimmingCharacters(in: .whitespaces), !name.isEmpty { return name }
+        guard url.scheme?.lowercased() == "mailto" else { return url.absoluteString }
+        let address = url.absoluteString.dropFirst("mailto:".count)
+        return address.removingPercentEncoding ?? String(address)
     }
 
     /// The user's answer to an invitation; anything but accepted, declined, or tentative is unknown.

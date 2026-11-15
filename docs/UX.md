@@ -86,7 +86,7 @@ Often the most common state. It must feel like a result, not an error (P7).
 
 Executing an action marks it done in place (checkmark, subdued). No confirmation dialogs. Done actions stay tappable (to rejoin a meeting, for example). If the system cannot open an action, an alert says so ("Maps didn't open") and the action stays not done.
 
-Not built yet: Details shows the place only; organizer, attendees, and the notes excerpt come with EventKit (step 7), and Suggested with Foundation Models (step 8).
+Built in step 7: Details shows the place, the organizer unless it is the user, the other people invited (not rooms or equipment; three names, or two and a count), and up to six lines of the notes, all as the calendar has them. Not built yet: Suggested, with Foundation Models (step 8).
 
 ### 5. Goal setup (sheet)
 

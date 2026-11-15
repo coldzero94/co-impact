@@ -35,6 +35,7 @@ private func structured(_ title: String?, at coordinate: (Double, Double)? = (37
         #expect(mapped.location == "Room 3" && mapped.url == zoom && mapped.notes == "Agenda")
         #expect(mapped.calendarKind == .regular && mapped.participation == .unknown && !mapped.isCanceled)
         #expect(!mapped.hasAttendees && !mapped.isUserAttendee && !mapped.isUserOrganizer && mapped.seriesID == nil)
+        #expect(mapped.organizer == nil && mapped.attendees.isEmpty)
         #expect(CalendarEvent(event { $0.isAllDay = true }).isAllDay)
         #expect(CalendarEvent(event { $0.title = "  " }).title == "")
     }
@@ -66,6 +67,16 @@ private func structured(_ title: String?, at coordinate: (Double, Double)? = (37
         for other: EKParticipantStatus? in [.pending, .delegated, .completed, .inProcess, .unknown, nil] {
             #expect(CalendarEvent.participation(other) == .unknown)
         }
+    }
+
+    @Test("A participant shows by name, else by email address; other addresses show whole")
+    func displayNames() throws {
+        let mail = try #require(URL(string: "mailto:mina.park%2Bwork@example.com"))
+        #expect(CalendarEvent.displayName(name: "Mina Park", url: mail) == "Mina Park")
+        #expect(CalendarEvent.displayName(name: " ", url: mail) == "mina.park+work@example.com")
+        #expect(CalendarEvent.displayName(name: nil, url: try #require(URL(string: "MAILTO:joon@example.com"))) == "joon@example.com")
+        let other = try #require(URL(string: "urn:uuid:synthetic"))
+        #expect(CalendarEvent.displayName(name: nil, url: other) == "urn:uuid:synthetic")
     }
 
     @Test("Only full access reads; restricted is told apart from denied and write-only")

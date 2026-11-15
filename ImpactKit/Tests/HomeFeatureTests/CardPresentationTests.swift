@@ -67,6 +67,14 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         #expect(summaryLine(cards: cards, eventsLeft: left) == text)
     }
 
+    @Test("Attendees: up to three names in full, else the first two and a count", arguments: [
+        (["Mina"], "Mina"), (["Mina", "Joon", "Sara"], "Mina, Joon, and Sara"),
+        (["Mina", "Joon", "Sara", "Alex", "Dana"], "Mina, Joon, and 3 others"),
+    ])
+    func attendees(_ names: [String], _ line: String) {
+        #expect(attendeeLine(names) == line)
+    }
+
     /// The states ImpactKit/AGENTS.md → UI documents for `-fixtureHour`, pinned so screenshots keep showing them.
     @Test("Sample day states", arguments: [9.8, 8, 19, 21])
     @MainActor func sampleDay(_ hour: Double) throws {

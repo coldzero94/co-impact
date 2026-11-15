@@ -32,7 +32,11 @@ public enum HomeFixtures {
         let events = [
             event("Standup", 7.5, minutes: 45) { $0.url = URL(string: "https://zoom.us/j/111") },
             event("1:1 with Mina", 9, minutes: 30) { $0.location = "https://meet.google.com/abc-defg-hij" },
-            event("Design review", 10) { $0.notes = "Join https://zoom.us/j/123456" },
+            event("Design review", 10) {
+                $0.notes = "Agenda: onboarding flow, then open questions.\nJoin https://zoom.us/j/123456"
+                $0.organizer = "Mina Park"
+                $0.attendees = ["Joon Lee", "Sara Kim", "Alex Cho", "Dana Yoon", "Eli Han"]
+            },
             event("Team sync", 11, minutes: 30) { $0.location = "회의실 3A" },
             event("Dentist", 14.5) { $0.structuredPlace = clinic },
             event("Town hall", 17) {

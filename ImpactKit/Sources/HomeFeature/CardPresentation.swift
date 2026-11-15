@@ -13,6 +13,9 @@ extension ImpactCard {
 
     var provider: String? { meetingURL.flatMap(ImpactEngine.meetingProvider) }
 
+    /// The values of the card's facts with this label, e.g. "Attendee" (UX.md → Card detail → Details).
+    func values(_ label: String) -> [String] { facts.filter { $0.label == label }.map(\.value) }
+
     /// The answer to the card's question (P1).
     /// shortcut: in-person answers show the place; once routing exists they show the leave-by time,
     /// keeping the place when no route exists (PRODUCT.md → Card timeline).
@@ -112,4 +115,10 @@ enum Countdown: Equatable {
 func summaryLine(cards: Int, eventsLeft: Int) -> String {
     guard eventsLeft > 0 else { return "No events left today" }
     return "\(cards) of \(eventsLeft) \(eventsLeft == 1 ? "event" : "events") \(cards == 1 ? "needs" : "need") you"
+}
+
+/// "Mina, Joon, and Sara", or with more than three people "Mina, Joon, and 4 others".
+func attendeeLine(_ names: [String]) -> String {
+    guard names.count > 3 else { return names.formatted(.list(type: .and)) }
+    return (names.prefix(2) + ["\(names.count - 2) others"]).formatted(.list(type: .and))
 }

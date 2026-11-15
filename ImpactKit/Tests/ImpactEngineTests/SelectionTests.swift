@@ -207,6 +207,19 @@ private let productExamples: [Example] = [
         #expect(engine.card(for: event { $0.location = "110 Test Street"; $0.geocodedPlace = invalid }, now: now) == nil)
     }
 
+    @Test("Organizer, attendees, and trimmed notes become calendar facts; blank notes give none")
+    func detailFacts() throws {
+        let card = try #require(engine.card(for: event {
+            $0.url = zoom; $0.organizer = "Mina Park"; $0.attendees = ["Joon Lee", "Sara Kim"]; $0.notes = "\n Agenda \n"
+        }, now: now))
+        let details = card.facts.filter { ["Organizer", "Attendee", "Notes"].contains($0.label) }
+        #expect(details.map(\.value) == ["Mina Park", "Joon Lee", "Sara Kim", "Agenda"])
+        #expect(details.map(\.provenance) == [.calendar(field: "organizer"), .calendar(field: "attendees"),
+                                             .calendar(field: "attendees"), .calendar(field: "notes")])
+        let plain = try #require(engine.card(for: event { $0.url = zoom; $0.notes = " \n" }, now: now))
+        #expect(plain.facts.map(\.label) == ["Title", "Start", "End", "Meeting"])
+    }
+
     @Test("Only notes supply linked documents; actions are unique and grounded")
     func secondaryActions() throws {
         let document = URL(string: "https://www.figma.com/file/synthetic")!
