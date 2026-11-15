@@ -19,6 +19,8 @@ public struct LiveHome: View {
     @State private var requestFailed = false
     /// A Live Activity's button opened Impact to run this card's primary action.
     @State private var runCardID: String?
+    /// The secret Impact's own run links carry (`RunToken`).
+    @State private var runToken = RunToken.load()
     @Environment(\.scenePhase) private var scenePhase
 
     public init() {}
@@ -68,7 +70,11 @@ public struct LiveHome: View {
             refresh()
         }
         .onOpenURL { url in
-            guard let id = LiveCard.cardID(fromRunURL: url) else { return }
+            guard let id = LiveCard.cardID(fromRunURL: url, token: runToken) else {
+                // Not from one of Impact's own Live Activities (ARCHITECTURE.md → Privacy): Impact only opens.
+                if LiveCard.isRunURL(url) { homeLog.notice("A run link without Impact's token was ignored") }
+                return
+            }
             // A Live Activity's button can resume Impact from hours ago: bring Home to the present first, so the
             // action counts at the time it runs and finds the card as the calendar has it now.
             refresh()
@@ -94,7 +100,7 @@ public struct LiveHome: View {
     /// longer sees), and nil (leave them be) until the first refresh has built Home.
     private var wantedLiveCards: [LiveCard]? {
         guard access == .granted, !noCalendars else { return [] }
-        return model?.liveCards
+        return model?.liveCards(runToken: runToken)
     }
 
     private func connect() async {
