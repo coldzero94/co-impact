@@ -15,6 +15,10 @@ public enum NextCards {
     /// widget moves on from card to card while Impact does not run.
     public static func moments(events: [CalendarEvent], state: SurfaceState, now: Date, calendar: Calendar,
                                engine: ImpactEngine) -> [Moment] {
+        // A card only ever leaves with time (it expires), so events without one now never get one: select once.
+        let events = events.filter {
+            engine.card(for: $0, now: now, suppressionRules: state.suppressionRules) != nil
+        }
         let home = { (date: Date) in
             engine.home(events: events, now: date, calendar: calendar, completedCardIDs: state.completedCardIDs,
                         impactsToday: 0, suppressionRules: state.suppressionRules)

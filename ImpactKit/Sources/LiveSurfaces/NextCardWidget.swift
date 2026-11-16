@@ -50,7 +50,12 @@ struct NextCardProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping @Sendable (Timeline<NextCardEntry>) -> Void) {
-        Task { @MainActor in completion(Timeline(entries: Self.entries(now: .now), policy: .atEnd)) }
+        Task { @MainActor in
+            let now = Date.now
+            let entries = Self.entries(now: now)
+            // With nothing ahead there is no change to wait for: read the calendar again in an hour, not at once.
+            completion(Timeline(entries: entries, policy: entries.count > 1 ? .atEnd : .after(now.addingTimeInterval(3_600))))
+        }
     }
 
     /// The widget's moments (`NextCards.moments`) from the calendar and Impact's state; it reloads after the last

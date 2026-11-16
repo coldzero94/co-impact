@@ -94,7 +94,7 @@ iOS does not let an app run whenever it wants. The engine runs when:
 | Every minute while Home is open | Always; countdowns move on the minute (built, step 7) |
 | `EKEventStoreChanged` notification | Only while the app is running (built, step 7) |
 | `BGAppRefreshTask` | Best effort; the system decides when, possibly not at all |
-| Widget timeline reload | Budgeted by the system. Built (step 9): the Lock Screen widget lays out entries up to each change of phase ahead, and Impact asks for a reload when the done or dismissed cards, the next cards, or calendar access change |
+| Widget timeline reload | Budgeted by the system. Built (step 9): the Lock Screen widget lays out entries up to each change of phase ahead, and Impact asks for a reload when the done or dismissed cards, the cards Home shows or wants Live Activities for, or calendar access change; with nothing ahead it reads the calendar again hourly |
 
 Consequence: results must be **scheduled ahead** at analysis time (notifications, widget timeline entries, scheduled Live Activities). If the user does not open the app for days, newly added events may not be analyzed. This is accepted for the MVP.
 

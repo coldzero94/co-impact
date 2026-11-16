@@ -33,6 +33,21 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         #expect(moments.map(\.date) == moments.map(\.date).sorted() && moments.count <= 24)
     }
 
+    @Test("Entries fall on every change of phase: Soon, start, end of Now, expiry, and the end")
+    func changes() throws {
+        var visit = meeting("Visit", 14)
+        visit.url = nil
+        visit.structuredPlace = Place(title: "Synthetic clinic", latitude: 37.5, longitude: 127)
+        let moments = NextCards.moments(events: [visit, meeting("Call", 16)], state: none, now: at(9),
+                                        calendar: losAngeles, engine: engine)
+        // In person: Soon at 13:30, start 14:00, expiry 14:15 (when the card leaves); online: Soon 15:45, start 16:00,
+        // end of Now 16:10, end 17:00. The other offsets fall in between and change nothing visible.
+        let dates = Set(moments.map(\.date))
+        for hour in [9, 13.5, 14, 14.25, 15.75, 16, 16 + 1.0 / 6, 17] { #expect(dates.contains(at(hour)), "\(hour)") }
+        #expect(moments.first { $0.date == at(14.25) }?.card?.id == "Call")
+        #expect(moments.first { $0.date == at(17) }?.card == nil)
+    }
+
     @Test("Done and dismissed cards are skipped; tomorrow's first card shows once today has none")
     func state() throws {
         let events = [meeting("Done", 10), meeting("Muted", 11), meeting("Tomorrow", 8, day: 1)]
