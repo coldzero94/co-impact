@@ -3,16 +3,23 @@ import ImpactEngine
 import os
 
 /// What the widgets need from Impact that the calendar does not hold (ARCHITECTURE.md → Storage): which cards are
-/// done and which are dismissed or muted. Card IDs and muted titles only, like Impact's own storage; the widgets
-/// read events from the calendar themselves.
+/// done and when (for the ring's Impacts), which are dismissed or muted, and the run links' secret. Of the calendar,
+/// card IDs, times, and muted titles only, like Impact's own storage; the widgets read events themselves.
 public struct SurfaceState: Codable, Hashable, Sendable {
-    public var completedCardIDs: Set<String>
+    /// When each card's Impact was recorded, by card ID.
+    public var completed: [String: Date]
     public var suppressionRules: [SuppressionRule]
+    /// The secret Impact's run links carry (`RunToken`): widgets are Impact's own surfaces, and the App Group is
+    /// Impact's alone. Nil only in the widgets' fallback when nothing decodes; they then show no action button.
+    public var runToken: String?
 
-    public init(completedCardIDs: Set<String>, suppressionRules: [SuppressionRule]) {
-        self.completedCardIDs = completedCardIDs
+    public init(completed: [String: Date], suppressionRules: [SuppressionRule], runToken: String? = nil) {
+        self.completed = completed
         self.suppressionRules = suppressionRules
+        self.runToken = runToken
     }
+
+    public var completedCardIDs: Set<String> { Set(completed.keys) }
 }
 
 /// `SurfaceState` in the App Group's defaults: Impact writes it, its widgets read it.
@@ -37,7 +44,10 @@ public struct SurfaceStore {
     }
 
     /// The state Impact last wrote, or nil before the first write or when it does not decode (then the widgets
-    /// show every card as not done until Impact writes again).
+    /// show every card as not done, dismissed ones too, an empty ring, and no action button until Impact writes
+    /// again).
+    /// shortcut: a change of form (e.g. `completedCardIDs` to `completed`) drops the stored state until Impact
+    /// next runs; decode the old form once Impact has users.
     public func load() -> SurfaceState? {
         guard let data = defaults.data(forKey: Self.key) else { return nil }
         do {

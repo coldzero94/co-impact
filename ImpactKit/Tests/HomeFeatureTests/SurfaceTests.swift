@@ -19,7 +19,7 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
 
 @Suite struct SurfaceTests {
     private let engine = try! ImpactEngine()
-    private let none = SurfaceState(completedCardIDs: [], suppressionRules: [])
+    private let none = SurfaceState(completed: [:], suppressionRules: [])
 
     @Test("The widget follows Home's Next up through Soon, Now, and expiry, then the next card")
     func moments() throws {
@@ -43,7 +43,7 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         #expect(NextCards.moments(events: busy, state: none, now: at(9), calendar: losAngeles, engine: engine).count == 24)
     }
 
-    @Test("Entries fall exactly on each change of phase: Soon, start, end of Now, expiry")
+    @Test("Entries fall exactly on each change of phase (Soon, start, end of Now, expiry) and at midnight")
     func changes() throws {
         let place = Place(title: "Synthetic clinic", latitude: 37.5, longitude: 127)
         var visit = meeting("Visit", 14)
@@ -57,12 +57,31 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         let moments = NextCards.moments(events: [keys, visit, meeting("Call", 16)], state: none, now: at(9),
                                         calendar: losAngeles, engine: engine)
         // Keys: Soon 11:30, start 12:00, leaves 12:05. Visit: Soon 13:30, start 14:00, expiry 14:15.
-        // Call (online): Soon 15:45, start 16:00, end of Now 16:10, end 17:00.
-        let expected = [9, 11.5, 12, 12 + 1.0 / 12, 13.5, 14, 14.25, 15.75, 16, 16 + 1.0 / 6, 17].map { at($0) }
+        // Call (online): Soon 15:45, start 16:00, end of Now 16:10, end 17:00. Midnight starts the ring over.
+        let expected = [9, 11.5, 12, 12 + 1.0 / 12, 13.5, 14, 14.25, 15.75, 16, 16 + 1.0 / 6, 17, 24].map { at($0) }
         #expect(moments.map(\.date) == expected)
         #expect(moments.first { $0.date == at(12 + 1.0 / 12) }?.card?.id == "Visit")
         #expect(moments.first { $0.date == at(14.25) }?.card?.id == "Call")
         #expect(moments.last?.card == nil)
+    }
+
+    @Test("The medium widget's Later column is the next card still to do; the ring counts the entry day's Impacts")
+    func laterAndRing() throws {
+        // Done starts with Review but was joined early, so it is neither Next up nor Later.
+        let events = [meeting("Done", 10), meeting("Review", 10), meeting("Sync", 13), meeting("Wrap", 15)]
+        let state = SurfaceState(completed: ["Done": at(9.78), "Yesterday": at(9, day: -1)], suppressionRules: [])
+        let moments = NextCards.moments(events: events, state: state, now: at(9.8), calendar: losAngeles, engine: engine)
+        let first = try #require(moments.first)
+        #expect(first.card?.id == "Review" && first.later?.id == "Sync")
+        // One Impact today (Done; yesterday's does not count) plus three cards still to do.
+        #expect(first.impactsToday == 1 && first.ringSegments == 4)
+        // Once Sync is Next up while Review still runs, Later is Wrap, never the earlier Review.
+        let overlap = [meeting("Review", 10), meeting("Sync", 10.5), meeting("Wrap", 15)]
+        let soon = try #require(NextCards.moments(events: overlap, state: state, now: at(10.3), calendar: losAngeles,
+                                                  engine: engine).first)
+        #expect(soon.card?.id == "Sync" && soon.later?.id == "Wrap")
+        // Midnight starts the ring over.
+        #expect(moments.last?.date == at(24) && moments.last?.impactsToday == 0)
     }
 
     @Test("The widget rereads after the last change ahead, at least hourly, and in an hour with nothing ahead")
@@ -75,7 +94,7 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
     @Test("Done and dismissed cards are skipped; tomorrow's first card shows once today has none")
     func state() throws {
         let events = [meeting("Done", 10), meeting("Muted", 11), meeting("Tomorrow", 8, day: 1)]
-        let state = SurfaceState(completedCardIDs: ["Done"], suppressionRules: [.occurrence(id: "Muted")])
+        let state = SurfaceState(completed: ["Done": at(8)], suppressionRules: [.occurrence(id: "Muted")])
         let moments = NextCards.moments(events: events, state: state, now: at(9), calendar: losAngeles, engine: engine)
         #expect(moments.first?.card?.id == "Tomorrow")
     }
@@ -87,7 +106,7 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = SurfaceStore(defaults: defaults)
         #expect(store.load() == nil)
-        let state = SurfaceState(completedCardIDs: ["a"], suppressionRules: [.title(calendarID: "work", title: "Standup")])
+        let state = SurfaceState(completed: ["a": at(9)], suppressionRules: [.title(calendarID: "work", title: "Standup")], runToken: "secret")
         store.save(state)
         #expect(store.load() == state)
         defaults.set(Data("not json".utf8), forKey: SurfaceStore.key)
@@ -106,7 +125,26 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         let model = try HomeModel(events: [meeting("Review", 10), meeting("Sync", 13), long], now: at(10),
                                   calendar: losAngeles, log: log)
         model.dismiss(try #require(model.snapshot.cards.first { $0.id == "Sync" }), similar: false)
-        #expect(model.surfaceState.completedCardIDs == ["Review", "Long"])
-        #expect(model.surfaceState.suppressionRules == [.occurrence(id: "Sync")])
+        let state = model.surfaceState(runToken: "secret")
+        #expect(state.completed == ["Review": at(9.9), "Long": at(9, day: -3)] && state.runToken == "secret")
+        #expect(state.suppressionRules == [.occurrence(id: "Sync")])
+    }
+
+    @Test("A run link reaches every card a widget can show: tomorrow's before Home lists it, and Home's own")
+    @MainActor func runnableTomorrow() throws {
+        var log = ActionLog()
+        let review = try #require(engine.card(for: meeting("Review", 14), now: at(14)))
+        _ = log.record(try #require(review.primaryAction), on: review, at: at(14))
+        // Review is joined and still on Home, so Home keeps tomorrow off its list; the widget shows tomorrow's card.
+        let events = [meeting("Review", 14), meeting("Tomorrow", 8, day: 1)]
+        let model = try HomeModel(events: events, now: at(14.2), calendar: losAngeles, log: log)
+        let shown = try #require(NextCards.moments(events: events, state: model.surfaceState(runToken: "secret"),
+                                                   now: at(14.2), calendar: losAngeles, engine: engine).first?.card)
+        #expect(shown.id == "Tomorrow" && !model.snapshot.cards.contains { $0.id == "Tomorrow" })
+        #expect(model.runnableCard(id: "Tomorrow")?.id == "Tomorrow")
+        // Past its Now phase, a meeting is still Home's Next up but wants no Live Activity: it runs too.
+        let late = try HomeModel(events: [meeting("Call", 10)], now: at(10.3), calendar: losAngeles, log: ActionLog())
+        #expect(late.snapshot.nextUp?.id == "Call" && late.snapshot.liveActivityCards.isEmpty)
+        #expect(late.runnableCard(id: "Call")?.id == "Call" && late.runnableCard(id: "Unknown") == nil)
     }
 }

@@ -20,19 +20,9 @@ extension ImpactCard {
         case .inPerson: place.map { $0.address ?? $0.title } ?? ""
         }
     }
-
 }
 
 extension ActionKind {
-    var label: String {
-        switch self {
-        case .joinMeeting: "Join meeting"
-        case .directions: "Directions"
-        case .openLink(let url): url.shortHost.map { "Open \($0)" } ?? "Open link"
-        case .call: "Call"
-        }
-    }
-
     /// Replaces the label once the action is marked done (UX.md → Card anatomy).
     var doneLabel: String {
         switch self {
@@ -52,29 +42,8 @@ extension ActionKind {
         case .call: "The call didn't start"
         }
     }
-
-    var symbol: String {
-        switch self {
-        case .joinMeeting: "video.fill"
-        case .directions: "car.fill"
-        case .openLink: "link"
-        case .call: "phone.fill"
-        }
-    }
 }
 
-extension URL {
-    /// The host to label a link by (PRODUCT.md → Action catalog): lowercased, as browsers show it, so "paypaI"
-    /// cannot pass for "paypal", and without a leading "www.". Links come from notes other people write, so
-    /// anything but a plain ASCII host name (a lookalike script, percent-encoding, control characters) gives
-    /// nil and the generic label.
-    var shortHost: String? {
-        guard let host = host()?.lowercased().replacing(/^www\./, with: ""), !host.isEmpty,
-              host.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-" || $0 == ".") })
-        else { return nil }
-        return host
-    }
-}
 
 /// Next up's large time (UX.md → Home): minutes under an hour, the clock time from an hour out, Now from the start.
 enum Countdown: Equatable {

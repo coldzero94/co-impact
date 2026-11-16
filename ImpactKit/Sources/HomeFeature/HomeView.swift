@@ -22,8 +22,8 @@ public struct HomeView: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @ScaledMetric(relativeTo: .title) private var ringSize = 46.0
 
-    /// A card whose primary action a Live Activity asked Impact to run (`LiveCard.runURL`); Home runs it and
-    /// clears it.
+    /// A card whose primary action a widget or Live Activity asked Impact to run (`LiveCard.runURL`); Home runs it
+    /// and clears it.
     @Binding private var runCardID: String?
 
     public init(model: HomeModel, runCardID: Binding<String?> = .constant(nil)) {
@@ -93,10 +93,10 @@ public struct HomeView: View {
         .onChange(of: runCardID, initial: true) {
             guard let id = runCardID else { return }
             runCardID = nil
-            guard let card = model.snapshot.cards.first(where: { $0.id == id }), let primary = card.primaryAction else {
-                // Dismissed, expired, or gone since the activity was scheduled: Home shows what is left. A done card
-                // is still listed and runs again (e.g. to rejoin).
-                homeLog.notice("A Live Activity asked to run card \(id, privacy: .private), which Home no longer lists")
+            guard let card = model.runnableCard(id: id), let primary = card.primaryAction else {
+                // Dismissed, expired, done ahead of Home listing it, or gone since the widget or activity showed it:
+                // Home shows what is left. A done card Home still lists runs again (e.g. to rejoin).
+                homeLog.notice("A run link asked to run card \(id, privacy: .private), which Impact no longer has")
                 return
             }
             run(primary, on: card) { failed = $0 }

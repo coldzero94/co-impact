@@ -20,7 +20,7 @@ public struct LiveHome: View {
     @State private var noCalendars = false
     @State private var startFailure: String?
     @State private var requestFailed = false
-    /// A Live Activity's button opened Impact to run this card's primary action.
+    /// A widget's or Live Activity's button opened Impact to run this card's primary action.
     @State private var runCardID: String?
     /// The secret Impact's own run links carry (`RunToken`).
     @State private var runToken = RunToken.load()
@@ -74,15 +74,15 @@ public struct LiveHome: View {
         }
         .onOpenURL { url in
             guard let id = LiveCard.cardID(fromRunURL: url, token: runToken) else {
-                // Not from one of Impact's own Live Activities (ARCHITECTURE.md → Privacy): Impact only opens.
+                // Not from one of Impact's own surfaces (ARCHITECTURE.md → Privacy): Impact only opens.
                 if LiveCard.isRunURL(url) { homeLog.notice("A run link without Impact's token was ignored") }
                 return
             }
-            // A Live Activity's button can resume Impact from hours ago: bring Home to the present first, so the
-            // action counts at the time it runs and finds the card as the calendar has it now.
+            // A widget's or Live Activity's button can resume Impact from hours ago: bring Home to the present
+            // first, so the action counts at the time it runs and finds the card as the calendar has it now.
             refresh()
             guard model != nil, !noCalendars else {
-                homeLog.notice("A Live Activity's run link arrived while Home cannot show; dropped")
+                homeLog.notice("A run link arrived while Home cannot show; dropped")
                 return
             }
             runCardID = id
@@ -96,9 +96,10 @@ public struct LiveHome: View {
             guard let cards = wantedLiveCards else { return }
             await LiveActivities.sync(cards, request: scenePhase == .active)
         }
-        // The Lock Screen widget reads the calendar itself, and Impact's state from the App Group: write it and
+        // The Next up widget reads the calendar itself, and Impact's state from the App Group: write it and
         // reload the widget when either changes as Home sees it (Home's snapshot stands in for the calendar).
-        .onChange(of: WidgetSync(state: model?.surfaceState, home: model?.snapshot, access: access, noCalendars: noCalendars),
+        .onChange(of: WidgetSync(state: model?.surfaceState(runToken: runToken), home: model?.snapshot, access: access,
+                                 noCalendars: noCalendars),
                   initial: true) { _, sync in
             if let state = sync.state { SurfaceStore()?.save(state) }
             WidgetCenter.shared.reloadTimelines(ofKind: NextCardWidget.kind)
@@ -282,7 +283,7 @@ private struct LiveSync: Equatable {
     let inFront: Bool
 }
 
-/// When live Home refreshes the Lock Screen widget: when the done and dismissed cards, Home's snapshot, calendar
+/// When live Home refreshes the Next up widget: when the done and dismissed cards, Home's snapshot, calendar
 /// access, or whether any calendar is readable change.
 private struct WidgetSync: Equatable {
     let state: SurfaceState?
