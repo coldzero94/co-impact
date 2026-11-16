@@ -10,7 +10,7 @@ public struct SurfaceState: Codable, Hashable, Sendable {
     public var completed: [String: Date]
     public var suppressionRules: [SuppressionRule]
     /// The secret Impact's run links carry (`RunToken`): widgets are Impact's own surfaces, and the App Group is
-    /// Impact's alone. Nil until Impact writes it; widget buttons then only open Impact.
+    /// Impact's alone. Nil until Impact writes it; widgets then show no action button.
     public var runToken: String?
 
     public init(completed: [String: Date], suppressionRules: [SuppressionRule], runToken: String? = nil) {

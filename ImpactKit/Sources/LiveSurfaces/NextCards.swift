@@ -42,13 +42,12 @@ public enum NextCards {
         return ([now] + changes.sorted().prefix(23)).map { date in
             let snapshot = date == now ? first : home(date)
             let card = snapshot.nextUp ?? snapshot.liveActivityCards.first
-            var seen: Set<String> = []
-            let toDo = (snapshot.cards + snapshot.liveActivityCards)
-                .filter { !state.completed.keys.contains($0.id) && seen.insert($0.id).inserted }
-                .sorted { ($0.start, $0.id) < ($1.start, $1.id) }
+            let later = (snapshot.cards + snapshot.liveActivityCards)
+                .filter { !state.completed.keys.contains($0.id) && $0.id != card?.id && $0.start >= (card?.start ?? date) }
+                .min { ($0.start, $0.id) < ($1.start, $1.id) }
             return Moment(date: date, card: card,
                           soonOrNow: card.map { ImpactEngine.isSoonOrNow($0, now: date) } ?? false,
-                          later: toDo.first { $0.id != card?.id && $0.start >= (card?.start ?? date) },
+                          later: later,
                           impactsToday: snapshot.impactsToday, ringSegments: snapshot.ringSegments)
         }
     }

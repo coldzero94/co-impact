@@ -93,7 +93,9 @@ public struct HomeView: View {
         .onChange(of: runCardID, initial: true) {
             guard let id = runCardID else { return }
             runCardID = nil
-            guard let card = model.snapshot.cards.first(where: { $0.id == id }), let primary = card.primaryAction else {
+            // Widgets and Live Activities can show a card Home does not list yet (tomorrow's, before 18:00).
+            let cards = model.snapshot.cards + model.snapshot.liveActivityCards
+            guard let card = cards.first(where: { $0.id == id }), let primary = card.primaryAction else {
                 // Dismissed, expired, or gone since the activity was scheduled: Home shows what is left. A done card
                 // is still listed and runs again (e.g. to rejoin).
                 homeLog.notice("A Live Activity asked to run card \(id, privacy: .private), which Home no longer lists")

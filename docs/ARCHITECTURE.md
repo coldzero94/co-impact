@@ -95,7 +95,7 @@ iOS does not let an app run whenever it wants. The engine runs when:
 | Every minute while Home is open | Always; countdowns move on the minute (built, step 7) |
 | `EKEventStoreChanged` notification | Only while the app is running (built, step 7) |
 | `BGAppRefreshTask` | Best effort; the system decides when, possibly not at all |
-| Widget timeline reload | Budgeted by the system. Built (step 9): the Lock Screen widget lays out entries up to each change of phase ahead, and Impact asks for a reload when the done or dismissed cards, Home's snapshot, or calendar access change; without Impact the widget reads the calendar again after the last change ahead and at least hourly |
+| Widget timeline reload | Budgeted by the system. Built (step 9): the Next up widget (Lock Screen and Home Screen) lays out entries up to each change of phase ahead and midnight, and Impact asks for a reload when the done or dismissed cards, Home's snapshot, or calendar access change; without Impact the widget reads the calendar again after the last change ahead and at least hourly |
 
 Consequence: results must be **scheduled ahead** at analysis time (notifications, widget timeline entries, scheduled Live Activities). If the user does not open the app for days, newly added events may not be analyzed. This is accepted for the MVP.
 
@@ -120,7 +120,7 @@ Live Activities are started **without a server** by scheduling them at analysis 
 
 ## Privacy
 
-- Run links (`impact://run?card=<id>&token=<secret>`, Live Activity buttons) run a listed card's primary action only with the per-install secret that Impact keeps in standard `UserDefaults` and puts in its own activities' links (owner, 2026-11-16); its widgets get it through `SurfaceState` in the App Group, which only Impact's targets can open. Card IDs alone are not enough, since any app with full calendar access can read them; a link without the right secret only opens Impact.
+- Run links (`impact://run?card=<id>&token=<secret>`, Live Activity buttons) run the primary action of a card Home lists or wants a Live Activity for, only with the per-install secret that Impact keeps in standard `UserDefaults` and puts in its own activities' links (owner, 2026-11-16); its widgets get it through `SurfaceState` in the App Group, which only Impact's targets can open. Card IDs alone are not enough, since any app with full calendar access can read them; a link without the right secret only opens Impact.
 - Calendar access: full access is required to read events. It also allows writing; the only write is Block time (PRODUCT.md → Goals). The usage string (`INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription` in the app target) states on-device processing; the clause that Impact adds events only when the user taps Block time joins it with Block time (step 11).
 - No analytics SDKs, no network calls with calendar content. The owner has approved sending a location without coordinates to Apple's geocoder (MapKit) once its quality is checked on a device (step 10); until then no location is sent to it. Shipping it means rewording the usage string, PRODUCT.md → Principles ("never leaves it"), and UX.md → Onboarding.
 - Google Calendar API (if ever added, D7): official OAuth via `ASWebAuthenticationSession`, tokens in Keychain, read-only scope.

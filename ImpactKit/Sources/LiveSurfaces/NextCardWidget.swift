@@ -208,6 +208,8 @@ struct NextCardView: View {
 private struct NextUp: View {
     let shown: NextCardEntry.Shown
     let time: String
+    /// Tinted and clear Home Screens draw widgets in one color: the button then keeps its text by being a faint pill.
+    @Environment(\.widgetRenderingMode) private var renderingMode
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -220,10 +222,10 @@ private struct NextUp: View {
                     Label(shown.actionLabel, systemImage: shown.symbol)
                         .font(.caption.weight(.semibold)).lineLimit(1)
                         .frame(maxWidth: .infinity, minHeight: 30)
-                        .foregroundStyle(.indigo)
-                        .background(.white, in: .capsule)
+                        .foregroundStyle(renderingMode == .fullColor ? Color.indigo : .white)
+                        .background(renderingMode == .fullColor ? Color.white : .white.opacity(0.25), in: .capsule)
                 }
-                .widgetAccentable()
+                .accessibilityLabel("\(shown.actionLabel), \(shown.title)")
                 .padding(.top, 4)
             }
         }
