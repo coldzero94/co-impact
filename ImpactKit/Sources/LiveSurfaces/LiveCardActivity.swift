@@ -11,7 +11,7 @@ public struct LiveCardActivity: Widget {
 
     public var body: some WidgetConfiguration {
         ActivityConfiguration(for: LiveCard.self) { context in
-            ActivityContent(card: context.attributes, stale: context.isStale)
+            ActivityLayout(card: context.attributes, stale: context.isStale)
                 .activityBackgroundTint(Color(.systemBackground).opacity(0.85))
         } dynamicIsland: { context in
             let card = context.attributes
@@ -59,7 +59,7 @@ public struct LiveCardActivity: Widget {
 }
 
 /// The Lock Screen and StandBy layout, or the small one on the Watch and in CarPlay.
-private struct ActivityContent: View {
+private struct ActivityLayout: View {
     let card: LiveCard
     let stale: Bool
     @Environment(\.activityFamily) private var family
