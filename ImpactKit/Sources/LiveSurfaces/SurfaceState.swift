@@ -21,9 +21,14 @@ public struct SurfaceStore {
     static let key = "surfaceState"
     let defaults: UserDefaults
 
-    /// Nil when the App Group is not available (e.g. a build signed without its entitlement).
+    /// Nil when the App Group is not available (e.g. a build signed without its entitlement): `UserDefaults` would
+    /// then quietly give the app and the widget separate, private defaults.
     public init?() {
-        guard let defaults = UserDefaults(suiteName: Self.appGroup) else { return nil }
+        guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: Self.appGroup) != nil,
+              let defaults = UserDefaults(suiteName: Self.appGroup) else {
+            surfaceLog.notice("The App Group is not available: widgets cannot see what is done or dismissed")
+            return nil
+        }
         self.defaults = defaults
     }
 

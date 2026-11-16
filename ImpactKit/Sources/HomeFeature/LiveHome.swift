@@ -98,7 +98,7 @@ public struct LiveHome: View {
         }
         // The Lock Screen widget reads the calendar itself, and Impact's state from the App Group: write it and
         // reload the widget when either changes as Home sees it (Home's snapshot stands in for the calendar).
-        .onChange(of: WidgetSync(state: model?.surfaceState, home: model?.snapshot, cards: wantedLiveCards, access: access),
+        .onChange(of: WidgetSync(state: model?.surfaceState, home: model?.snapshot, access: access, noCalendars: noCalendars),
                   initial: true) { _, sync in
             if let state = sync.state { SurfaceStore()?.save(state) }
             WidgetCenter.shared.reloadTimelines(ofKind: NextCardWidget.kind)
@@ -282,11 +282,11 @@ private struct LiveSync: Equatable {
     let inFront: Bool
 }
 
-/// When live Home refreshes the Lock Screen widget: when the done and dismissed cards, the cards Home shows or
-/// wants Live Activities for, or calendar access change.
+/// When live Home refreshes the Lock Screen widget: when the done and dismissed cards, Home's snapshot, calendar
+/// access, or whether any calendar is readable change.
 private struct WidgetSync: Equatable {
     let state: SurfaceState?
     let home: HomeSnapshot?
-    let cards: [LiveCard]?
     let access: CalendarAccess
+    let noCalendars: Bool
 }

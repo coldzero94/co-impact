@@ -53,8 +53,10 @@ struct NextCardProvider: TimelineProvider {
         Task { @MainActor in
             let now = Date.now
             let entries = Self.entries(now: now)
-            // With nothing ahead there is no change to wait for: read the calendar again in an hour, not at once.
-            completion(Timeline(entries: entries, policy: entries.count > 1 ? .atEnd : .after(now.addingTimeInterval(3_600))))
+            // Read the calendar again after the last change ahead, and at least hourly, so an event added elsewhere
+            // shows within the hour while Impact does not run (about 24 reloads a day at most).
+            let hour = now.addingTimeInterval(3_600)
+            completion(Timeline(entries: entries, policy: .after(min(entries.last.map(\.date) ?? hour, hour))))
         }
     }
 
@@ -62,9 +64,10 @@ struct NextCardProvider: TimelineProvider {
     /// one, or when Impact asks after a change. Without calendar access, one entry that says so.
     @MainActor static func entries(now: Date) -> [NextCardEntry] {
         let calendar = Calendar.autoupdatingCurrent
-        let (_, noon, _) = ImpactEngine.horizon(now: now, calendar: calendar)
+        // The same days live Home fetches: entries past midnight treat tomorrow as today, so its afternoon is needed.
+        let (_, _, end) = ImpactEngine.horizon(now: now, calendar: calendar)
         guard EventKitCalendar.access == .granted,
-              let events = EventKitCalendar().events(from: calendar.startOfDay(for: now), to: noon),
+              let events = EventKitCalendar().events(from: calendar.startOfDay(for: now), to: end),
               let engine = try? ImpactEngine() else {
             return [NextCardEntry(date: now, shown: nil, canRead: false, relevance: nil)]
         }
@@ -109,12 +112,17 @@ struct NextCardView: View {
                 AccessoryWidgetBackground()
                 if let shown = entry.shown {
                     VStack(spacing: 1) {
-                        Image(systemName: shown.symbol).font(.caption).widgetAccentable()
+                        // Another day's card names its day, so 8:00 tomorrow never reads as tonight.
+                        if shown.isToday {
+                            Image(systemName: shown.symbol).font(.caption).widgetAccentable()
+                        } else {
+                            Text(shown.start, format: .dateTime.weekday(.abbreviated)).font(.caption2.weight(.semibold))
+                        }
                         Text(shown.start, format: .dateTime.hour(.defaultDigits(amPM: .omitted)).minute())
                             .font(.system(size: 14, weight: .semibold)).minimumScaleFactor(0.6)
                     }
                 } else {
-                    Image(systemName: "checkmark").font(.title3.weight(.semibold))
+                    Image(systemName: entry.canRead ? "checkmark" : "exclamationmark").font(.title3.weight(.semibold))
                 }
             }
         default:

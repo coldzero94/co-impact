@@ -25,8 +25,13 @@ public enum NextCards {
         }
         let first = home(now)
         let ahead = first.cards + first.liveActivityCards
-        let offsets: [TimeInterval] = [-30 * 60, -15 * 60, 0, 10 * 60, 15 * 60]
-        let changes = Set(ahead.flatMap { card in offsets.map { card.start + $0 } + [card.end] }).filter { $0 > now }
+        // In person: Soon (−30 min), start, expiry (+15 min). Online and hybrid: Soon (−15), start, end of Now (+10),
+        // expiry (the end).
+        let changes = Set(ahead.flatMap { card in
+            card.kind == .inPerson
+                ? [card.start - 30 * 60, card.start, card.start + 15 * 60]
+                : [card.start - 15 * 60, card.start, card.start + 10 * 60, card.end]
+        }).filter { $0 > now }
         return ([now] + changes.sorted().prefix(23)).map { date in
             let snapshot = date == now ? first : home(date)
             let card = snapshot.nextUp ?? snapshot.liveActivityCards.first

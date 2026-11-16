@@ -30,7 +30,17 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         #expect(at945.card?.id == "Review" && at945.soonOrNow)
         // Review ends at 11:00 (an online card expires at its end); Sync leads from then.
         #expect(moments.first { $0.date == at(11) }?.card?.id == "Sync")
-        #expect(moments.map(\.date) == moments.map(\.date).sorted() && moments.count <= 24)
+        #expect(moments.map(\.date) == moments.map(\.date).sorted())
+    }
+
+    @Test("Back-to-back changes share an entry, and a busy day stops at 24")
+    func capAndDedupe() throws {
+        // Review ends at 11:00 when Sync starts: one entry at 11:00.
+        let pair = NextCards.moments(events: [meeting("Review", 10), meeting("Sync", 11)], state: none, now: at(9),
+                                     calendar: losAngeles, engine: engine)
+        #expect(pair.count { $0.date == at(11) } == 1)
+        let busy = (0 ..< 12).map { meeting("M\($0)", 9.5 + Double($0)) }
+        #expect(NextCards.moments(events: busy, state: none, now: at(9), calendar: losAngeles, engine: engine).count == 24)
     }
 
     @Test("Entries fall on every change of phase: Soon, start, end of Now, expiry, and the end")
@@ -77,6 +87,7 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         _ = log.record(try #require(review.primaryAction), on: review, at: at(9.9))
         log.restore(["Old": at(9, day: -3)])
         let model = try HomeModel(events: [meeting("Review", 10), meeting("Sync", 13)], now: at(10), calendar: losAngeles, log: log)
+        // A long event still on Home keeps its old stamp: "Old" is not on Home, "Review" is recent.
         model.dismiss(try #require(model.snapshot.cards.first { $0.id == "Sync" }), similar: false)
         #expect(model.surfaceState.completedCardIDs == ["Review"])
         #expect(model.surfaceState.suppressionRules == [.occurrence(id: "Sync")])
