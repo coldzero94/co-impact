@@ -43,19 +43,33 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         #expect(NextCards.moments(events: busy, state: none, now: at(9), calendar: losAngeles, engine: engine).count == 24)
     }
 
-    @Test("Entries fall on every change of phase: Soon, start, end of Now, expiry, and the end")
+    @Test("Entries fall exactly on each change of phase: Soon, start, end of Now, expiry")
     func changes() throws {
+        let place = Place(title: "Synthetic clinic", latitude: 37.5, longitude: 127)
         var visit = meeting("Visit", 14)
         visit.url = nil
-        visit.structuredPlace = Place(title: "Synthetic clinic", latitude: 37.5, longitude: 127)
-        let moments = NextCards.moments(events: [visit, meeting("Call", 16)], state: none, now: at(9),
+        visit.structuredPlace = place
+        // An in-person card that ends before 15 minutes leaves at its end.
+        var keys = meeting("Keys", 12)
+        keys.url = nil
+        keys.structuredPlace = place
+        keys.end = at(12) + 5 * 60
+        let moments = NextCards.moments(events: [keys, visit, meeting("Call", 16)], state: none, now: at(9),
                                         calendar: losAngeles, engine: engine)
-        // In person: Soon at 13:30, start 14:00, expiry 14:15 (when the card leaves); online: Soon 15:45, start 16:00,
-        // end of Now 16:10, end 17:00. The other offsets fall in between and change nothing visible.
-        let dates = Set(moments.map(\.date))
-        for hour in [9, 13.5, 14, 14.25, 15.75, 16, 16 + 1.0 / 6, 17] { #expect(dates.contains(at(hour)), "\(hour)") }
+        // Keys: Soon 11:30, start 12:00, leaves 12:05. Visit: Soon 13:30, start 14:00, expiry 14:15.
+        // Call (online): Soon 15:45, start 16:00, end of Now 16:10, end 17:00.
+        let expected = [9, 11.5, 12, 12 + 1.0 / 12, 13.5, 14, 14.25, 15.75, 16, 16 + 1.0 / 6, 17].map { at($0) }
+        #expect(moments.map(\.date) == expected)
+        #expect(moments.first { $0.date == at(12 + 1.0 / 12) }?.card?.id == "Visit")
         #expect(moments.first { $0.date == at(14.25) }?.card?.id == "Call")
-        #expect(moments.first { $0.date == at(17) }?.card == nil)
+        #expect(moments.last?.card == nil)
+    }
+
+    @Test("The widget rereads after the last change ahead, at least hourly, and in an hour with nothing ahead")
+    func reloadDate() {
+        #expect(NextCards.reloadDate(after: [at(9)], now: at(9)) == at(10))
+        #expect(NextCards.reloadDate(after: [at(9), at(9.5)], now: at(9)) == at(9.5))
+        #expect(NextCards.reloadDate(after: [at(9), at(12)], now: at(9)) == at(10))
     }
 
     @Test("Done and dismissed cards are skipped; tomorrow's first card shows once today has none")
@@ -80,16 +94,19 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         #expect(store.load() == nil)
     }
 
-    @Test("Home tells the widgets the cards done in the last two days and its dismissal rules")
+    @Test("Home tells the widgets the cards done in the last two days or still on Home, and its dismissal rules")
     @MainActor func homeState() throws {
         var log = ActionLog()
         let review = try #require(engine.card(for: meeting("Review", 10), now: at(9.9)))
         _ = log.record(try #require(review.primaryAction), on: review, at: at(9.9))
-        log.restore(["Old": at(9, day: -3)])
-        let model = try HomeModel(events: [meeting("Review", 10), meeting("Sync", 13)], now: at(10), calendar: losAngeles, log: log)
-        // A long event still on Home keeps its old stamp: "Old" is not on Home, "Review" is recent.
+        // Long runs from three days ago to tomorrow and was joined on its first day: still on Home, so still done.
+        var long = meeting("Long", 9, day: -3)
+        long.end = at(18, day: 1)
+        log.restore(["Old": at(9, day: -3), "Long": at(9, day: -3)])
+        let model = try HomeModel(events: [meeting("Review", 10), meeting("Sync", 13), long], now: at(10),
+                                  calendar: losAngeles, log: log)
         model.dismiss(try #require(model.snapshot.cards.first { $0.id == "Sync" }), similar: false)
-        #expect(model.surfaceState.completedCardIDs == ["Review"])
+        #expect(model.surfaceState.completedCardIDs == ["Review", "Long"])
         #expect(model.surfaceState.suppressionRules == [.occurrence(id: "Sync")])
     }
 }

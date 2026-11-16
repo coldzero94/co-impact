@@ -53,10 +53,7 @@ struct NextCardProvider: TimelineProvider {
         Task { @MainActor in
             let now = Date.now
             let entries = Self.entries(now: now)
-            // Read the calendar again after the last change ahead, and at least hourly, so an event added elsewhere
-            // shows within the hour while Impact does not run (about 24 reloads a day at most).
-            let hour = now.addingTimeInterval(3_600)
-            completion(Timeline(entries: entries, policy: .after(min(entries.last.map(\.date) ?? hour, hour))))
+            completion(Timeline(entries: entries, policy: .after(NextCards.reloadDate(after: entries.map(\.date), now: now))))
         }
     }
 

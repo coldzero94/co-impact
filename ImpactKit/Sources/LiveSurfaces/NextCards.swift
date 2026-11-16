@@ -4,7 +4,8 @@ import ImpactEngine
 /// What the Lock Screen widget shows over time (`NextCardWidget`), apart from WidgetKit.
 public enum NextCards {
     /// One moment of the widget: from `date` on, it shows `card` (Home's Next up, else the first card ahead,
-    /// e.g. tomorrow's), or nothing; `soonOrNow` raises it in the Smart Stack.
+    /// e.g. tomorrow's), or nothing; `soonOrNow` sets the entry's relevance (whether a Lock Screen widget's
+    /// relevance changes anything is unverified: research/system-surfaces.md).
     public struct Moment: Hashable, Sendable {
         public let date: Date
         public let card: ImpactCard?
@@ -25,11 +26,11 @@ public enum NextCards {
         }
         let first = home(now)
         let ahead = first.cards + first.liveActivityCards
-        // In person: Soon (−30 min), start, expiry (+15 min). Online and hybrid: Soon (−15), start, end of Now (+10),
-        // expiry (the end).
+        // In person: Soon (−30 min), start, expiry (15 minutes after the start, or the end if sooner). Online and
+        // hybrid: Soon (−15), start, end of Now (+10), expiry (the end).
         let changes = Set(ahead.flatMap { card in
             card.kind == .inPerson
-                ? [card.start - 30 * 60, card.start, card.start + 15 * 60]
+                ? [card.start - 30 * 60, card.start, min(card.start + 15 * 60, card.end)]
                 : [card.start - 15 * 60, card.start, card.start + 10 * 60, card.end]
         }).filter { $0 > now }
         return ([now] + changes.sorted().prefix(23)).map { date in
@@ -37,5 +38,13 @@ public enum NextCards {
             let card = snapshot.nextUp ?? snapshot.liveActivityCards.first
             return Moment(date: date, card: card, soonOrNow: card.map { ImpactEngine.isSoonOrNow($0, now: date) } ?? false)
         }
+    }
+
+    /// When the widget reads the calendar again: after the last change ahead, and at least hourly, so an event
+    /// added elsewhere shows within the hour while Impact does not run (about 24 reloads a day at most). `dates` are
+    /// the moments' dates; the first is now, never a change to wait for.
+    public static func reloadDate(after dates: [Date], now: Date) -> Date {
+        let hour = now.addingTimeInterval(3_600)
+        return min(dates.dropFirst().last ?? hour, hour)
     }
 }
