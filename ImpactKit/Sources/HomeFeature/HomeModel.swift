@@ -1,5 +1,6 @@
 import Foundation
 import ImpactEngine
+import LiveSurfaces
 import Observation
 import os
 
@@ -76,6 +77,14 @@ public final class HomeModel {
         rebuild()
         if recorded { saveImpacts(log.impacts) }
         return recorded
+    }
+
+    /// What the widgets need to show cards as Home does (`SurfaceState`): the cards done in the last two days (all
+    /// a widget can list) and the dismissals' rules.
+    var surfaceState: SurfaceState {
+        let since = now.addingTimeInterval(-2 * 86_400)
+        return SurfaceState(completedCardIDs: Set(log.impacts.filter { $0.value > since }.keys),
+                            suppressionRules: dismissals.rules)
     }
 
     private func rebuild() {
