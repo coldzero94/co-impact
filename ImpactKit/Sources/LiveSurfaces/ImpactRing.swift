@@ -1,13 +1,19 @@
 import SwiftUI
 
 /// Today's Impacts: one segment per chance, filled per Impact (UX.md → Home).
-struct ImpactRing: View {
+public struct ImpactRing: View {
     let filled: Int
     let segments: Int
     var lineWidth: CGFloat = 5
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    var body: some View {
+    public init(filled: Int, segments: Int, lineWidth: CGFloat = 5) {
+        self.filled = filled
+        self.segments = segments
+        self.lineWidth = lineWidth
+    }
+
+    public var body: some View {
         GeometryReader { geometry in
             let diameter = min(geometry.size.width, geometry.size.height) - lineWidth
             // Round caps reach past each segment's end, so the gap covers a line width. On very busy
