@@ -89,6 +89,12 @@ public final class HomeModel {
                             suppressionRules: dismissals.rules, runToken: runToken)
     }
 
+    /// The card a run link names (`LiveCard.runURL`): one Home lists, or one a widget or Live Activity shows
+    /// before Home lists it (tomorrow's, before 18:00).
+    func runnableCard(id: String) -> ImpactCard? {
+        (snapshot.cards + snapshot.liveActivityCards).first { $0.id == id }
+    }
+
     private func rebuild() {
         snapshot = Self.home(engine, events, now, calendar, log, dismissals)
     }

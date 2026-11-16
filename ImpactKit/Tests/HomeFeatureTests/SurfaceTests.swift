@@ -120,4 +120,18 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         #expect(model.surfaceState(runToken: "secret").completedCardIDs == ["Review", "Long"])
         #expect(model.surfaceState(runToken: "secret").suppressionRules == [.occurrence(id: "Sync")])
     }
+
+    @Test("A run link reaches the card a widget shows before Home lists it (tomorrow's, before 18:00)")
+    @MainActor func runnableTomorrow() throws {
+        var log = ActionLog()
+        let review = try #require(engine.card(for: meeting("Review", 14), now: at(14)))
+        _ = log.record(try #require(review.primaryAction), on: review, at: at(14))
+        // Review is joined and still on Home, so Home keeps tomorrow off its list; the widget shows tomorrow's card.
+        let events = [meeting("Review", 14), meeting("Tomorrow", 8, day: 1)]
+        let model = try HomeModel(events: events, now: at(14.2), calendar: losAngeles, log: log)
+        let shown = try #require(NextCards.moments(events: events, state: model.surfaceState(runToken: "secret"),
+                                                   now: at(14.2), calendar: losAngeles, engine: engine).first?.card)
+        #expect(shown.id == "Tomorrow" && !model.snapshot.cards.contains { $0.id == "Tomorrow" })
+        #expect(model.runnableCard(id: "Tomorrow")?.id == "Tomorrow")
+    }
 }
