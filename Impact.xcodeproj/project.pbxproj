@@ -46,6 +46,7 @@
 		9FC0A1C51BDAE2E9E5821485 /* Exceptions for "Impact" folder in "Impact" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Impact.entitlements,
 				Info.plist,
 			);
 			target = 60086CF4DF85CC50ED9876A1 /* Impact */;
@@ -53,6 +54,7 @@
 		79E2C2AC066AC7F43C0ED4B1 /* Exceptions for "ImpactWidgets" folder in "ImpactWidgets" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				ImpactWidgets.entitlements,
 				Info.plist,
 			);
 			target = BB47C43C18BDEBB59FA6B48C /* ImpactWidgets */;
@@ -270,6 +272,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				CODE_SIGN_ENTITLEMENTS = Impact/Impact.entitlements;
 				INFOPLIST_FILE = Impact/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Impact;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Impact reads your events on this iPhone to find the ones that need you. Your calendar never leaves your device.";
@@ -298,6 +301,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				CODE_SIGN_ENTITLEMENTS = Impact/Impact.entitlements;
 				INFOPLIST_FILE = Impact/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Impact;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Impact reads your events on this iPhone to find the ones that need you. Your calendar never leaves your device.";
@@ -457,6 +461,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				CODE_SIGN_ENTITLEMENTS = ImpactWidgets/ImpactWidgets.entitlements;
 				INFOPLIST_FILE = ImpactWidgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Impact;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -481,6 +486,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				CODE_SIGN_ENTITLEMENTS = ImpactWidgets/ImpactWidgets.entitlements;
 				INFOPLIST_FILE = ImpactWidgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Impact;
 				LD_RUNPATH_SEARCH_PATHS = (

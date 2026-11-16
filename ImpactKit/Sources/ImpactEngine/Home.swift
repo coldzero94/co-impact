@@ -124,7 +124,7 @@ extension ImpactEngine {
     }
 
     /// Soon or Now: in person until the start, online and hybrid until 10 minutes after it.
-    static func isSoonOrNow(_ card: ImpactCard, now: Date) -> Bool {
+    public static func isSoonOrNow(_ card: ImpactCard, now: Date) -> Bool {
         now >= soonStart(of: card) && now < nowPhase(of: card).upperBound
     }
 }

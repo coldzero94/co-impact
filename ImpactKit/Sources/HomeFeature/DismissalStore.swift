@@ -4,8 +4,9 @@ import os
 
 /// Dismissals in `UserDefaults` (ARCHITECTURE.md → Storage): occurrence IDs, and the calendar IDs with the series
 /// IDs or titles the user muted.
-/// shortcut: standard defaults, loaded once in the foreground and saved whole; when widgets or background refresh
-/// read them (steps 9–10), move them to the App Group and never save over data that could not be read.
+/// shortcut: standard defaults, loaded once in the foreground and saved whole (widgets get the rules through
+/// `SurfaceState`); when background refresh reads them (step 10), move them to the App Group and never save over
+/// data that could not be read.
 struct DismissalStore {
     let defaults: UserDefaults
     static let key = "dismissals"

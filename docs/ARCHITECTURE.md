@@ -8,14 +8,16 @@ Follows Apple's local-package guidance and the thin-app-target pattern used by I
 
 ```
 Impact.xcodeproj               Thin app shell, Xcode 16+ synchronized folders
-Impact/                        App target: @main entry point, Assets.xcassets, and Info.plist (URL scheme, Live Activities)
-ImpactWidgets/                 Widget extension: its @main WidgetBundle and Info.plist only
+Impact/                        App target: @main entry point, Assets.xcassets, Info.plist (URL scheme, Live Activities),
+                               and entitlements (App Group)
+ImpactWidgets/                 Widget extension: its @main WidgetBundle, Info.plist, and entitlements only
 ImpactKit/                     Local Swift package: all logic and UI features
 ├── Package.swift              Umbrella product `ImpactKit` for the app; `LiveSurfaces` for the extension
 ├── Sources/ImpactEngine/      Pure Swift: model, rules, ranking (no UI, no EventKit)
 ├── Sources/CalendarSources/   EventKit: calendar access, fetching, and mapping events to CalendarEvent
-├── Sources/LiveSurfaces/      The Live Activity: what it shows (`LiveCard`), its layouts, its run link, and
-│                              scheduling (ActivityKit and WidgetKit code iOS-only)
+├── Sources/LiveSurfaces/      System surfaces: the Live Activity (`LiveCard`, layouts, run link, scheduling), the
+│                              Lock Screen widget, the state widgets share with the app, and the card facts every
+│                              surface shows (ActivityKit and WidgetKit code iOS-only)
 ├── Sources/HomeFeature/       SwiftUI onboarding, Home, card detail, actions, Impact ring and moment, live
 │                              refresh, stored Impacts, Live Activity sync and run links, synthetic fixtures
 ├── Tests/ImpactEngineTests/   Swift Testing
@@ -28,10 +30,10 @@ Decisions:
 - **New code goes into `ImpactKit`**; the app target stays an entry point plus wiring. Working rules for the package (adding modules, platforms, tests): [ImpactKit/AGENTS.md](../ImpactKit/AGENTS.md).
 - **Modules are added one per area as their roadmap step starts.** `HomeFeature` (step 5), `CalendarSources` (step 7), and `LiveSurfaces` (step 9) exist; `HomeFeature` uses `CalendarSources` for its live root view and `LiveSurfaces` for Live Activities. Planned (Proposed): `DesignSystem` once a second feature shares components, `ImpactIntelligence` (step 8).
 - **The package also builds for macOS**, so `swift test` runs without a simulator.
-- **Files need no project edits.** The app and extension folders are synchronized folders (their `Info.plist` excluded from resources), package targets pick up files by directory, and the app links one umbrella product.
+- **Files need no project edits.** The app and extension folders are synchronized folders (their `Info.plist` and entitlements excluded from resources), package targets pick up files by directory, and the app links one umbrella product.
 - **The `.xcodeproj` is committed.** XcodeGen was used once to scaffold it and is not a dependency. Project-level changes (the widget extension in step 9, capabilities, signing) are made in Xcode or in `project.pbxproj`; revisit a generator (XcodeGen, Tuist) if they become frequent.
 - **Build settings** follow Xcode 27's app template (Approachable Concurrency, `MainActor` default isolation in the app target, member import visibility, user script sandboxing, String Catalogs, gnu17/gnu++20, upgrade check 2700), except Swift 6 language mode. The package enables the same upcoming features without default `MainActor` isolation.
-- **App identity:** bundle ID `io.github.coldzero94.impact` (placeholder until App Store registration), the widget extension `io.github.coldzero94.impact.widgets`, iPhone only, no development team set; set `DEVELOPMENT_TEAM` on both targets locally for device builds (step 10).
+- **App identity:** bundle ID `io.github.coldzero94.impact` (placeholder until App Store registration), the widget extension `io.github.coldzero94.impact.widgets`, the App Group `group.io.github.coldzero94.impact` (both targets' entitlements), iPhone only, no development team set; set `DEVELOPMENT_TEAM` on both targets locally for device builds, which registers the App Group (step 10).
 
 Minimum deployment target: iOS 26.0 (PRODUCT.md D8).
 
@@ -92,7 +94,7 @@ iOS does not let an app run whenever it wants. The engine runs when:
 | Every minute while Home is open | Always; countdowns move on the minute (built, step 7) |
 | `EKEventStoreChanged` notification | Only while the app is running (built, step 7) |
 | `BGAppRefreshTask` | Best effort; the system decides when, possibly not at all |
-| Widget timeline reload | Budgeted by the system |
+| Widget timeline reload | Budgeted by the system. Built (step 9): the Lock Screen widget lays out entries up to each change of phase ahead, and Impact asks for a reload when the done or dismissed cards, Home's snapshot, or calendar access change; without Impact the widget reads the calendar again after the last change ahead and at least hourly |
 
 Consequence: results must be **scheduled ahead** at analysis time (notifications, widget timeline entries, scheduled Live Activities). If the user does not open the app for days, newly added events may not be analyzed. This is accepted for the MVP.
 
@@ -108,9 +110,10 @@ Live Activities are started **without a server** by scheduling them at analysis 
 ## Storage
 
 - Built (step 7): recorded Impacts, as card IDs and times, in one JSON file in the app's Application Support folder. Which secondary actions ran is not stored. A file that does not decode is renamed aside; one that cannot be read at the moment is left alone, each save first tries reading it again and skips until it can, and each refresh tries too and adds what it reads to Home. Merges keep each card's earlier stamp. Without a usable file, Impacts count until the app quits.
-- Proposed: card and action state in SwiftData in an App Group container (shared with widgets). The Impact file moves there when widgets read it (step 9).
+- Built (step 9): what widgets need from Impact (`SurfaceState`): the card IDs done in the last two days or still on Home, and the dismissals' rules (so muted titles too), as JSON in the App Group's defaults, rewritten whenever it changes. The widgets read events from the calendar themselves, so no other calendar content is stored; Impacts and dismissals stay where they are, Impact being the only writer.
+- Proposed: card and action state in SwiftData in an App Group container (shared with widgets), once background refresh (step 10) or the daily log (step 13) needs more than `SurfaceState`.
 - Proposed: goals, Impact records, daily-log lines, and the identifiers of events Impact created, in SwiftData in the same container.
-- Built (step 7): dismissals, as JSON in standard `UserDefaults`: occurrence IDs with when they lapse (the later of the event's end and two days after the dismissal) and the calendar IDs with the series IDs or titles the user muted (muted titles are the only calendar text stored). Data that does not decode is kept under another key. When widgets or background refresh read them (steps 9–10), they move to the App Group; since they are loaded once and saved whole, saves must then never overwrite dismissals that could not be read, as Impact saves already do.
+- Built (step 7): dismissals, as JSON in standard `UserDefaults`: occurrence IDs with when they lapse (the later of the event's end and two days after the dismissal) and the calendar IDs with the series IDs or titles the user muted (muted titles are the only calendar text stored). Data that does not decode is kept under another key. Widgets get their rules through `SurfaceState` (above). If background refresh (step 10) needs them, they move to the App Group; since they are loaded once and saved whole, saves must then never overwrite dismissals that could not be read, as Impact saves already do.
 - Proposed: settings in `UserDefaults` in the App Group.
 - No calendar content is persisted beyond what card state needs; re-read from EventKit instead.
 
@@ -139,6 +142,7 @@ Verified facts only. Add the date and how each was verified.
 | `SystemLanguageModel` unavailability reasons: `deviceNotEligible`, `appleIntelligenceNotEnabled`, `modelNotReady`; `contextSize` and `supportedLanguages` exist | 2026-11-07 | FoundationModels `.swiftinterface` |
 | `Activity.request(attributes:content:pushType:style:alertConfiguration:start:)` exists, iOS 26.0+; `pushType` is `PushType? = nil` | 2026-11-07, 2026-11-15 | ActivityKit `.swiftinterface` |
 | In the iOS 27 simulator, a scheduled request returns an activity in state `pending` that turns `active` at its start date while the app is in the background; `end(_:dismissalPolicy:)` removed an active one. Activities appear on the Lock Screen and in the Dynamic Island (also in `simctl` screenshots) only after the Lock Screen's first "Allow Live Activities from Impact?" is answered. A Live Activity `Link` to `impact://run?card=…` opens Impact with the URL. After Impact is relaunched, `Activity.activities` lists its active and pending activities with the same IDs, so a sync does not request them again; installing a new build ends them all. Ending an activity while Impact was leaving the front for Safari worked | 2026-11-15 | Simulator run (iPhone 18 Pro, iOS 27) |
+| In the iOS 27 simulator, the widget extension reads EventKit with the app's full access (`authorizationStatus` `.fullAccess`; events fetched) and opens the App Group container when both targets are signed (ad hoc) with its entitlement | 2026-11-16 | Simulator run (iPhone 18 Pro, iOS 27) |
 | `request(…start:)` must be called with the app in the foreground; `update(_:)` and `end(_:dismissalPolicy:)` work in the foreground or background ("You can update or end a Live Activity while your app is in the background, but you can only start a Live Activity while the app is in the foreground, unless you adopt AppIntents") | 2026-11-16 | ActivityKit `.swiftdoc` in the iOS 27 SDK (the `.swiftinterface` has no doc comments); [Displaying live data with Live Activities](https://developer.apple.com/documentation/activitykit/displaying-live-data-with-live-activities) |
 | Xcode MCP bridge available at `xcrun mcpbridge` (not configured) | 2026-11-07 | `xcrun --find mcpbridge` |
 | `NSDataDetector` finds links and phone numbers in natural-language text; results expose `url` and `phoneNumber` | 2026-11-08 | [Apple documentation](https://developer.apple.com/documentation/foundation/nsdatadetector), iOS 27 Foundation headers, and engine tests on macOS; URLs are validated separately |

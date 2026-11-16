@@ -3,6 +3,9 @@ import ImpactEngine
 import LiveSurfaces
 import os
 import SwiftUI
+#if os(iOS)
+import WidgetKit
+#endif
 
 /// The app outside debug fixtures (UX.md → Onboarding): asks for calendar access, then shows Home on the
 /// user's calendar, refreshed on the built triggers in ARCHITECTURE.md → Refresh and platform constraints.
@@ -92,6 +95,13 @@ public struct LiveHome: View {
         .task(id: LiveSync(cards: wantedLiveCards, inFront: scenePhase == .active)) {
             guard let cards = wantedLiveCards else { return }
             await LiveActivities.sync(cards, request: scenePhase == .active)
+        }
+        // The Lock Screen widget reads the calendar itself, and Impact's state from the App Group: write it and
+        // reload the widget when either changes as Home sees it (Home's snapshot stands in for the calendar).
+        .onChange(of: WidgetSync(state: model?.surfaceState, home: model?.snapshot, access: access, noCalendars: noCalendars),
+                  initial: true) { _, sync in
+            if let state = sync.state { SurfaceStore()?.save(state) }
+            WidgetCenter.shared.reloadTimelines(ofKind: NextCardWidget.kind)
         }
         #endif
     }
@@ -270,4 +280,13 @@ private struct MessageScreen<Message: View, Action: View>: View {
 private struct LiveSync: Equatable {
     let cards: [LiveCard]?
     let inFront: Bool
+}
+
+/// When live Home refreshes the Lock Screen widget: when the done and dismissed cards, Home's snapshot, calendar
+/// access, or whether any calendar is readable change.
+private struct WidgetSync: Equatable {
+    let state: SurfaceState?
+    let home: HomeSnapshot?
+    let access: CalendarAccess
+    let noCalendars: Bool
 }

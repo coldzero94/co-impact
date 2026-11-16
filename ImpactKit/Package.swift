@@ -23,7 +23,7 @@ let package = Package(
     targets: [
         .target(name: "ImpactEngine", swiftSettings: swiftSettings),
         .target(name: "CalendarSources", dependencies: ["ImpactEngine"], swiftSettings: swiftSettings),
-        .target(name: "LiveSurfaces", swiftSettings: swiftSettings),
+        .target(name: "LiveSurfaces", dependencies: ["ImpactEngine", "CalendarSources"], swiftSettings: swiftSettings),
         .target(name: "HomeFeature", dependencies: ["ImpactEngine", "CalendarSources", "LiveSurfaces"], swiftSettings: swiftSettings),
         .testTarget(name: "ImpactEngineTests", dependencies: ["ImpactEngine"], swiftSettings: swiftSettings),
         .testTarget(name: "CalendarSourcesTests", dependencies: ["CalendarSources", "ImpactEngine"], swiftSettings: swiftSettings),

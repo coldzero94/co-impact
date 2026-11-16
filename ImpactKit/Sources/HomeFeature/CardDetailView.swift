@@ -1,4 +1,5 @@
 import ImpactEngine
+import LiveSurfaces
 import SwiftUI
 
 /// Card detail (UX.md → Card detail): header, answer, the card's actions, and details.
