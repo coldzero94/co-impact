@@ -65,15 +65,23 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         #expect(moments.last?.card == nil)
     }
 
-    @Test("The medium widget's second row is the next card still to do; the ring counts the day's Impacts")
+    @Test("The medium widget's Later column is the next card still to do; the ring counts the entry day's Impacts")
     func laterAndRing() throws {
-        let events = [meeting("Done", 8), meeting("Review", 10), meeting("Sync", 13), meeting("Wrap", 15)]
-        let state = SurfaceState(completed: ["Done": at(8), "Yesterday": at(9, day: -1)], suppressionRules: [])
-        let first = try #require(NextCards.moments(events: events, state: state, now: at(9), calendar: losAngeles,
-                                                   engine: engine).first)
+        // Done starts with Review but was joined early, so it is neither Next up nor Later.
+        let events = [meeting("Done", 10), meeting("Review", 10), meeting("Sync", 13), meeting("Wrap", 15)]
+        let state = SurfaceState(completed: ["Done": at(9.78), "Yesterday": at(9, day: -1)], suppressionRules: [])
+        let moments = NextCards.moments(events: events, state: state, now: at(9.8), calendar: losAngeles, engine: engine)
+        let first = try #require(moments.first)
         #expect(first.card?.id == "Review" && first.later?.id == "Sync")
         // One Impact today (Done; yesterday's does not count) plus three cards still to do.
         #expect(first.impactsToday == 1 && first.ringSegments == 4)
+        // Once Sync is Next up while Review still runs, Later is Wrap, never the earlier Review.
+        let overlap = [meeting("Review", 10), meeting("Sync", 10.5), meeting("Wrap", 15)]
+        let soon = try #require(NextCards.moments(events: overlap, state: state, now: at(10.3), calendar: losAngeles,
+                                                  engine: engine).first)
+        #expect(soon.card?.id == "Sync" && soon.later?.id == "Wrap")
+        // Midnight starts the ring over.
+        #expect(moments.last?.date == at(24) && moments.last?.impactsToday == 0)
     }
 
     @Test("The widget rereads after the last change ahead, at least hourly, and in an hour with nothing ahead")
@@ -117,11 +125,12 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         let model = try HomeModel(events: [meeting("Review", 10), meeting("Sync", 13), long], now: at(10),
                                   calendar: losAngeles, log: log)
         model.dismiss(try #require(model.snapshot.cards.first { $0.id == "Sync" }), similar: false)
-        #expect(model.surfaceState(runToken: "secret").completedCardIDs == ["Review", "Long"])
-        #expect(model.surfaceState(runToken: "secret").suppressionRules == [.occurrence(id: "Sync")])
+        let state = model.surfaceState(runToken: "secret")
+        #expect(state.completed == ["Review": at(9.9), "Long": at(9, day: -3)] && state.runToken == "secret")
+        #expect(state.suppressionRules == [.occurrence(id: "Sync")])
     }
 
-    @Test("A run link reaches the card a widget shows before Home lists it (tomorrow's, before 18:00)")
+    @Test("A run link reaches every card a widget can show: tomorrow's before Home lists it, and Home's own")
     @MainActor func runnableTomorrow() throws {
         var log = ActionLog()
         let review = try #require(engine.card(for: meeting("Review", 14), now: at(14)))
@@ -133,5 +142,9 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
                                                    now: at(14.2), calendar: losAngeles, engine: engine).first?.card)
         #expect(shown.id == "Tomorrow" && !model.snapshot.cards.contains { $0.id == "Tomorrow" })
         #expect(model.runnableCard(id: "Tomorrow")?.id == "Tomorrow")
+        // Past its Now phase, a meeting is still Home's Next up but wants no Live Activity: it runs too.
+        let late = try HomeModel(events: [meeting("Call", 10)], now: at(10.3), calendar: losAngeles, log: ActionLog())
+        #expect(late.snapshot.nextUp?.id == "Call" && late.snapshot.liveActivityCards.isEmpty)
+        #expect(late.runnableCard(id: "Call")?.id == "Call" && late.runnableCard(id: "Unknown") == nil)
     }
 }

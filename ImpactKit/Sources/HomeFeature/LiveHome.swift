@@ -96,7 +96,7 @@ public struct LiveHome: View {
             guard let cards = wantedLiveCards else { return }
             await LiveActivities.sync(cards, request: scenePhase == .active)
         }
-        // The Lock Screen widget reads the calendar itself, and Impact's state from the App Group: write it and
+        // The Next up widget reads the calendar itself, and Impact's state from the App Group: write it and
         // reload the widget when either changes as Home sees it (Home's snapshot stands in for the calendar).
         .onChange(of: WidgetSync(state: model?.surfaceState(runToken: runToken), home: model?.snapshot, access: access,
                                  noCalendars: noCalendars),
@@ -283,7 +283,7 @@ private struct LiveSync: Equatable {
     let inFront: Bool
 }
 
-/// When live Home refreshes the Lock Screen widget: when the done and dismissed cards, Home's snapshot, calendar
+/// When live Home refreshes the Next up widget: when the done and dismissed cards, Home's snapshot, calendar
 /// access, or whether any calendar is readable change.
 private struct WidgetSync: Equatable {
     let state: SurfaceState?

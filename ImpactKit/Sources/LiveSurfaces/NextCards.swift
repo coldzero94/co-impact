@@ -10,7 +10,7 @@ public enum NextCards {
         public let date: Date
         public let card: ImpactCard?
         public let soonOrNow: Bool
-        /// The next card still to do after `card`: the medium widget's second row.
+        /// The next card still to do after `card`: the medium widget's Later column.
         public let later: ImpactCard?
         /// The Impact ring on the moment's day, as on Home: Impacts recorded that day, and its segments.
         public let impactsToday: Int

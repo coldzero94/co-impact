@@ -104,11 +104,13 @@ struct NextCardView: View {
     var body: some View {
         content
             .containerBackground(for: .widget) {
-                // Home Screen widgets with a card wear Next up's accent; everything else stays plain.
-                if isSystem, entry.shown != nil {
+                // Home Screen widgets wear Next up's accent with a card, the system background without one.
+                if !isSystem {
+                    Color.clear
+                } else if entry.shown != nil {
                     LinearGradient(colors: [.indigo, .indigo.mix(with: .black, by: 0.3)], startPoint: .top, endPoint: .bottom)
                 } else {
-                    Color.clear
+                    Rectangle().fill(.background)
                 }
             }
             .accessibilityElement(children: .contain)
@@ -163,10 +165,9 @@ struct NextCardView: View {
                 .foregroundStyle(.white)
             } else {
                 HStack(spacing: 16) {
-                    ImpactRing(filled: entry.impactsToday, segments: entry.ringSegments).frame(width: 64, height: 64)
+                    emptyMark.frame(width: 64, height: 64)
                     Text(emptyLine).font(.headline).frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .tint(.indigo)
             }
         default:
             if let shown = entry.shown {
@@ -184,13 +185,22 @@ struct NextCardView: View {
 
     private var emptyLine: String { entry.canRead ? "Nothing needs you today." : "Impact can't read your calendar." }
 
-    /// No card: the Impact ring, as on Home (UX.md → System surfaces).
     private var ring: some View {
         VStack(spacing: 8) {
-            ImpactRing(filled: entry.impactsToday, segments: entry.ringSegments).frame(width: 58, height: 58)
+            emptyMark.frame(width: 58, height: 58)
             Text(emptyLine).font(.caption.weight(.semibold)).multilineTextAlignment(.center)
         }
-        .tint(.indigo)
+    }
+
+    /// No card: the Impact ring, as on Home (UX.md → System surfaces); without the calendar, a warning instead of
+    /// a count it could not make (hard rule 2).
+    @ViewBuilder private var emptyMark: some View {
+        if entry.canRead {
+            ImpactRing(filled: entry.impactsToday, segments: entry.ringSegments).tint(.indigo)
+        } else {
+            Image(systemName: "calendar.badge.exclamationmark").resizable().scaledToFit().padding(8)
+                .foregroundStyle(.secondary).accessibilityHidden(true)
+        }
     }
 
     /// "10:00 AM" today, "Tue 8:30 AM" for a card on another day.
@@ -204,6 +214,7 @@ struct NextCardView: View {
         return "Next: \(shown.title) at \(time(shown)), \(shown.keyFact)"
     }
 }
+
 /// Next up on the Home Screen: key fact, time, title, and the primary action through Impact.
 private struct NextUp: View {
     let shown: NextCardEntry.Shown
@@ -216,12 +227,13 @@ private struct NextUp: View {
             Label(shown.keyFact, systemImage: shown.symbol).font(.caption.weight(.semibold)).lineLimit(1).opacity(0.85)
             Spacer(minLength: 0)
             Text(time).font(.title2.weight(.bold)).lineLimit(1).minimumScaleFactor(0.6).widgetAccentable()
-            Text(shown.title).font(.subheadline.weight(.semibold)).lineLimit(2)
+            // One line, so the 44-pt button (UX.md → Accessibility) fits under it.
+            Text(shown.title).font(.subheadline.weight(.semibold)).lineLimit(1)
             if let url = shown.runURL {
                 Link(destination: url) {
                     Label(shown.actionLabel, systemImage: shown.symbol)
                         .font(.caption.weight(.semibold)).lineLimit(1)
-                        .frame(maxWidth: .infinity, minHeight: 30)
+                        .frame(maxWidth: .infinity, minHeight: 44)
                         .foregroundStyle(renderingMode == .fullColor ? Color.indigo : .white)
                         .background(renderingMode == .fullColor ? Color.white : .white.opacity(0.25), in: .capsule)
                 }

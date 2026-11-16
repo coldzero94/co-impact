@@ -14,7 +14,7 @@ extension ImpactCard {
 
     public var provider: String? { meetingURL.flatMap(ImpactEngine.meetingProvider) }
 
-    /// The one key fact on a row, on Next up's top line, and on the Lock Screen widget.
+    /// The one key fact on a row, on Next up's top line, and on the widgets.
     /// shortcut: in-person cards show the place; with routing they show the leave-by time, keeping the place
     /// when no route exists (PRODUCT.md → Card timeline).
     public var keyFact: String {
