@@ -1,18 +1,9 @@
 import Foundation
 import ImpactEngine
+import LiveSurfaces
 
 /// Display text for a card (UX.md → Card anatomy).
 extension ImpactCard {
-    var meetingURL: URL? {
-        confirmedActions.lazy.compactMap { if case .joinMeeting(let url) = $0.kind { url } else { nil } }.first
-    }
-
-    var place: Place? {
-        confirmedActions.lazy.compactMap { if case .directions(let place) = $0.kind { place } else { nil } }.first
-    }
-
-    var provider: String? { meetingURL.flatMap(ImpactEngine.meetingProvider) }
-
     /// Details (UX.md → Card detail), from the facts `ImpactEngine.card(for:now:)` labels.
     var organizer: String? { facts.first { $0.label == "Organizer" }?.value }
     var attendees: [String] { facts.filter { $0.label == "Attendee" }.map(\.value) }
@@ -30,22 +21,6 @@ extension ImpactCard {
         }
     }
 
-    /// The one key fact on a row and on Next up's top line.
-    /// shortcut: in-person cards show the place; with routing they show the leave-by time, keeping the place
-    /// when no route exists (PRODUCT.md → Card timeline).
-    var keyFact: String {
-        switch kind {
-        case .onlineMeeting, .hybrid: provider ?? "Online"
-        case .inPerson: place?.title ?? ""
-        }
-    }
-
-    var symbol: String {
-        switch kind {
-        case .onlineMeeting, .hybrid: "video.fill"
-        case .inPerson: "car.fill"
-        }
-    }
 }
 
 extension ActionKind {
