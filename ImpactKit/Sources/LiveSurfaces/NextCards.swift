@@ -1,19 +1,24 @@
 import Foundation
 import ImpactEngine
 
-/// What the Lock Screen widget shows over time (`NextCardWidget`), apart from WidgetKit.
+/// What the widgets show over time (`NextCardWidget`), apart from WidgetKit.
 public enum NextCards {
-    /// One moment of the widget: from `date` on, it shows `card` (Home's Next up, else the first card ahead,
-    /// e.g. tomorrow's), or nothing; `soonOrNow` sets the entry's relevance (whether a Lock Screen widget's
-    /// relevance changes anything is unverified: research/system-surfaces.md).
+    /// One moment of the widgets: from `date` on, they show `card` (Home's Next up, else the first card ahead,
+    /// e.g. tomorrow's), or nothing; `soonOrNow` sets the entry's relevance (whether it changes anything is
+    /// unverified: research/system-surfaces.md).
     public struct Moment: Hashable, Sendable {
         public let date: Date
         public let card: ImpactCard?
         public let soonOrNow: Bool
+        /// The next card still to do after `card`: the medium widget's second row.
+        public let later: ImpactCard?
+        /// The Impact ring on the moment's day, as on Home: Impacts recorded that day, and its segments.
+        public let impactsToday: Int
+        public let ringSegments: Int
     }
 
-    /// Now, then each moment a card ahead changes phase (Soon, start, end of Now, expiry), at most 24, so the
-    /// widget moves on from card to card while Impact does not run.
+    /// Now, then each moment a card ahead changes phase (Soon, start, end of Now, expiry) and midnight (the ring
+    /// starts over), at most 24, so the widgets move on from card to card while Impact does not run.
     public static func moments(events: [CalendarEvent], state: SurfaceState, now: Date, calendar: Calendar,
                                engine: ImpactEngine) -> [Moment] {
         // A card only ever leaves with time (it expires), so events without one now never get one: select once.
@@ -22,7 +27,8 @@ public enum NextCards {
         }
         let home = { (date: Date) in
             engine.home(events: events, now: date, calendar: calendar, completedCardIDs: state.completedCardIDs,
-                        impactsToday: 0, suppressionRules: state.suppressionRules)
+                        impactsToday: state.completed.values.count { calendar.isDate($0, inSameDayAs: date) },
+                        suppressionRules: state.suppressionRules)
         }
         let first = home(now)
         let ahead = first.cards + first.liveActivityCards
@@ -32,11 +38,18 @@ public enum NextCards {
             card.kind == .inPerson
                 ? [card.start - 30 * 60, card.start, min(card.start + 15 * 60, card.end)]
                 : [card.start - 15 * 60, card.start, card.start + 10 * 60, card.end]
-        }).filter { $0 > now }
+        } + [ImpactEngine.horizon(now: now, calendar: calendar).tomorrow]).filter { $0 > now }
         return ([now] + changes.sorted().prefix(23)).map { date in
             let snapshot = date == now ? first : home(date)
             let card = snapshot.nextUp ?? snapshot.liveActivityCards.first
-            return Moment(date: date, card: card, soonOrNow: card.map { ImpactEngine.isSoonOrNow($0, now: date) } ?? false)
+            var seen: Set<String> = []
+            let toDo = (snapshot.cards + snapshot.liveActivityCards)
+                .filter { !state.completed.keys.contains($0.id) && seen.insert($0.id).inserted }
+                .sorted { ($0.start, $0.id) < ($1.start, $1.id) }
+            return Moment(date: date, card: card,
+                          soonOrNow: card.map { ImpactEngine.isSoonOrNow($0, now: date) } ?? false,
+                          later: toDo.first { $0.id != card?.id && $0.start >= (card?.start ?? date) },
+                          impactsToday: snapshot.impactsToday, ringSegments: snapshot.ringSegments)
         }
     }
 

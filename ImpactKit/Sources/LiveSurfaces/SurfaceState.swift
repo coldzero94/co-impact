@@ -3,16 +3,23 @@ import ImpactEngine
 import os
 
 /// What the widgets need from Impact that the calendar does not hold (ARCHITECTURE.md → Storage): which cards are
-/// done and which are dismissed or muted. Card IDs and muted titles only, like Impact's own storage; the widgets
-/// read events from the calendar themselves.
+/// done and when (for the ring's Impacts), which are dismissed or muted, and the run links' secret. Card IDs, times,
+/// and muted titles only, like Impact's own storage; the widgets read events from the calendar themselves.
 public struct SurfaceState: Codable, Hashable, Sendable {
-    public var completedCardIDs: Set<String>
+    /// When each card's Impact was recorded, by card ID.
+    public var completed: [String: Date]
     public var suppressionRules: [SuppressionRule]
+    /// The secret Impact's run links carry (`RunToken`): widgets are Impact's own surfaces, and the App Group is
+    /// Impact's alone. Nil until Impact writes it; widget buttons then only open Impact.
+    public var runToken: String?
 
-    public init(completedCardIDs: Set<String>, suppressionRules: [SuppressionRule]) {
-        self.completedCardIDs = completedCardIDs
+    public init(completed: [String: Date], suppressionRules: [SuppressionRule], runToken: String? = nil) {
+        self.completed = completed
         self.suppressionRules = suppressionRules
+        self.runToken = runToken
     }
+
+    public var completedCardIDs: Set<String> { Set(completed.keys) }
 }
 
 /// `SurfaceState` in the App Group's defaults: Impact writes it, its widgets read it.

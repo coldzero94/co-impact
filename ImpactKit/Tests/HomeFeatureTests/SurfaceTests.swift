@@ -19,7 +19,7 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
 
 @Suite struct SurfaceTests {
     private let engine = try! ImpactEngine()
-    private let none = SurfaceState(completedCardIDs: [], suppressionRules: [])
+    private let none = SurfaceState(completed: [:], suppressionRules: [])
 
     @Test("The widget follows Home's Next up through Soon, Now, and expiry, then the next card")
     func moments() throws {
@@ -43,7 +43,7 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         #expect(NextCards.moments(events: busy, state: none, now: at(9), calendar: losAngeles, engine: engine).count == 24)
     }
 
-    @Test("Entries fall exactly on each change of phase: Soon, start, end of Now, expiry")
+    @Test("Entries fall exactly on each change of phase (Soon, start, end of Now, expiry) and at midnight")
     func changes() throws {
         let place = Place(title: "Synthetic clinic", latitude: 37.5, longitude: 127)
         var visit = meeting("Visit", 14)
@@ -57,12 +57,23 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         let moments = NextCards.moments(events: [keys, visit, meeting("Call", 16)], state: none, now: at(9),
                                         calendar: losAngeles, engine: engine)
         // Keys: Soon 11:30, start 12:00, leaves 12:05. Visit: Soon 13:30, start 14:00, expiry 14:15.
-        // Call (online): Soon 15:45, start 16:00, end of Now 16:10, end 17:00.
-        let expected = [9, 11.5, 12, 12 + 1.0 / 12, 13.5, 14, 14.25, 15.75, 16, 16 + 1.0 / 6, 17].map { at($0) }
+        // Call (online): Soon 15:45, start 16:00, end of Now 16:10, end 17:00. Midnight starts the ring over.
+        let expected = [9, 11.5, 12, 12 + 1.0 / 12, 13.5, 14, 14.25, 15.75, 16, 16 + 1.0 / 6, 17, 24].map { at($0) }
         #expect(moments.map(\.date) == expected)
         #expect(moments.first { $0.date == at(12 + 1.0 / 12) }?.card?.id == "Visit")
         #expect(moments.first { $0.date == at(14.25) }?.card?.id == "Call")
         #expect(moments.last?.card == nil)
+    }
+
+    @Test("The medium widget's second row is the next card still to do; the ring counts the day's Impacts")
+    func laterAndRing() throws {
+        let events = [meeting("Done", 8), meeting("Review", 10), meeting("Sync", 13), meeting("Wrap", 15)]
+        let state = SurfaceState(completed: ["Done": at(8), "Yesterday": at(9, day: -1)], suppressionRules: [])
+        let first = try #require(NextCards.moments(events: events, state: state, now: at(9), calendar: losAngeles,
+                                                   engine: engine).first)
+        #expect(first.card?.id == "Review" && first.later?.id == "Sync")
+        // One Impact today (Done; yesterday's does not count) plus three cards still to do.
+        #expect(first.impactsToday == 1 && first.ringSegments == 4)
     }
 
     @Test("The widget rereads after the last change ahead, at least hourly, and in an hour with nothing ahead")
@@ -75,7 +86,7 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
     @Test("Done and dismissed cards are skipped; tomorrow's first card shows once today has none")
     func state() throws {
         let events = [meeting("Done", 10), meeting("Muted", 11), meeting("Tomorrow", 8, day: 1)]
-        let state = SurfaceState(completedCardIDs: ["Done"], suppressionRules: [.occurrence(id: "Muted")])
+        let state = SurfaceState(completed: ["Done": at(8)], suppressionRules: [.occurrence(id: "Muted")])
         let moments = NextCards.moments(events: events, state: state, now: at(9), calendar: losAngeles, engine: engine)
         #expect(moments.first?.card?.id == "Tomorrow")
     }
@@ -87,7 +98,7 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = SurfaceStore(defaults: defaults)
         #expect(store.load() == nil)
-        let state = SurfaceState(completedCardIDs: ["a"], suppressionRules: [.title(calendarID: "work", title: "Standup")])
+        let state = SurfaceState(completed: ["a": at(9)], suppressionRules: [.title(calendarID: "work", title: "Standup")], runToken: "secret")
         store.save(state)
         #expect(store.load() == state)
         defaults.set(Data("not json".utf8), forKey: SurfaceStore.key)
@@ -106,7 +117,7 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         let model = try HomeModel(events: [meeting("Review", 10), meeting("Sync", 13), long], now: at(10),
                                   calendar: losAngeles, log: log)
         model.dismiss(try #require(model.snapshot.cards.first { $0.id == "Sync" }), similar: false)
-        #expect(model.surfaceState.completedCardIDs == ["Review", "Long"])
-        #expect(model.surfaceState.suppressionRules == [.occurrence(id: "Sync")])
+        #expect(model.surfaceState(runToken: "secret").completedCardIDs == ["Review", "Long"])
+        #expect(model.surfaceState(runToken: "secret").suppressionRules == [.occurrence(id: "Sync")])
     }
 }

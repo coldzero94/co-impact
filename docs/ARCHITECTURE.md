@@ -16,8 +16,9 @@ ImpactKit/                     Local Swift package: all logic and UI features
 ├── Sources/ImpactEngine/      Pure Swift: model, rules, ranking (no UI, no EventKit)
 ├── Sources/CalendarSources/   EventKit: calendar access, fetching, and mapping events to CalendarEvent
 ├── Sources/LiveSurfaces/      System surfaces: the Live Activity (`LiveCard`, layouts, run link, scheduling), the
-│                              Lock Screen widget, the state widgets share with the app, and the card facts every
-│                              surface shows (ActivityKit and WidgetKit code iOS-only)
+│                              Next up widget (Lock Screen and Home Screen), the state widgets share with the app,
+│                              and what every surface shows of a card: its facts, action labels, and the Impact ring
+│                              (ActivityKit and WidgetKit code iOS-only)
 ├── Sources/HomeFeature/       SwiftUI onboarding, Home, card detail, actions, Impact ring and moment, live
 │                              refresh, stored Impacts, Live Activity sync and run links, synthetic fixtures
 ├── Tests/ImpactEngineTests/   Swift Testing
@@ -110,7 +111,7 @@ Live Activities are started **without a server** by scheduling them at analysis 
 ## Storage
 
 - Built (step 7): recorded Impacts, as card IDs and times, in one JSON file in the app's Application Support folder. Which secondary actions ran is not stored. A file that does not decode is renamed aside; one that cannot be read at the moment is left alone, each save first tries reading it again and skips until it can, and each refresh tries too and adds what it reads to Home. Merges keep each card's earlier stamp. Without a usable file, Impacts count until the app quits.
-- Built (step 9): what widgets need from Impact (`SurfaceState`): the card IDs done in the last two days or still on Home, and the dismissals' rules (so muted titles too), as JSON in the App Group's defaults, rewritten whenever it changes. The widgets read events from the calendar themselves, so no other calendar content is stored; Impacts and dismissals stay where they are, Impact being the only writer.
+- Built (step 9): what widgets need from Impact (`SurfaceState`): the Impacts (card IDs and times) of the last two days or of cards still on Home, the dismissals' rules (so muted titles too), and the run links' secret, as JSON in the App Group's defaults, rewritten whenever it changes. The widgets read events from the calendar themselves, so no other calendar content is stored; Impacts and dismissals stay where they are, Impact being the only writer.
 - Proposed: card and action state in SwiftData in an App Group container (shared with widgets), once background refresh (step 10) or the daily log (step 13) needs more than `SurfaceState`.
 - Proposed: goals, Impact records, daily-log lines, and the identifiers of events Impact created, in SwiftData in the same container.
 - Built (step 7): dismissals, as JSON in standard `UserDefaults`: occurrence IDs with when they lapse (the later of the event's end and two days after the dismissal) and the calendar IDs with the series IDs or titles the user muted (muted titles are the only calendar text stored). Data that does not decode is kept under another key. Widgets get their rules through `SurfaceState` (above). If background refresh (step 10) needs them, they move to the App Group; since they are loaded once and saved whole, saves must then never overwrite dismissals that could not be read, as Impact saves already do.
@@ -119,7 +120,7 @@ Live Activities are started **without a server** by scheduling them at analysis 
 
 ## Privacy
 
-- Run links (`impact://run?card=<id>&token=<secret>`, Live Activity buttons) run a listed card's primary action only with the per-install secret that Impact keeps in standard `UserDefaults` and puts in its own activities' links (owner, 2026-11-16). Card IDs alone are not enough, since any app with full calendar access can read them; a link without the right secret only opens Impact.
+- Run links (`impact://run?card=<id>&token=<secret>`, Live Activity buttons) run a listed card's primary action only with the per-install secret that Impact keeps in standard `UserDefaults` and puts in its own activities' links (owner, 2026-11-16); its widgets get it through `SurfaceState` in the App Group, which only Impact's targets can open. Card IDs alone are not enough, since any app with full calendar access can read them; a link without the right secret only opens Impact.
 - Calendar access: full access is required to read events. It also allows writing; the only write is Block time (PRODUCT.md → Goals). The usage string (`INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription` in the app target) states on-device processing; the clause that Impact adds events only when the user taps Block time joins it with Block time (step 11).
 - No analytics SDKs, no network calls with calendar content. The owner has approved sending a location without coordinates to Apple's geocoder (MapKit) once its quality is checked on a device (step 10); until then no location is sent to it. Shipping it means rewording the usage string, PRODUCT.md → Principles ("never leaves it"), and UX.md → Onboarding.
 - Google Calendar API (if ever added, D7): official OAuth via `ASWebAuthenticationSession`, tokens in Keychain, read-only scope.

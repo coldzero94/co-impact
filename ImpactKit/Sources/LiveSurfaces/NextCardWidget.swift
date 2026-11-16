@@ -4,8 +4,10 @@ import ImpactEngine
 import SwiftUI
 import WidgetKit
 
-/// The Lock Screen widget (UX.md → System surfaces): the next card's time, title, and key fact. It reads the
-/// calendar itself and Impact's `SurfaceState`, so it moves on from card to card while Impact does not run.
+/// The Next up widget (UX.md → System surfaces). On the Lock Screen: the next card's time, title, and key fact.
+/// On the Home Screen: small adds the primary action, medium the next card after it; with no card, the Impact
+/// ring. It reads the calendar itself and Impact's `SurfaceState`, so it moves on from card to card while Impact
+/// does not run.
 public struct NextCardWidget: Widget {
     public static let kind = "NextCard"
 
@@ -17,7 +19,7 @@ public struct NextCardWidget: Widget {
         }
         .configurationDisplayName("Next up")
         .description("The next event that needs you, and when.")
-        .supportedFamilies([.accessoryRectangular, .accessoryInline, .accessoryCircular])
+        .supportedFamilies([.accessoryRectangular, .accessoryInline, .accessoryCircular, .systemSmall, .systemMedium])
     }
 }
 
@@ -29,10 +31,16 @@ struct NextCardEntry: TimelineEntry {
         let symbol: String
         let start: Date
         let isToday: Bool
+        /// The primary action's label and the link that runs it through Impact (nil without the run token).
+        var actionLabel = ""
+        var runURL: URL?
     }
 
     let date: Date
     let shown: Shown?
+    var later: Shown?
+    var impactsToday = 0
+    var ringSegments = 0
     let canRead: Bool
     let relevance: TimelineEntryRelevance?
 }
@@ -68,18 +76,23 @@ struct NextCardProvider: TimelineProvider {
               let engine = try? ImpactEngine() else {
             return [NextCardEntry(date: now, shown: nil, canRead: false, relevance: nil)]
         }
-        let state = SurfaceStore()?.load() ?? SurfaceState(completedCardIDs: [], suppressionRules: [])
+        let state = SurfaceStore()?.load() ?? SurfaceState(completed: [:], suppressionRules: [])
         return NextCards.moments(events: events, state: state, now: now, calendar: calendar, engine: engine).map { moment in
-            let shown = moment.card.map {
-                NextCardEntry.Shown(title: $0.title, keyFact: $0.keyFact, symbol: $0.symbol, start: $0.start,
-                                    isToday: calendar.isDate($0.start, inSameDayAs: moment.date))
+            let show = { (card: ImpactCard) in
+                NextCardEntry.Shown(title: card.title, keyFact: card.keyFact, symbol: card.symbol, start: card.start,
+                                    isToday: calendar.isDate(card.start, inSameDayAs: moment.date),
+                                    actionLabel: card.primaryAction?.kind.label ?? "",
+                                    runURL: state.runToken.map { LiveCard.runURL(cardID: card.id, token: $0) })
             }
+            let shown = moment.card.map(show)
             let relevance = moment.card.map {
                 moment.soonOrNow
                     ? TimelineEntryRelevance(score: 1, duration: ImpactEngine.nowPhase(of: $0).upperBound.timeIntervalSince(moment.date))
                     : TimelineEntryRelevance(score: 0)
             }
-            return NextCardEntry(date: moment.date, shown: shown, canRead: true, relevance: relevance)
+            return NextCardEntry(date: moment.date, shown: shown, later: moment.later.map(show),
+                                 impactsToday: moment.impactsToday, ringSegments: moment.ringSegments,
+                                 canRead: true, relevance: relevance)
         }
     }
 }
@@ -90,10 +103,19 @@ struct NextCardView: View {
 
     var body: some View {
         content
-            .containerBackground(for: .widget) { Color.clear }
-            .accessibilityElement(children: .combine)
+            .containerBackground(for: .widget) {
+                // Home Screen widgets with a card wear Next up's accent; everything else stays plain.
+                if isSystem, entry.shown != nil {
+                    LinearGradient(colors: [.indigo, .indigo.mix(with: .black, by: 0.3)], startPoint: .top, endPoint: .bottom)
+                } else {
+                    Color.clear
+                }
+            }
+            .accessibilityElement(children: .contain)
             .accessibilityLabel(spoken)
     }
+
+    private var isSystem: Bool { family == .systemSmall || family == .systemMedium }
 
     @ViewBuilder
     private var content: some View {
@@ -122,6 +144,30 @@ struct NextCardView: View {
                     Image(systemName: entry.canRead ? "checkmark" : "exclamationmark").font(.title3.weight(.semibold))
                 }
             }
+        case .systemSmall:
+            if let shown = entry.shown { NextUp(shown: shown, time: time(shown)) } else { ring }
+        case .systemMedium:
+            if let shown = entry.shown {
+                HStack(alignment: .top, spacing: 14) {
+                    NextUp(shown: shown, time: time(shown))
+                    if let later = entry.later {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Later").font(.caption.weight(.semibold)).opacity(0.75)
+                            Text(time(later)).font(.headline).widgetAccentable()
+                            Text(later.title).font(.subheadline).lineLimit(2)
+                            Text(later.keyFact).font(.caption).opacity(0.75).lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    }
+                }
+                .foregroundStyle(.white)
+            } else {
+                HStack(spacing: 16) {
+                    ImpactRing(filled: entry.impactsToday, segments: entry.ringSegments).frame(width: 64, height: 64)
+                    Text(emptyLine).font(.headline).frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .tint(.indigo)
+            }
         default:
             if let shown = entry.shown {
                 VStack(alignment: .leading, spacing: 1) {
@@ -138,6 +184,15 @@ struct NextCardView: View {
 
     private var emptyLine: String { entry.canRead ? "Nothing needs you today." : "Impact can't read your calendar." }
 
+    /// No card: the Impact ring, as on Home (UX.md → System surfaces).
+    private var ring: some View {
+        VStack(spacing: 8) {
+            ImpactRing(filled: entry.impactsToday, segments: entry.ringSegments).frame(width: 58, height: 58)
+            Text(emptyLine).font(.caption.weight(.semibold)).multilineTextAlignment(.center)
+        }
+        .tint(.indigo)
+    }
+
     /// "10:00 AM" today, "Tue 8:30 AM" for a card on another day.
     private func time(_ shown: NextCardEntry.Shown) -> String {
         shown.isToday ? shown.start.formatted(.dateTime.hour().minute())
@@ -147,6 +202,33 @@ struct NextCardView: View {
     private var spoken: String {
         guard let shown = entry.shown else { return emptyLine }
         return "Next: \(shown.title) at \(time(shown)), \(shown.keyFact)"
+    }
+}
+/// Next up on the Home Screen: key fact, time, title, and the primary action through Impact.
+private struct NextUp: View {
+    let shown: NextCardEntry.Shown
+    let time: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Label(shown.keyFact, systemImage: shown.symbol).font(.caption.weight(.semibold)).lineLimit(1).opacity(0.85)
+            Spacer(minLength: 0)
+            Text(time).font(.title2.weight(.bold)).lineLimit(1).minimumScaleFactor(0.6).widgetAccentable()
+            Text(shown.title).font(.subheadline.weight(.semibold)).lineLimit(2)
+            if let url = shown.runURL {
+                Link(destination: url) {
+                    Label(shown.actionLabel, systemImage: shown.symbol)
+                        .font(.caption.weight(.semibold)).lineLimit(1)
+                        .frame(maxWidth: .infinity, minHeight: 30)
+                        .foregroundStyle(.indigo)
+                        .background(.white, in: .capsule)
+                }
+                .widgetAccentable()
+                .padding(.top, 4)
+            }
+        }
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 }
 #endif
