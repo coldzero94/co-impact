@@ -4,14 +4,14 @@ import SwiftUI
 import WidgetKit
 
 /// A card's Live Activity (UX.md → System surfaces): the Now phase only. Its one button opens Impact, which runs
-/// the primary action. StandBy shows the Lock Screen layout; the Watch Smart Stack and CarPlay show the compact
-/// pair, where the button is missing or does nothing.
+/// the primary action. StandBy shows the Lock Screen layout; the Watch Smart Stack and CarPlay show the small one,
+/// without the button (it does nothing in CarPlay, and the car is glance-only).
 public struct LiveCardActivity: Widget {
     public init() {}
 
     public var body: some WidgetConfiguration {
         ActivityConfiguration(for: LiveCard.self) { context in
-            LockScreenView(card: context.attributes, stale: context.isStale)
+            ActivityContent(card: context.attributes, stale: context.isStale)
                 .activityBackgroundTint(Color(.systemBackground).opacity(0.85))
         } dynamicIsland: { context in
             let card = context.attributes
@@ -33,15 +33,88 @@ public struct LiveCardActivity: Widget {
                     }
                 }
             } compactLeading: {
-                Image(systemName: card.symbol).foregroundStyle(.indigo).accessibilityLabel(card.title)
+                // With limited width the pair must fit a 28-pt circle: the ring alone, the empty trailing side hidden.
+                LimitedWidth { limited in
+                    if limited {
+                        TimeRing(card: card)
+                    } else {
+                        Image(systemName: card.symbol).foregroundStyle(.indigo).accessibilityLabel(card.title)
+                    }
+                }
             } compactTrailing: {
-                // A dimmed screen showed "8 minutes" here in the simulator: shrink rather than truncate.
-                Countdown(card: card, stale: context.isStale).lineLimit(1).minimumScaleFactor(0.6).frame(maxWidth: 64)
+                LimitedWidth { limited in
+                    if !limited {
+                        // A dimmed screen showed "8 minutes" here in the simulator: shrink rather than truncate.
+                        Countdown(card: card, stale: context.isStale).lineLimit(1).minimumScaleFactor(0.6)
+                            .frame(maxWidth: 64)
+                    }
+                }
             } minimal: {
-                Image(systemName: card.symbol).foregroundStyle(.indigo).accessibilityLabel(card.title)
+                TimeRing(card: card)
             }
             .keylineTint(.indigo)
         }
+        .supplementalActivityFamilies([.small])
+    }
+}
+
+/// The Lock Screen and StandBy layout, or the small one on the Watch and in CarPlay.
+private struct ActivityContent: View {
+    let card: LiveCard
+    let stale: Bool
+    @Environment(\.activityFamily) private var family
+
+    var body: some View {
+        if family == .small {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack {
+                    Image(systemName: card.symbol).foregroundStyle(.indigo).accessibilityHidden(true)
+                    Spacer(minLength: 4)
+                    Countdown(card: card, stale: stale).font(.headline).lineLimit(1).minimumScaleFactor(0.6)
+                }
+                Text(card.title).font(.headline).lineLimit(1)
+                Text(card.answer).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+            .padding(10)
+        } else {
+            LockScreenView(card: card, stale: stale)
+        }
+    }
+}
+
+/// Time left to the start as a ring around the card's symbol, drawn by the system: it fits the 28-pt circle of
+/// the minimal and limited-width views, where timer text would truncate. Empty from the start on.
+private struct TimeRing: View {
+    let card: LiveCard
+
+    var body: some View {
+        ProgressView(timerInterval: card.nowPhase.lowerBound...card.start, countsDown: true) {
+            EmptyView()
+        } currentValueLabel: {
+            Image(systemName: card.symbol).font(.caption2.weight(.semibold))
+        }
+        .progressViewStyle(.circular)
+        .tint(.indigo)
+        .foregroundStyle(.indigo)
+        .accessibilityLabel(Text("\(card.title), \(card.start, format: .dateTime.hour().minute())"))
+    }
+}
+
+/// Whether the Dynamic Island draws compact and minimal views with limited width (iOS 27: landscape, or two
+/// activities on iPhone 18 Pro); never before iOS 27.
+private struct LimitedWidth<Content: View>: View {
+    @ViewBuilder let content: (Bool) -> Content
+
+    var body: some View {
+        if #available(iOS 27, *) { Reader(content: content) } else { content(false) }
+    }
+
+    @available(iOS 27, *)
+    private struct Reader: View {
+        @Environment(\.isDynamicIslandLimitedInWidth) private var limited
+        let content: (Bool) -> Content
+
+        var body: some View { content(limited) }
     }
 }
 
