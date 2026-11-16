@@ -33,7 +33,8 @@ public struct LiveCardActivity: Widget {
                     }
                 }
             } compactLeading: {
-                // With limited width the pair must fit a 28-pt circle: the ring alone, the empty trailing side hidden.
+                // With limited width, Apple's fallback: the leading view in a 28-pt circle (the ring) and an empty
+                // trailing one, which the system hides.
                 LimitedWidth { limited in
                     if limited {
                         TimeRing(card: card)
@@ -82,8 +83,9 @@ private struct ActivityLayout: View {
     }
 }
 
-/// Time left to the start as a ring around the card's symbol, drawn by the system: it fits the 28-pt circle of
-/// the minimal and limited-width views, where timer text would truncate. Empty from the start on.
+/// Time left to the start as a ring around the card's symbol, drawn by the system: small enough for the minimal
+/// view and, with limited width, the 28-pt circle Apple asks for, where timer text would truncate (unverified on
+/// screen: ARCHITECTURE.md → To verify). Empty from the start on.
 private struct TimeRing: View {
     let card: LiveCard
 
@@ -96,12 +98,13 @@ private struct TimeRing: View {
         .progressViewStyle(.circular)
         .tint(.indigo)
         .foregroundStyle(.indigo)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("\(card.title), \(card.start, format: .dateTime.hour().minute())"))
     }
 }
 
-/// Whether the Dynamic Island draws compact and minimal views with limited width (iOS 27: landscape, or two
-/// activities on iPhone 18 Pro); never before iOS 27.
+/// Whether the Dynamic Island draws compact and minimal views with limited width (iOS 27, e.g. in landscape, on
+/// iPhone Duo, or with two or more activities on iPhone 18 Pro); never before iOS 27.
 private struct LimitedWidth<Content: View>: View {
     @ViewBuilder let content: (Bool) -> Content
 
