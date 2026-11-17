@@ -89,10 +89,10 @@ public final class HomeModel {
                             suppressionRules: dismissals.rules, runToken: runToken)
     }
 
-    /// The card a run link names (`LiveCard.runURL`): one Home lists, or one a widget or Live Activity shows
-    /// before Home lists it (tomorrow's, before 18:00).
+    /// The card a run request names: one Home lists. Surfaces offer only today's cards, and a Live Activity's
+    /// only during its Now phase, when Home lists it.
     func runnableCard(id: String) -> ImpactCard? {
-        (snapshot.cards + snapshot.liveActivityCards).first { $0.id == id }
+        snapshot.cards.first { $0.id == id }
     }
 
     private func rebuild() {

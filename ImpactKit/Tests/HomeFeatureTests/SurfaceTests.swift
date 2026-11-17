@@ -134,6 +134,17 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         #expect(RunRequest(cardID: online.id, action: .directions).pick(from: online) == nil)
     }
 
+    @Test("The widgets' button runs today's Next up, a meeting running past midnight included, never tomorrow's")
+    func runnableMoments() throws {
+        let evening = NextCards.moments(events: [meeting("Tomorrow", 8, day: 1)], state: none, now: at(20),
+                                        calendar: losAngeles, engine: engine).first
+        #expect(evening?.card?.id == "Tomorrow" && evening?.runnable == false)
+        // 23:30 yesterday to 00:30: at 00:05 it is still today's Next up.
+        let late = NextCards.moments(events: [meeting("Call", 23.5, day: -1)], state: none, now: at(1.0 / 12),
+                                     calendar: losAngeles, engine: engine).first
+        #expect(late?.card?.id == "Call" && late?.runnable == true)
+    }
+
     @Test("The widget rereads after the last change ahead, at least hourly, and in an hour with nothing ahead")
     func reloadDate() {
         #expect(NextCards.reloadDate(after: [at(9)], now: at(9)) == at(10))
@@ -180,18 +191,19 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         #expect(state.suppressionRules == [.occurrence(id: "Sync")])
     }
 
-    @Test("A run link reaches every card a widget can show: tomorrow's before Home lists it, and Home's own")
-    @MainActor func runnableTomorrow() throws {
+    @Test("A run request reaches the cards Home lists, Next up past its Now phase included, not tomorrow's early")
+    @MainActor func runnableCards() throws {
         var log = ActionLog()
         let review = try #require(engine.card(for: meeting("Review", 14), now: at(14)))
         _ = log.record(try #require(review.primaryAction), on: review, at: at(14))
-        // Review is joined and still on Home, so Home keeps tomorrow off its list; the widget shows tomorrow's card.
+        // Review is joined and still on Home, so Home keeps tomorrow off its list; the widget shows tomorrow's card
+        // without a button, and a request for it runs nothing.
         let events = [meeting("Review", 14), meeting("Tomorrow", 8, day: 1)]
         let model = try HomeModel(events: events, now: at(14.2), calendar: losAngeles, log: log)
         let shown = try #require(NextCards.moments(events: events, state: model.surfaceState(runToken: "secret"),
-                                                   now: at(14.2), calendar: losAngeles, engine: engine).first?.card)
-        #expect(shown.id == "Tomorrow" && !model.snapshot.cards.contains { $0.id == "Tomorrow" })
-        #expect(model.runnableCard(id: "Tomorrow")?.id == "Tomorrow")
+                                                   now: at(14.2), calendar: losAngeles, engine: engine).first)
+        #expect(shown.card?.id == "Tomorrow" && !shown.runnable)
+        #expect(model.runnableCard(id: "Tomorrow") == nil)
         // Past its Now phase, a meeting is still Home's Next up but wants no Live Activity: it runs too.
         let late = try HomeModel(events: [meeting("Call", 10)], now: at(10.3), calendar: losAngeles, log: ActionLog())
         #expect(late.snapshot.nextUp?.id == "Call" && late.snapshot.liveActivityCards.isEmpty)

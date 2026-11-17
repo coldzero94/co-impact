@@ -20,7 +20,7 @@ public struct NextUpControl: ControlWidget {
             }
         }
         .displayName("Next up")
-        .description("Joins your next meeting or starts directions, through Impact.")
+        .description("Joins today's next meeting or starts directions, through Impact.")
     }
 }
 
@@ -29,8 +29,10 @@ public struct NextUpControl: ControlWidget {
 /// 2026-11-17), so a meeting is never joined the evening before.
 public struct RunNextUpIntent: AppIntent {
     public static let title: LocalizedStringResource = "Run Next Up"
-    public static let description = IntentDescription("Opens Impact and runs your next event's main action.")
+    public static let description = IntentDescription("Opens Impact and runs today's next event's main action.")
     public static let supportedModes: IntentModes = .foreground(.immediate)
+    /// The control's action only: Siri and Shortcuts have the App Shortcuts (UX.md → System surfaces).
+    public static let isDiscoverable = false
 
     public init() {}
 

@@ -94,7 +94,7 @@ public struct HomeView: View {
             guard let request = runRequest else { return }
             runRequest = nil
             guard let card = model.runnableCard(id: request.cardID), let action = request.pick(from: card) else {
-                // Dismissed, expired, done ahead of Home listing it, or gone since the surface showed it: Home shows
+                // Dismissed, expired, not listed (yet), or gone since the surface showed it: Home shows
                 // what is left. A done card Home still lists runs again (e.g. to rejoin).
                 homeLog.notice("A run request for card \(request.cardID, privacy: .private) found nothing to run")
                 return

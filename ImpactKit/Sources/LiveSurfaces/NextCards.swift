@@ -45,6 +45,9 @@ public enum NextCards {
         public let date: Date
         public let card: ImpactCard?
         public let soonOrNow: Bool
+        /// Whether `card` is today's Next up, whose primary action the widgets' button runs; another day's card
+        /// waits for its day (owner, 2026-11-17), while a meeting running past midnight still runs.
+        public let runnable: Bool
         /// The next card still to do after `card`: the medium widget's Later column.
         public let later: ImpactCard?
         /// The Impact ring on the moment's day, as on Home: Impacts recorded that day, and its segments.
@@ -78,6 +81,7 @@ public enum NextCards {
                 .min { ($0.start, $0.id) < ($1.start, $1.id) }
             return Moment(date: date, card: card,
                           soonOrNow: card.map { ImpactEngine.isSoonOrNow($0, now: date) } ?? false,
+                          runnable: snapshot.nextUp != nil,
                           later: later,
                           impactsToday: snapshot.impactsToday, ringSegments: snapshot.ringSegments)
         }
