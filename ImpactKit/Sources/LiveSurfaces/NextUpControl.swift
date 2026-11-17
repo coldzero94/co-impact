@@ -6,7 +6,8 @@ import WidgetKit
 
 /// The Next up control (UX.md → System surfaces) for Control Center, the Lock Screen, and the Action button: a
 /// fixed button, since a control's value is not refreshed while Impact does not run (ARCHITECTURE.md → Platform
-/// facts), so a time on it would go stale. Pressing it opens Impact, which runs today's Next up's primary action.
+/// facts), so a time on it would go stale. Pressing it opens Impact, which runs the primary action of the card that
+/// runs now (`NextCards.runnable`).
 public struct NextUpControl: ControlWidget {
     public static let kind = "NextUpControl"
 
@@ -25,8 +26,9 @@ public struct NextUpControl: ControlWidget {
 }
 
 /// The Next up control's action: brings Impact to the front, then leaves a run request for the card that runs now
-/// (`NextCards.runnable`: today's Next up, or a meeting just after midnight once in its Soon phase), which live
-/// Home runs as it runs a run link. With none, Impact just opens, so a meeting is never joined the evening before.
+/// (`NextCards.runnable`: by day Home's Next up; just before midnight possibly a meeting in its Soon or Now phase),
+/// which live Home runs as it runs a run link. With none, Impact just opens, so a meeting is never joined the
+/// evening before.
 public struct RunNextUpIntent: AppIntent {
     public static let title: LocalizedStringResource = "Run Next Up"
     public static let description = IntentDescription("Opens Impact and runs today's next event's main action.")

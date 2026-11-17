@@ -53,8 +53,8 @@ struct WhatsNextIntent: AppIntent {
     }
 }
 
-/// "Join my next meeting in Impact": Home's Next up among today's cards still to do with a meeting link, joined
-/// through Impact.
+/// "Join my next meeting in Impact": the card that runs now among those with a meeting link (`NextCards.next`),
+/// joined through Impact.
 struct JoinNextMeetingIntent: AppIntent {
     static let title = LocalizedStringResource("Join Next Meeting", table: "Shortcuts")
     static let description = IntentDescription(LocalizedStringResource(
@@ -71,8 +71,8 @@ struct JoinNextMeetingIntent: AppIntent {
     }
 }
 
-/// "Directions to my next appointment in Impact": Home's Next up among today's cards still to do with a place,
-/// routed through Impact.
+/// "Directions to my next appointment in Impact": the card that runs now among those with a place
+/// (`NextCards.next`), routed through Impact.
 struct DirectionsToNextIntent: AppIntent {
     static let title = LocalizedStringResource("Directions to Next Appointment", table: "Shortcuts")
     static let description = IntentDescription(LocalizedStringResource(
@@ -101,7 +101,7 @@ extension AppIntent {
         let calendar = Calendar.autoupdatingCurrent
         guard let (events, state, engine) = NextCards.read(now: now, calendar: calendar) else { return .noCalendar }
         let home = NextCards.home(events: events, state: state, now: now, calendar: calendar, engine: engine)
-        guard let card = NextCards.next(action, in: home, state: state, now: now, calendar: calendar) else {
+        guard let card = NextCards.next(action, in: home, now: now, calendar: calendar) else {
             return .nothing
         }
         try await continueInForeground(alwaysConfirm: false)

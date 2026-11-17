@@ -84,7 +84,7 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         #expect(moments.last?.date == at(24) && moments.last?.impactsToday == 0)
     }
 
-    @Test("Siri runs Home's Next up among today's cards still to do with the action asked for, never tomorrow's")
+    @Test("Siri runs the card that runs now among those with the action asked for; tomorrow's waits for its day")
     func nextForIntents() throws {
         var visit = meeting("Visit", 14)
         visit.url = nil
@@ -99,23 +99,23 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
                       meeting("Tomorrow", 8, day: 1)]
         let state = SurfaceState(completed: ["Done": at(9.6)], suppressionRules: [.occurrence(id: "Muted")])
         let home = NextCards.home(events: events, state: state, now: at(10), calendar: losAngeles, engine: engine)
-        #expect(NextCards.next(.join, in: home, state: state, now: at(10), calendar: losAngeles)?.id == "Review")
-        #expect(NextCards.next(.directions, in: home, state: state, now: at(10), calendar: losAngeles)?.id == "Errand")
+        #expect(NextCards.next(.join, in: home, now: at(10), calendar: losAngeles)?.id == "Review")
+        #expect(NextCards.next(.directions, in: home, now: at(10), calendar: losAngeles)?.id == "Errand")
         // In the evening Home lists tomorrow's meeting, but it is not joined the evening before.
         let evening = NextCards.home(events: events, state: state, now: at(20), calendar: losAngeles, engine: engine)
         #expect(evening.cards.contains { $0.id == "Tomorrow" })
-        #expect(NextCards.next(.join, in: evening, state: state, now: at(20), calendar: losAngeles) == nil)
+        #expect(NextCards.next(.join, in: evening, now: at(20), calendar: losAngeles) == nil)
         // Back to back: at 13:54 Sync (13:00, joined elsewhere, so not done here) is ending and Review is in Soon.
         let backToBack = [meeting("Sync", 13), meeting("Review", 14)]
         let late = NextCards.home(events: backToBack, state: none, now: at(13.9), calendar: losAngeles, engine: engine)
-        #expect(NextCards.next(.join, in: late, state: none, now: at(13.9), calendar: losAngeles)?.id == "Review")
+        #expect(NextCards.next(.join, in: late, now: at(13.9), calendar: losAngeles)?.id == "Review")
         // Overlapping: at 10:30 Home's Next up is Review (10:00), not the Workshop running since 9:00.
         var workshop = meeting("Workshop", 9)
         workshop.end = at(12)
         let overlap = [workshop, meeting("Review", 10)]
         let mid = NextCards.home(events: overlap, state: none, now: at(10.5), calendar: losAngeles, engine: engine)
         #expect(mid.nextUp?.id == "Review")
-        #expect(NextCards.next(.join, in: mid, state: none, now: at(10.5), calendar: losAngeles)?.id == "Review")
+        #expect(NextCards.next(.join, in: mid, now: at(10.5), calendar: losAngeles)?.id == "Review")
     }
 
     @Test("A run request runs the primary action, or the kind an App Intent asked for if the card has it")
@@ -134,7 +134,7 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         #expect(RunRequest(cardID: online.id, action: .directions).pick(from: online) == nil)
     }
 
-    @Test("The widgets' button runs today's Next up, a meeting running past midnight included, never tomorrow's")
+    @Test("The widgets and the control run today's Next up, or a card already in its Soon phase before midnight")
     func runnableMoments() throws {
         let evening = NextCards.moments(events: [meeting("Tomorrow", 8, day: 1)], state: none, now: at(20),
                                         calendar: losAngeles, engine: engine).first
@@ -146,8 +146,19 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         let soonHome = NextCards.home(events: [meeting("Early", 1.0 / 12, day: 1)], state: none,
                                       now: at(23 + 55.0 / 60), calendar: losAngeles, engine: engine)
         #expect(NextCards.runnable(in: soonHome, now: at(23 + 55.0 / 60), calendar: losAngeles)?.id == "Early")
-        let joined = NextCards.next(.join, in: soonHome, state: none, now: at(23 + 55.0 / 60), calendar: losAngeles)
+        let joined = NextCards.next(.join, in: soonHome, now: at(23 + 55.0 / 60), calendar: losAngeles)
         #expect(joined?.id == "Early")
+        // Before midnight a meeting ends that was joined elsewhere (not done here) while Early is in Soon: every
+        // surface runs Early, as its Live Activity does, and the widgets show it.
+        let both = [meeting("Late", 23), meeting("Early", 1.0 / 12, day: 1)]
+        let edge = NextCards.home(events: both, state: none, now: at(23 + 55.0 / 60), calendar: losAngeles,
+                                  engine: engine)
+        #expect(edge.nextUp?.id == "Late")
+        #expect(NextCards.runnable(in: edge, now: at(23 + 55.0 / 60), calendar: losAngeles)?.id == "Early")
+        #expect(NextCards.next(.join, in: edge, now: at(23 + 55.0 / 60), calendar: losAngeles)?.id == "Early")
+        let shown = NextCards.moments(events: both, state: none, now: at(23 + 55.0 / 60), calendar: losAngeles,
+                                      engine: engine).first
+        #expect(shown?.card?.id == "Early" && shown?.runnable == true)
         // 23:30 yesterday to 00:30: at 00:05 it is still today's Next up.
         let late = NextCards.moments(events: [meeting("Call", 23.5, day: -1)], state: none, now: at(1.0 / 12),
                                      calendar: losAngeles, engine: engine).first
