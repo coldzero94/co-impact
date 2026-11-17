@@ -28,8 +28,8 @@ struct ImpactShortcuts: AppShortcutsProvider {
     }
 }
 
-/// "What's next in Impact": says the next card as the widgets show it (Home's Next up, else the first card ahead),
-/// without opening Impact. The answer is complete when spoken, with nothing on screen.
+/// "What's next in Impact": says the next card as the widgets show it (`NextCards.moments`), without opening
+/// Impact. The answer is complete when spoken, with nothing on screen.
 struct WhatsNextIntent: AppIntent {
     static let title = LocalizedStringResource("What's Next", table: "Shortcuts")
     static let description = IntentDescription(LocalizedStringResource("Says the next event that needs you, and when.",
@@ -94,7 +94,7 @@ enum NextRun {
 }
 
 extension AppIntent {
-    /// Finds today's next card still to do with `action` (`NextCards.next`) and, if there is one, brings Impact to
+    /// Finds the card that runs now with `action` (`NextCards.next`) and, if there is one, brings Impact to
     /// the front, where live Home runs it as it runs a run link. Without one, Impact stays in the background.
     @MainActor func runNext(_ action: RunAction) async throws -> NextRun {
         let now = Date.now

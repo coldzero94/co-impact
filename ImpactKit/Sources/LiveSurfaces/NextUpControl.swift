@@ -26,7 +26,7 @@ public struct NextUpControl: ControlWidget {
 }
 
 /// The Next up control's action: brings Impact to the front, then leaves a run request for the card that runs now
-/// (`NextCards.runnable`: by day Home's Next up; just before midnight possibly a meeting in its Soon or Now phase),
+/// (`NextCards.runnable`: by day Home's Next up; just before midnight possibly a card of tomorrow in its Now phase),
 /// which live Home runs as it runs a run link. With none, Impact just opens, so a meeting is never joined the
 /// evening before.
 public struct RunNextUpIntent: AppIntent {

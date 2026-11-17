@@ -90,8 +90,8 @@ public final class HomeModel {
     }
 
     /// The card a run request names: one Home lists. The widgets, the control, and the App Shortcuts offer only
-    /// today's cards and, just after midnight, one in its Soon or Now phase; a Live Activity's button, from its Now
-    /// phase on. Either way Home lists the card by then (tomorrow morning's from 18:00).
+    /// today's cards and, just before midnight, one of tomorrow in its Now phase; a Live Activity's button, from its
+    /// Now phase on. Either way Home lists the card by then (tomorrow morning's from 18:00).
     func runnableCard(id: String) -> ImpactCard? {
         snapshot.cards.first { $0.id == id }
     }

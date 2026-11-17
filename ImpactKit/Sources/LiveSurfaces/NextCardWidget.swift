@@ -22,7 +22,8 @@ public struct NextCardWidget: Widget {
     }
 }
 
-/// What one moment of the widget shows: Home's Next up, else the first card ahead (tomorrow's), else nothing.
+/// What one moment of the widget shows: the card that runs now (`NextCards.runnable`; by day Home's Next up), else
+/// the first card ahead (tomorrow's), else nothing.
 struct NextCardEntry: TimelineEntry {
     struct Shown: Hashable {
         let title: String

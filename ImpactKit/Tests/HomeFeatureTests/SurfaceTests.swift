@@ -134,12 +134,16 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         #expect(RunRequest(cardID: online.id, action: .directions).pick(from: online) == nil)
     }
 
-    @Test("The widgets and the control run today's Next up, or a card already in its Soon phase before midnight")
+    @Test("The widgets and the control run today's Next up, or before midnight a card of tomorrow in its Now phase")
     func runnableMoments() throws {
         let evening = NextCards.moments(events: [meeting("Tomorrow", 8, day: 1)], state: none, now: at(20),
                                         calendar: losAngeles, engine: engine).first
         #expect(evening?.card?.id == "Tomorrow" && evening?.runnable == false)
-        // A meeting at 00:05 is in its Soon phase from 23:50: it runs at 23:55, as its Live Activity does.
+        // A meeting at 00:05 is in its Now phase from 23:55, when its Live Activity runs it; in Soon at 23:52, not yet.
+        let notYet = NextCards.moments(events: [meeting("Early", 1.0 / 12, day: 1)], state: none,
+                                       now: at(23 + 52.0 / 60), calendar: losAngeles, engine: engine)
+        #expect(notYet.first?.card?.id == "Early" && notYet.first?.runnable == false)
+        #expect(notYet.first { $0.date == at(23 + 55.0 / 60) }?.runnable == true)
         let soon = NextCards.moments(events: [meeting("Early", 1.0 / 12, day: 1)], state: none, now: at(23 + 55.0 / 60),
                                      calendar: losAngeles, engine: engine).first
         #expect(soon?.card?.id == "Early" && soon?.runnable == true)
@@ -148,12 +152,15 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         #expect(NextCards.runnable(in: soonHome, now: at(23 + 55.0 / 60), calendar: losAngeles)?.id == "Early")
         let joined = NextCards.next(.join, in: soonHome, now: at(23 + 55.0 / 60), calendar: losAngeles)
         #expect(joined?.id == "Early")
-        // Before midnight a meeting ends that was joined elsewhere (not done here) while Early is in Soon: every
-        // surface runs Early, as its Live Activity does, and the widgets show it.
+        // Before midnight a meeting ends that was joined elsewhere (not done here) while Early is in its Now phase:
+        // every surface runs Early, as its Live Activity does, and the widgets show it. At 23:52 Late still runs.
         let both = [meeting("Late", 23), meeting("Early", 1.0 / 12, day: 1)]
         let edge = NextCards.home(events: both, state: none, now: at(23 + 55.0 / 60), calendar: losAngeles,
                                   engine: engine)
         #expect(edge.nextUp?.id == "Late")
+        let before = NextCards.home(events: both, state: none, now: at(23 + 52.0 / 60), calendar: losAngeles,
+                                    engine: engine)
+        #expect(NextCards.runnable(in: before, now: at(23 + 52.0 / 60), calendar: losAngeles)?.id == "Late")
         #expect(NextCards.runnable(in: edge, now: at(23 + 55.0 / 60), calendar: losAngeles)?.id == "Early")
         #expect(NextCards.next(.join, in: edge, now: at(23 + 55.0 / 60), calendar: losAngeles)?.id == "Early")
         let shown = NextCards.moments(events: both, state: none, now: at(23 + 55.0 / 60), calendar: losAngeles,
