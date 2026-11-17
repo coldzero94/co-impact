@@ -22,13 +22,13 @@ public struct HomeView: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @ScaledMetric(relativeTo: .title) private var ringSize = 46.0
 
-    /// A card whose primary action a widget or Live Activity asked Impact to run (`LiveCard.runURL`); Home runs it
-    /// and clears it.
-    @Binding private var runCardID: String?
+    /// A card's action a widget, Live Activity, or App Intent asked Impact to run (`RunRequest`); Home runs it and
+    /// clears it.
+    @Binding private var runRequest: RunRequest?
 
-    public init(model: HomeModel, runCardID: Binding<String?> = .constant(nil)) {
+    public init(model: HomeModel, runRequest: Binding<RunRequest?> = .constant(nil)) {
         self.model = model
-        _runCardID = runCardID
+        _runRequest = runRequest
     }
 
     public var body: some View {
@@ -90,16 +90,16 @@ public struct HomeView: View {
                 .presentationDetents(typeSize.isAccessibilitySize ? [.large] : [.medium, .large])
         }
         .actionFailureAlert($failed)
-        .onChange(of: runCardID, initial: true) {
-            guard let id = runCardID else { return }
-            runCardID = nil
-            guard let card = model.runnableCard(id: id), let primary = card.primaryAction else {
-                // Dismissed, expired, done ahead of Home listing it, or gone since the widget or activity showed it:
-                // Home shows what is left. A done card Home still lists runs again (e.g. to rejoin).
-                homeLog.notice("A run link asked to run card \(id, privacy: .private), which Impact no longer has")
+        .onChange(of: runRequest, initial: true) {
+            guard let request = runRequest else { return }
+            runRequest = nil
+            guard let card = model.runnableCard(id: request.cardID), let action = request.pick(from: card) else {
+                // Dismissed, expired, done ahead of Home listing it, or gone since the surface showed it: Home shows
+                // what is left. A done card Home still lists runs again (e.g. to rejoin).
+                homeLog.notice("A run request for card \(request.cardID, privacy: .private) found nothing to run")
                 return
             }
-            run(primary, on: card) { failed = $0 }
+            run(action, on: card) { failed = $0 }
         }
         .sensoryFeedback(.success, trigger: landings)
         .onChange(of: scenePhase) { playPending() }

@@ -1,8 +1,43 @@
+import CalendarSources
 import Foundation
 import ImpactEngine
 
-/// What the widgets show over time (`NextCardWidget`), apart from WidgetKit.
+/// What the widgets show over time (`NextCardWidget`) and what Impact's App Intents run, apart from WidgetKit and
+/// App Intents.
 public enum NextCards {
+    /// What a widget or App Intent reads while Impact may not run: the days live Home fetches (entries past
+    /// midnight treat tomorrow as today, so its afternoon is needed) and Impact's state. Nil when Impact cannot read
+    /// the calendar.
+    @MainActor public static func read(now: Date, calendar: Calendar)
+        -> (events: [CalendarEvent], state: SurfaceState, engine: ImpactEngine)? {
+        let (_, _, end) = ImpactEngine.horizon(now: now, calendar: calendar)
+        guard EventKitCalendar.access == .granted,
+              let events = EventKitCalendar().events(from: calendar.startOfDay(for: now), to: end),
+              let engine = try? ImpactEngine() else { return nil }
+        return (events, SurfaceStore()?.load() ?? SurfaceState(completed: [:], suppressionRules: []), engine)
+    }
+
+    /// Home at `now` as Impact shows it, from the calendar and Impact's state; the ring counts that day's Impacts.
+    public static func home(events: [CalendarEvent], state: SurfaceState, now: Date, calendar: Calendar,
+                            engine: ImpactEngine) -> HomeSnapshot {
+        engine.home(events: events, now: now, calendar: calendar, completedCardIDs: state.completedCardIDs,
+                    impactsToday: state.completed.values.count { calendar.isDate($0, inSameDayAs: now) },
+                    suppressionRules: state.suppressionRules)
+    }
+
+    /// What "Join my next meeting" and "Directions to my next appointment" run: Home's Next up rule among today's
+    /// cards still to do with that action, so a meeting about to start wins over one ending that was joined
+    /// elsewhere. Tomorrow's wait for tomorrow, so a meeting is never joined the evening before.
+    public static func next(_ action: RunAction, in home: HomeSnapshot, state: SurfaceState, now: Date,
+                            calendar: Calendar) -> ImpactCard? {
+        let tomorrow = ImpactEngine.horizon(now: now, calendar: calendar).tomorrow
+        // Home lists every card of today, but with Next up first: back in start order, as the rule needs.
+        return ImpactEngine.nextUp(among: home.cards.filter { card in
+            card.start < tomorrow && !state.completed.keys.contains(card.id)
+                && card.confirmedActions.contains { action.matches($0.kind) }
+        }.sorted { ($0.start, $0.id) < ($1.start, $1.id) }, now: now)
+    }
+
     /// One moment of the widgets: from `date` on, they show `card` (Home's Next up, else the first card ahead,
     /// e.g. tomorrow's), or nothing; `soonOrNow` sets the entry's relevance (whether it changes anything is
     /// unverified: research/system-surfaces.md).
@@ -25,11 +60,7 @@ public enum NextCards {
         let events = events.filter {
             engine.card(for: $0, now: now, suppressionRules: state.suppressionRules) != nil
         }
-        let home = { (date: Date) in
-            engine.home(events: events, now: date, calendar: calendar, completedCardIDs: state.completedCardIDs,
-                        impactsToday: state.completed.values.count { calendar.isDate($0, inSameDayAs: date) },
-                        suppressionRules: state.suppressionRules)
-        }
+        let home = { (date: Date) in Self.home(events: events, state: state, now: date, calendar: calendar, engine: engine) }
         let first = home(now)
         let ahead = first.cards + first.liveActivityCards
         // In person: Soon (−30 min), start, expiry (15 minutes after the start, or the end if sooner). Online and

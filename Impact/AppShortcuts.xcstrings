@@ -1,0 +1,66 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Directions to my next appointment in ${applicationName}": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}로 다음 약속 길 안내"
+          }
+        }
+      }
+    },
+    "Get directions to my next appointment with ${applicationName}": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}에서 다음 약속까지 길 찾기"
+          }
+        }
+      }
+    },
+    "Join my next meeting in ${applicationName}": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}로 다음 회의 참여"
+          }
+        }
+      }
+    },
+    "Join my next meeting with ${applicationName}": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}에서 다음 회의 들어가기"
+          }
+        }
+      }
+    },
+    "What's my next event in ${applicationName}": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}에서 다음 일정 뭐야"
+          }
+        }
+      }
+    },
+    "What's next in ${applicationName}": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName} 다음 일정 알려줘"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

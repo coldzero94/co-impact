@@ -1,5 +1,4 @@
 #if os(iOS)
-import CalendarSources
 import ImpactEngine
 import SwiftUI
 import WidgetKit
@@ -69,14 +68,9 @@ struct NextCardProvider: TimelineProvider {
     /// one, or when Impact asks after a change. Without calendar access, one entry that says so.
     @MainActor static func entries(now: Date) -> [NextCardEntry] {
         let calendar = Calendar.autoupdatingCurrent
-        // The same days live Home fetches: entries past midnight treat tomorrow as today, so its afternoon is needed.
-        let (_, _, end) = ImpactEngine.horizon(now: now, calendar: calendar)
-        guard EventKitCalendar.access == .granted,
-              let events = EventKitCalendar().events(from: calendar.startOfDay(for: now), to: end),
-              let engine = try? ImpactEngine() else {
+        guard let (events, state, engine) = NextCards.read(now: now, calendar: calendar) else {
             return [NextCardEntry(date: now, shown: nil, canRead: false, relevance: nil)]
         }
-        let state = SurfaceStore()?.load() ?? SurfaceState(completed: [:], suppressionRules: [])
         return NextCards.moments(events: events, state: state, now: now, calendar: calendar, engine: engine).map { moment in
             let show = { (card: ImpactCard) in
                 NextCardEntry.Shown(title: card.title, keyFact: card.keyFact, symbol: card.symbol, start: card.start,
