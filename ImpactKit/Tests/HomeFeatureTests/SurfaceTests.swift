@@ -84,6 +84,35 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         #expect(moments.last?.date == at(24) && moments.last?.impactsToday == 0)
     }
 
+    @Test("Siri runs today's first card still to do with the action asked for, never tomorrow's")
+    func nextForIntents() throws {
+        var visit = meeting("Visit", 14)
+        visit.url = nil
+        visit.structuredPlace = Place(title: "Synthetic clinic", latitude: 37.5, longitude: 127)
+        // Done (9:30) was joined, so Review (11:00) is the next meeting; Visit is the next place.
+        let events = [meeting("Done", 9.5), meeting("Review", 11), visit, meeting("Tomorrow", 8, day: 1)]
+        let state = SurfaceState(completed: ["Done": at(9.6)], suppressionRules: [])
+        let home = NextCards.home(events: events, state: state, now: at(10), calendar: losAngeles, engine: engine)
+        #expect(NextCards.next(.join, in: home, state: state, now: at(10), calendar: losAngeles)?.id == "Review")
+        #expect(NextCards.next(.directions, in: home, state: state, now: at(10), calendar: losAngeles)?.id == "Visit")
+        // In the evening Home lists tomorrow's meeting, but it is not joined the evening before.
+        let evening = NextCards.home(events: events, state: state, now: at(20), calendar: losAngeles, engine: engine)
+        #expect(evening.cards.contains { $0.id == "Tomorrow" })
+        #expect(NextCards.next(.join, in: evening, state: state, now: at(20), calendar: losAngeles) == nil)
+    }
+
+    @Test("A run request runs the primary action, or the kind an App Intent asked for if the card has it")
+    func pickAction() throws {
+        var hybrid = meeting("Hybrid", 11)
+        hybrid.structuredPlace = Place(title: "Synthetic office", latitude: 37.5, longitude: 127)
+        let card = try #require(engine.card(for: hybrid, now: at(10)))
+        let online = try #require(engine.card(for: meeting("Review", 11), now: at(10)))
+        #expect(RunRequest(cardID: card.id).pick(from: card) == card.primaryAction)
+        #expect(RunRequest(cardID: card.id, action: .directions).pick(from: card).map { RunAction.directions.matches($0.kind) } == true)
+        #expect(RunRequest(cardID: card.id, action: .join).pick(from: card).map { RunAction.join.matches($0.kind) } == true)
+        #expect(RunRequest(cardID: online.id, action: .directions).pick(from: online) == nil)
+    }
+
     @Test("The widget rereads after the last change ahead, at least hourly, and in an hour with nothing ahead")
     func reloadDate() {
         #expect(NextCards.reloadDate(after: [at(9)], now: at(9)) == at(10))

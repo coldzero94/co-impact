@@ -20,8 +20,8 @@ public struct LiveHome: View {
     @State private var noCalendars = false
     @State private var startFailure: String?
     @State private var requestFailed = false
-    /// A widget's or Live Activity's button opened Impact to run this card's primary action.
-    @State private var runCardID: String?
+    /// A widget's or Live Activity's button, or an App Intent, asked Impact to run this card's action.
+    @State private var runRequest: RunRequest?
     /// The secret Impact's own run links carry (`RunToken`).
     @State private var runToken = RunToken.load()
     @Environment(\.scenePhase) private var scenePhase
@@ -35,7 +35,7 @@ public struct LiveHome: View {
                 if noCalendars {
                     NoCalendars()
                 } else if let model {
-                    HomeView(model: model, runCardID: $runCardID)
+                    HomeView(model: model, runRequest: $runRequest)
                 } else if let startFailure {
                     Text(startFailure).padding()
                 } else {
@@ -66,8 +66,8 @@ public struct LiveHome: View {
             }
         }
         .onChange(of: scenePhase) {
-            // A run link waits only while Impact is coming to the front, never for a later visit.
-            if scenePhase == .background { runCardID = nil }
+            // A run request waits only while Impact is coming to the front, never for a later visit.
+            if scenePhase == .background { runRequest = nil }
             guard scenePhase == .active else { return }
             access = EventKitCalendar.access // the user may have changed it in Settings
             refresh()
@@ -78,14 +78,13 @@ public struct LiveHome: View {
                 if LiveCard.isRunURL(url) { homeLog.notice("A run link without Impact's token was ignored") }
                 return
             }
-            // A widget's or Live Activity's button can resume Impact from hours ago: bring Home to the present
-            // first, so the action counts at the time it runs and finds the card as the calendar has it now.
-            refresh()
-            guard model != nil, !noCalendars else {
-                homeLog.notice("A run link arrived while Home cannot show; dropped")
-                return
-            }
-            runCardID = id
+            run(RunRequest(cardID: id))
+        }
+        // Siri and Shortcuts: an App Intent brought Impact to the front and left its request here.
+        .onChange(of: RunRequests.shared.pending, initial: true) {
+            guard let request = RunRequests.shared.pending else { return }
+            RunRequests.shared.pending = nil
+            run(request)
         }
         #if os(iOS)
         // Scheduled Live Activities carry each card's one Now alert (PRODUCT.md → Interruptions). Unwanted ones end
@@ -127,6 +126,17 @@ public struct LiveHome: View {
     }
 
     /// Fetches today and the six days after it (`ImpactEngine.horizon`) and rebuilds Home at the current time.
+    /// A surface's button or an App Intent can resume Impact from hours ago: bring Home to the present first, so
+    /// the action counts at the time it runs and finds the card as the calendar has it now.
+    private func run(_ request: RunRequest) {
+        refresh()
+        guard model != nil, !noCalendars else {
+            homeLog.notice("A run request arrived while Home cannot show; dropped")
+            return
+        }
+        runRequest = request
+    }
+
     private func refresh() {
         guard access == .granted else { return }
         let now = Date.now

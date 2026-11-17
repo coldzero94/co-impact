@@ -315,3 +315,4 @@ AI is optional enrichment (P5, P6). Without Apple Intelligence the product is co
 | D20 | Daily log | Built from Impacts, optional one line, on device only; Foundation Models summary and Journaling Suggestions later | Proposed |
 | D21 | Positioning and accounts | Work and personal goals in one app; personal Google accounts through iOS Settings, no Google sign-in (D7) | Proposed |
 | D22 | Launch timing | No deadline, quality first; the new year is a marketing moment, not a release date | Decided (2026-11-09) |
+| D23 | Siri language | App Shortcut phrases and spoken answers in English and Korean; the app's screens stay English until the app is localized | Decided (2026-11-17) |
