@@ -89,8 +89,9 @@ public final class HomeModel {
                             suppressionRules: dismissals.rules, runToken: runToken)
     }
 
-    /// The card a run request names: one Home lists. Surfaces offer only today's cards, and a Live Activity's
-    /// only during its Now phase, when Home lists it.
+    /// The card a run request names: one Home lists. The widgets, the control, and the App Shortcuts offer only
+    /// today's cards; a Live Activity's button, from its Now phase on, a card Home lists by then (tomorrow
+    /// morning's from 18:00).
     func runnableCard(id: String) -> ImpactCard? {
         snapshot.cards.first { $0.id == id }
     }

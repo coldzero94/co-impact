@@ -78,7 +78,8 @@ struct NextCardProvider: TimelineProvider {
                                     isToday: calendar.isDate(card.start, inSameDayAs: moment.date),
                                     actionLabel: card.primaryAction?.kind.label ?? "",
                                     runURL: state.runToken.flatMap {
-                                        moment.runnable ? LiveCard.runURL(cardID: card.id, token: $0) : nil
+                                        moment.runnable && card.id == moment.card?.id
+                                            ? LiveCard.runURL(cardID: card.id, token: $0) : nil
                                     })
             }
             let shown = moment.card.map(show)
