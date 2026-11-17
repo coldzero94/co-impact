@@ -22,7 +22,8 @@ public struct NextCardWidget: Widget {
     }
 }
 
-/// What one moment of the widget shows: Home's Next up, else the first card ahead (tomorrow's), else nothing.
+/// What one moment of the widget shows: the card that runs now (`NextCards.runnable`; by day Home's Next up), else
+/// the first card ahead (tomorrow's), else nothing.
 struct NextCardEntry: TimelineEntry {
     struct Shown: Hashable {
         let title: String
@@ -31,7 +32,7 @@ struct NextCardEntry: TimelineEntry {
         let start: Date
         let isToday: Bool
         /// The primary action's label and the link that runs it through Impact: nil without the run token, and
-        /// unless the card is today's Next up (`NextCards.Moment.runnable`).
+        /// unless the card runs now (`NextCards.Moment.runnable`).
         var actionLabel = ""
         var runURL: URL?
     }
