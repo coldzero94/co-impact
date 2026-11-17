@@ -86,6 +86,11 @@ public struct LiveHome: View {
             RunRequests.shared.pending = nil
             run(request)
         }
+        // PRODUCT.md → Permissions: notifications are asked the first time a card reaches its Now phase while
+        // Impact is open (Home refreshes each minute, so this sees it), if not asked before.
+        .task(id: cardInNow) {
+            if cardInNow { await NowAlerts.askOnce() }
+        }
         #if os(iOS)
         // Scheduled Live Activities carry each card's one Now alert (PRODUCT.md → Interruptions). Unwanted ones end
         // as soon as the wanted cards change, in front or not; missing ones are requested each time Impact comes to
@@ -123,6 +128,10 @@ public struct LiveHome: View {
             requestFailed = true
             access = EventKitCalendar.access
         }
+    }
+
+    private var cardInNow: Bool {
+        scenePhase == .active && model?.snapshot.cards.contains { ImpactEngine.nowPhase(of: $0).contains(.now) } == true
     }
 
     /// A surface's button or an App Intent can resume Impact from hours ago: bring Home to the present first, so

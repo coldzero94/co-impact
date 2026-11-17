@@ -1,4 +1,5 @@
 import HomeFeature
+import LiveSurfaces
 import SwiftUI
 
 @main
@@ -6,6 +7,11 @@ struct ImpactApp: App {
     #if DEBUG
     @State private var fixture = Self.fixtureHour.map { hour in Result { try HomeFixtures.sample(at: hour) } }
     #endif
+
+    init() {
+        // A tap on a fallback Now alert can launch Impact: its handler must be in place first.
+        NowAlerts.handleTaps()
+    }
 
     var body: some Scene {
         WindowGroup {
