@@ -31,7 +31,7 @@ struct NextCardEntry: TimelineEntry {
         let start: Date
         let isToday: Bool
         /// The primary action's label and the link that runs it through Impact: nil without the run token, and
-        /// unless the card is today's Next up (`NextCards.Moment.runnable`).
+        /// unless the card runs now (`NextCards.Moment.runnable`).
         var actionLabel = ""
         var runURL: URL?
     }

@@ -25,15 +25,28 @@ public enum NextCards {
                     suppressionRules: state.suppressionRules)
     }
 
-    /// What "Join my next meeting" and "Directions to my next appointment" run: Home's Next up rule among today's
-    /// cards still to do with that action, so a meeting about to start wins over one ending that was joined
-    /// elsewhere. Tomorrow's wait for tomorrow, so a meeting is never joined the evening before.
+    /// Whether a surface may run `card` now: one of today's, or one already in its Soon or Now phase (a meeting
+    /// just after midnight). Another day's card otherwise waits for its day, so a meeting is never joined the
+    /// evening before (owner, 2026-11-17).
+    public static func runsNow(_ card: ImpactCard, now: Date, calendar: Calendar) -> Bool {
+        card.start < ImpactEngine.horizon(now: now, calendar: calendar).tomorrow
+            || ImpactEngine.isSoonOrNow(card, now: now)
+    }
+
+    /// What the widgets' button and the Next up control run: Home's Next up, else the first card ahead if it
+    /// already runs (`runsNow`), as the Live Activity of a meeting at 00:05 does from 23:50.
+    public static func runnable(in home: HomeSnapshot, now: Date, calendar: Calendar) -> ImpactCard? {
+        home.nextUp ?? home.liveActivityCards.first.flatMap { runsNow($0, now: now, calendar: calendar) ? $0 : nil }
+    }
+
+    /// What "Join my next meeting" and "Directions to my next appointment" run: Home's Next up rule among the
+    /// cards still to do with that action that run now (`runsNow`), so a meeting about to start wins over one
+    /// ending that was joined elsewhere.
     public static func next(_ action: RunAction, in home: HomeSnapshot, state: SurfaceState, now: Date,
                             calendar: Calendar) -> ImpactCard? {
-        let tomorrow = ImpactEngine.horizon(now: now, calendar: calendar).tomorrow
         // Home lists every card of today, but with Next up first: back in start order, as the rule needs.
-        return ImpactEngine.nextUp(among: home.cards.filter { card in
-            card.start < tomorrow && !state.completed.keys.contains(card.id)
+        ImpactEngine.nextUp(among: home.cards.filter { card in
+            runsNow(card, now: now, calendar: calendar) && !state.completed.keys.contains(card.id)
                 && card.confirmedActions.contains { action.matches($0.kind) }
         }.sorted { ($0.start, $0.id) < ($1.start, $1.id) }, now: now)
     }
@@ -45,8 +58,8 @@ public enum NextCards {
         public let date: Date
         public let card: ImpactCard?
         public let soonOrNow: Bool
-        /// Whether `card` is today's Next up, whose primary action the widgets' button runs; another day's card
-        /// waits for its day (owner, 2026-11-17), while a meeting running past midnight still runs.
+        /// Whether the widgets' button runs `card` (`NextCards.runnable`): today's Next up, a meeting running past
+        /// midnight included, or the first card ahead once in its Soon or Now phase; else it waits for its day.
         public let runnable: Bool
         /// The next card still to do after `card`: the medium widget's Later column.
         public let later: ImpactCard?
@@ -81,7 +94,8 @@ public enum NextCards {
                 .min { ($0.start, $0.id) < ($1.start, $1.id) }
             return Moment(date: date, card: card,
                           soonOrNow: card.map { ImpactEngine.isSoonOrNow($0, now: date) } ?? false,
-                          runnable: snapshot.nextUp != nil,
+                          runnable: card.map { Self.runnable(in: snapshot, now: date, calendar: calendar)?.id == $0.id }
+                              ?? false,
                           later: later,
                           impactsToday: snapshot.impactsToday, ringSegments: snapshot.ringSegments)
         }

@@ -24,9 +24,9 @@ public struct NextUpControl: ControlWidget {
     }
 }
 
-/// The Next up control's action: brings Impact to the front, then leaves a run request for Home's Next up, which
-/// live Home runs as it runs a run link. Only today's: with no card left today, Impact just opens (owner,
-/// 2026-11-17), so a meeting is never joined the evening before.
+/// The Next up control's action: brings Impact to the front, then leaves a run request for the card that runs now
+/// (`NextCards.runnable`: today's Next up, or a meeting just after midnight once in its Soon phase), which live
+/// Home runs as it runs a run link. With none, Impact just opens, so a meeting is never joined the evening before.
 public struct RunNextUpIntent: AppIntent {
     public static let title: LocalizedStringResource = "Run Next Up"
     public static let description = IntentDescription("Opens Impact and runs today's next event's main action.")
@@ -40,7 +40,8 @@ public struct RunNextUpIntent: AppIntent {
         let now = Date.now
         let calendar = Calendar.autoupdatingCurrent
         if let (events, state, engine) = NextCards.read(now: now, calendar: calendar),
-           let card = NextCards.home(events: events, state: state, now: now, calendar: calendar, engine: engine).nextUp {
+           let card = NextCards.runnable(in: NextCards.home(events: events, state: state, now: now, calendar: calendar,
+                                                            engine: engine), now: now, calendar: calendar) {
             RunRequests.shared.pending = RunRequest(cardID: card.id)
         }
         return .result()

@@ -139,6 +139,15 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         let evening = NextCards.moments(events: [meeting("Tomorrow", 8, day: 1)], state: none, now: at(20),
                                         calendar: losAngeles, engine: engine).first
         #expect(evening?.card?.id == "Tomorrow" && evening?.runnable == false)
+        // A meeting at 00:05 is in its Soon phase from 23:50: it runs at 23:55, as its Live Activity does.
+        let soon = NextCards.moments(events: [meeting("Early", 1.0 / 12, day: 1)], state: none, now: at(23 + 55.0 / 60),
+                                     calendar: losAngeles, engine: engine).first
+        #expect(soon?.card?.id == "Early" && soon?.runnable == true)
+        let soonHome = NextCards.home(events: [meeting("Early", 1.0 / 12, day: 1)], state: none,
+                                      now: at(23 + 55.0 / 60), calendar: losAngeles, engine: engine)
+        #expect(NextCards.runnable(in: soonHome, now: at(23 + 55.0 / 60), calendar: losAngeles)?.id == "Early")
+        let joined = NextCards.next(.join, in: soonHome, state: none, now: at(23 + 55.0 / 60), calendar: losAngeles)
+        #expect(joined?.id == "Early")
         // 23:30 yesterday to 00:30: at 00:05 it is still today's Next up.
         let late = NextCards.moments(events: [meeting("Call", 23.5, day: -1)], state: none, now: at(1.0 / 12),
                                      calendar: losAngeles, engine: engine).first
