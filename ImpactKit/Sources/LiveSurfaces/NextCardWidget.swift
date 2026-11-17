@@ -30,7 +30,8 @@ struct NextCardEntry: TimelineEntry {
         let symbol: String
         let start: Date
         let isToday: Bool
-        /// The primary action's label and the link that runs it through Impact (nil without the run token).
+        /// The primary action's label and the link that runs it through Impact: nil without the run token, and
+        /// unless the card is today's Next up (`NextCards.Moment.runnable`).
         var actionLabel = ""
         var runURL: URL?
     }
@@ -76,7 +77,10 @@ struct NextCardProvider: TimelineProvider {
                 NextCardEntry.Shown(title: card.title, keyFact: card.keyFact, symbol: card.symbol, start: card.start,
                                     isToday: calendar.isDate(card.start, inSameDayAs: moment.date),
                                     actionLabel: card.primaryAction?.kind.label ?? "",
-                                    runURL: state.runToken.map { LiveCard.runURL(cardID: card.id, token: $0) })
+                                    runURL: state.runToken.flatMap {
+                                        moment.runnable && card.id == moment.card?.id
+                                            ? LiveCard.runURL(cardID: card.id, token: $0) : nil
+                                    })
             }
             let shown = moment.card.map(show)
             let relevance = moment.card.map {

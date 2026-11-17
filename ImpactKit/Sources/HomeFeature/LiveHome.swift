@@ -80,7 +80,7 @@ public struct LiveHome: View {
             }
             run(RunRequest(cardID: id))
         }
-        // Siri and Shortcuts: an App Intent brought Impact to the front and left its request here.
+        // Siri, Shortcuts, and the Next up control: an App Intent brought Impact to the front and left its request.
         .onChange(of: RunRequests.shared.pending, initial: true) {
             guard let request = RunRequests.shared.pending else { return }
             RunRequests.shared.pending = nil
