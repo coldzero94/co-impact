@@ -86,6 +86,8 @@ Often the most common state. It must feel like a result, not an error (P7).
 
 Executing an action marks it done in place (checkmark, subdued), except a primary action before the card's Soon phase, which only opens its target (PRODUCT.md → Completion semantics). No confirmation dialogs. Done actions stay tappable (to rejoin a meeting, for example). If the system cannot open an action, an alert says so ("Maps didn't open") and the action stays not done.
 
+Built in step 8: below the details, a "Suggested" section with `sparkles` lists up to two next steps, each above its quote from the notes in italics; VoiceOver reads "Suggested: … From the notes: …". It appears only when the on-device model returns steps whose quotes are in the notes, after the detail opens (PRODUCT.md → AI scope); otherwise nothing shows.
+
 Built in step 7: below any place, Details shows the organizer unless it is the user, the other people invited (not rooms or equipment; up to three names, else two and a count; a guest with neither a name nor an email address shows as "Unnamed guest", and such an organizer as "Organized by an unnamed guest", owner 2026-11-15), and up to six lines of the notes, as the calendar has them. Not built yet: Suggested, with Foundation Models (step 8).
 
 ### 5. Goal setup (sheet)

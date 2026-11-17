@@ -1,15 +1,17 @@
 import ImpactEngine
+import ImpactIntelligence
 import LiveSurfaces
 import SwiftUI
 
-/// Card detail (UX.md → Card detail): header, answer, the card's actions, and details.
-/// shortcut: no Suggested section until Foundation Models (step 8).
+/// Card detail (UX.md → Card detail): header, answer, the card's actions, details, and, when the on-device model
+/// finds any, up to two suggested next steps from the notes.
 struct CardDetailView: View {
     let card: ImpactCard
     let model: HomeModel
     /// Runs the action; the closure gets the kind when the system could not open it.
     let run: (ImpactAction, @escaping (ActionKind) -> Void) -> Void
     @State private var failed: ActionKind?
+    @State private var suggestions: [NextStep] = []
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
@@ -28,6 +30,7 @@ struct CardDetailView: View {
                         }
                     }
                     details
+                    suggested
                 }
                 .padding(20)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -40,6 +43,10 @@ struct CardDetailView: View {
         }
         // PRODUCT.md → Permissions: notifications are asked from the first card's detail, if not asked before.
         .task { await NowAlerts.askOnce() }
+        .task(id: card.notes) {
+            guard let notes = card.notes else { return }
+            suggestions = await Suggestions.generate(title: card.title, notes: notes)
+        }
         .actionFailureAlert($failed)
     }
 
@@ -71,6 +78,25 @@ struct CardDetailView: View {
                 if let notes {
                     detail(notes, "note.text").lineLimit(6).font(.subheadline).foregroundStyle(.secondary)
                         .accessibilityLabel("Notes: " + notes)
+                }
+            }
+        }
+    }
+
+    /// Inferred, so in their own section with `sparkles` and "Suggested", never among facts or actions, each with
+    /// the words of the notes it comes from (UX.md → Confirmed vs. inferred).
+    @ViewBuilder
+    private var suggested: some View {
+        if !suggestions.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Suggested", systemImage: "sparkles").font(.headline)
+                ForEach(suggestions, id: \.self) { step in
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(step.text)
+                        Text("“\(step.quote)”").font(.footnote).italic().foregroundStyle(.secondary)
+                    }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Suggested: \(step.text). From the notes: \(step.quote)")
                 }
             }
         }
