@@ -30,13 +30,13 @@ public enum LiveActivities {
         // A newer sync replaced this one, or Impact left the front, while it waited: only one sync requests, and only
         // in front.
         guard request, !Task.isCancelled else {
-            if !request { await NowAlerts.remove(except: Set(cards.map(\.cardID))) }
+            if !request { await NowAlerts.remove(except: Set(cards.map(NowAlerts.identifier))) }
             return
         }
         let (startNow, schedule) = LiveCard.toRequest(wanted: cards, existing: existing, now: .now)
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-            liveLog.notice("Live Activities are off for Impact: \(schedule.count, privacy: .public) cards get the fallback alert")
-            await NowAlerts.set(schedule)
+            liveLog.notice("Live Activities are off for Impact: \(schedule.count, privacy: .public) cards need the fallback alert")
+            await NowAlerts.set(schedule, keeping: startNow)
             return
         }
         var fallback: [LiveCard] = []
@@ -57,7 +57,7 @@ public enum LiveActivities {
                 if scheduled { fallback.append(card) }
             }
         }
-        await NowAlerts.set(fallback)
+        await NowAlerts.set(fallback, keeping: startNow)
     }
 }
 

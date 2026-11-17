@@ -7,8 +7,14 @@ import UserNotifications
 /// the card's primary action through Impact, as the Live Activity's button does (owner, 2026-11-17).
 @MainActor
 public enum NowAlerts {
-    /// A pending fallback alert's identifier: this prefix and the card ID.
+    /// Every fallback alert's identifier starts with this.
     nonisolated static let prefix = "now."
+
+    /// A fallback alert's identifier: the card ID and its Now phase's start, so a card moved to another time drops
+    /// its old alert even where Impact only removes (the background), as its changed Live Activity ends.
+    nonisolated static func identifier(for card: LiveCard) -> String {
+        prefix + card.cardID + "@" + String(Int(card.nowPhase.lowerBound.timeIntervalSince1970))
+    }
 
     /// Asks for notification permission if it was never asked (PRODUCT.md → Permissions: the first time a card
     /// reaches its Now phase while Impact is open, or from the first card's detail); otherwise does nothing.
@@ -22,16 +28,23 @@ public enum NowAlerts {
         }
     }
 
-    /// Makes the pending fallback alerts exactly `cards`' (their Live Activities could not be scheduled): adds or
-    /// updates theirs and removes the rest, so a card done, dismissed, changed, or scheduled after all keeps none.
-    static func set(_ cards: [LiveCard]) async {
+    /// Makes the fallback alerts exactly `cards`' (their Live Activities could not be scheduled): adds or updates
+    /// theirs and removes the rest, so a card done, dismissed, changed, or scheduled after all keeps none. The alerts
+    /// of `inNow`, cards whose Now phase has just begun, stay: one may be due this instant.
+    static func set(_ cards: [LiveCard], keeping inNow: [LiveCard]) async {
         let center = UNUserNotificationCenter.current()
-        await remove(except: Set(cards.map(\.cardID)))
+        await remove(except: Set((cards + inNow).map(identifier)))
         // Without permission an add fails (seen in the simulator): wait for it instead of failing on every sync.
         let status = await center.notificationSettings().authorizationStatus
-        guard status != .notDetermined, status != .denied else { return }
+        guard status != .notDetermined, status != .denied else {
+            if !cards.isEmpty {
+                liveAlertsLog.notice("Notifications are not allowed: \(cards.count, privacy: .public) cards get no Now alert")
+            }
+            return
+        }
         for card in cards {
-            // A newer sync replaced this one while it waited: it sets the alerts instead.
+            // A newer sync replaced this one while it waited: it takes over (from the background it only removes,
+            // and the next sync in front adds what is missing).
             guard !Task.isCancelled else { return }
             do {
                 try await center.add(request(for: card, now: .now))
@@ -41,13 +54,16 @@ public enum NowAlerts {
         }
     }
 
-    /// Removes the pending fallback alerts of cards not in `cardIDs`. From the background, where Impact cannot
-    /// request Live Activities, this is all it does: the alerts of cards still wanted stay.
-    static func remove(except cardIDs: Set<String>) async {
+    /// Removes the fallback alerts, pending or delivered, whose identifiers (`identifier(for:)`) are not in `kept`.
+    /// From the background, where Impact cannot request Live Activities, this is all it does, with the wanted
+    /// cards' identifiers: their alerts stay.
+    static func remove(except kept: Set<String>) async {
         let center = UNUserNotificationCenter.current()
-        let stale = await center.pendingNotificationRequests().map(\.identifier)
-            .filter { $0.hasPrefix(prefix) && !cardIDs.contains(String($0.dropFirst(prefix.count))) }
-        center.removePendingNotificationRequests(withIdentifiers: stale)
+        let isStale = { (id: String) in id.hasPrefix(prefix) && !kept.contains(id) }
+        center.removePendingNotificationRequests(withIdentifiers: await center.pendingNotificationRequests()
+            .map(\.identifier).filter(isStale))
+        center.removeDeliveredNotifications(withIdentifiers: await center.deliveredNotifications()
+            .map(\.request.identifier).filter(isStale))
     }
 
     /// The alert for `card`: its title and answer, as the Live Activity's start alert shows them, Time Sensitive
@@ -61,7 +77,7 @@ public enum NowAlerts {
         content.userInfo = ["card": card.cardID]
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, card.nowPhase.lowerBound.timeIntervalSince(now)),
                                                         repeats: false)
-        return UNNotificationRequest(identifier: prefix + card.cardID, content: content, trigger: trigger)
+        return UNNotificationRequest(identifier: identifier(for: card), content: content, trigger: trigger)
     }
 
     /// Lets a tap on a fallback alert run its card's primary action (`RunRequests`, as a run link does), and shows

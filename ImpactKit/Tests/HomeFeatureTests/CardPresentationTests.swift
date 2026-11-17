@@ -98,7 +98,14 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         let live = try #require(LiveCard(zoom, runToken: "secret"))
         let now = live.nowPhase.lowerBound.addingTimeInterval(-3_600)
         let request = NowAlerts.request(for: live, now: now)
-        #expect(request.identifier == NowAlerts.prefix + zoom.id)
+        #expect(request.identifier == NowAlerts.identifier(for: live) && request.identifier.hasPrefix(NowAlerts.prefix))
+        // Moved to another time, the card's alert gets another identifier, so the old one is removed.
+        let later = live.start.addingTimeInterval(3_600)
+        let moved = LiveCard(cardID: live.cardID, title: live.title, answer: live.answer, symbol: live.symbol,
+                             actionLabel: live.actionLabel, start: later,
+                             nowPhase: later.addingTimeInterval(-600) ..< later.addingTimeInterval(600),
+                             runToken: "secret")
+        #expect(NowAlerts.identifier(for: moved) != request.identifier)
         #expect(request.content.title == zoom.title && request.content.body == "Zoom link ready")
         #expect(request.content.interruptionLevel == .timeSensitive)
         #expect(request.content.userInfo["card"] as? String == zoom.id)
