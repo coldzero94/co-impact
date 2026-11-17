@@ -102,6 +102,7 @@ public struct LiveHome: View {
                   initial: true) { _, sync in
             if let state = sync.state { SurfaceStore()?.save(state) }
             WidgetCenter.shared.reloadTimelines(ofKind: NextCardWidget.kind)
+            ControlCenter.shared.reloadControls(ofKind: NextUpControl.kind)
         }
         #endif
     }

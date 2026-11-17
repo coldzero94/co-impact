@@ -8,5 +8,6 @@ struct ImpactWidgets: WidgetBundle {
     var body: some Widget {
         LiveCardActivity()
         NextCardWidget()
+        NextUpControl()
     }
 }
