@@ -47,7 +47,9 @@ struct CardDetailView: View {
             // Changed or removed notes take their steps with them: quotes always come from the notes shown.
             suggestions = []
             guard let notes = card.notes else { return }
-            suggestions = await Suggestions.generate(title: card.title, notes: notes)
+            let steps = await Suggestions.generate(title: card.title, notes: notes)
+            // Notes changed while the model answered: the newer task shows its own steps.
+            if !Task.isCancelled { suggestions = steps }
         }
         .actionFailureAlert($failed)
     }
@@ -94,7 +96,7 @@ struct CardDetailView: View {
                 Label("Suggested", systemImage: "sparkles").font(.headline)
                 ForEach(suggestions, id: \.self) { step in
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(step.text)
+                        Text(step.text).lineLimit(3)
                         Text("“\(step.quote)”").font(.footnote).italic().foregroundStyle(.secondary)
                     }
                     .accessibilityElement(children: .ignore)

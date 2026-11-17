@@ -24,7 +24,8 @@ import Testing
         #expect(Suggestions.grounded([NextStep(text: " ", quote: "Bring the signed NDA."),
                                       NextStep(text: "Bring your laptop", quote: "the")], in: notes).isEmpty)
         let twice = NextStep(text: "Bring the NDA", quote: "Bring the signed NDA.")
-        #expect(Suggestions.grounded([twice, twice], in: notes) == [twice])
+        #expect(Suggestions.grounded([twice, NextStep(text: "Bring the NDA", quote: "the signed NDA")], in: notes)
+                == [twice])
     }
 
     @Test("Notes are worth asking about only with a few words beyond a link")

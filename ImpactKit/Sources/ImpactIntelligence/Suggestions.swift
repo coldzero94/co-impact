@@ -14,27 +14,27 @@ public struct NextStep: Hashable, Sendable {
 /// Optional enrichment (P5): without the model, for notes in a language it does not support, or on any error, there
 /// are none and the card is complete without them.
 public enum Suggestions {
-    /// The start of the notes the model reads, so one request fits its context (ARCHITECTURE.md → Foundation Models).
+    /// The start of the notes the model reads, so one request stays well within its context.
     static let notesLimit = 2_000
 
     /// Notes with enough text to act on: a few words beyond a link (PRODUCT.md → AI scope, When).
-    /// shortcut: counts space-separated words, so Japanese or Chinese notes are never asked; count letters if those
-    /// users come.
+    /// shortcut: words are split on spaces, here and in `grounded`'s two-word quotes, so Japanese, Chinese, or Thai
+    /// notes get no steps (most are not asked, and the rest lose their quotes); count characters if those users come.
     static func worthAsking(_ notes: String) -> Bool {
         notes.split(whereSeparator: \.isWhitespace).count { !$0.contains("://") } >= 4
     }
 
-    /// The steps to show: at most two different ones, each with text and a quote of at least two words found
-    /// verbatim in `notes` (quotation marks and spaces around the quote aside), so a stray word like "the" justifies
-    /// nothing; a step whose quote is not found is discarded.
+    /// The steps to show: at most two with different text, each with a quote of at least two words found verbatim
+    /// in `notes` (quotation marks and spaces around the quote aside), so a stray word like "the" justifies nothing;
+    /// a step whose quote is not found is discarded.
     static func grounded(_ steps: [NextStep], in notes: String) -> [NextStep] {
         let marks = CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "\"'“”‘’「」『』"))
-        var seen: Set<NextStep> = []
+        var seen: Set<String> = []
         let kept = steps.compactMap { raw -> NextStep? in
             let step = NextStep(text: raw.text.trimmingCharacters(in: .whitespacesAndNewlines),
                                 quote: raw.quote.trimmingCharacters(in: marks))
             guard !step.text.isEmpty, step.quote.split(whereSeparator: \.isWhitespace).count >= 2,
-                  notes.contains(step.quote), seen.insert(step).inserted else { return nil }
+                  notes.contains(step.quote), seen.insert(step.text).inserted else { return nil }
             return step
         }
         return Array(kept.prefix(2))
@@ -57,17 +57,27 @@ public enum Suggestions {
     /// The model's grounded answer, or nil when it gave none: unavailable, an unsupported language, or an error.
     @MainActor private static func ask(title: String, notes: String) async -> [NextStep]? {
         let model = SystemLanguageModel.default
-        guard case .available = model.availability else { return nil }
+        guard case .available = model.availability else {
+            intelligenceLog.notice("No suggestions: the model is \(String(describing: model.availability), privacy: .public)")
+            return nil
+        }
         // The notes' language decides (PRODUCT.md → AI scope, Language); one the model does not support is skipped.
         guard let language = NLLanguageRecognizer.dominantLanguage(for: notes),
-              model.supportsLocale(Locale(identifier: language.rawValue)) else { return nil }
+              model.supportsLocale(Locale(identifier: language.rawValue)) else {
+            intelligenceLog.notice("No suggestions: the notes' language is not supported")
+            return nil
+        }
         let session = LanguageModelSession(model: model, instructions: instructions)
         do {
             // The notes come from the event's organizer: they go in the prompt, never in the instructions.
             let plan = try await session.respond(to: "Event: \(title)\n\nNotes:\n\(notes)", generating: Plan.self).content
-            return grounded(plan.steps.map { NextStep(text: $0.text, quote: $0.quote) }, in: notes)
+            let steps = grounded(plan.steps.map { NextStep(text: $0.text, quote: $0.quote) }, in: notes)
+            // How often quotes hold up on a device (ARCHITECTURE.md → To verify), without content.
+            intelligenceLog.notice("Suggestions: \(steps.count, privacy: .public) of \(plan.steps.count, privacy: .public) steps grounded")
+            return steps
         } catch {
-            intelligenceLog.notice("No suggestions: \(String(describing: type(of: error)), privacy: .public)")
+            // Type and code only: a description could carry the notes.
+            intelligenceLog.notice("No suggestions: \(String(describing: type(of: error)), privacy: .public) \((error as NSError).code, privacy: .public)")
             return nil
         }
     }
