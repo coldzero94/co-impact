@@ -6,7 +6,8 @@ import ImpactEngine
 /// App Intents.
 public enum NextCards {
     /// What a widget or App Intent reads while Impact may not run: the days live Home fetches (entries past
-    /// midnight treat tomorrow as today, so its afternoon is needed) and Impact's state. Nil without calendar access.
+    /// midnight treat tomorrow as today, so its afternoon is needed) and Impact's state. Nil when Impact cannot read
+    /// the calendar.
     @MainActor public static func read(now: Date, calendar: Calendar)
         -> (events: [CalendarEvent], state: SurfaceState, engine: ImpactEngine)? {
         let (_, _, end) = ImpactEngine.horizon(now: now, calendar: calendar)
@@ -30,11 +31,11 @@ public enum NextCards {
     public static func next(_ action: RunAction, in home: HomeSnapshot, state: SurfaceState, now: Date,
                             calendar: Calendar) -> ImpactCard? {
         let tomorrow = ImpactEngine.horizon(now: now, calendar: calendar).tomorrow
-        // Home lists every card of today, in start order.
+        // Home lists every card of today, but with Next up first: back in start order, as the rule needs.
         return ImpactEngine.nextUp(among: home.cards.filter { card in
             card.start < tomorrow && !state.completed.keys.contains(card.id)
                 && card.confirmedActions.contains { action.matches($0.kind) }
-        }, now: now)
+        }.sorted { ($0.start, $0.id) < ($1.start, $1.id) }, now: now)
     }
 
     /// One moment of the widgets: from `date` on, they show `card` (Home's Next up, else the first card ahead,

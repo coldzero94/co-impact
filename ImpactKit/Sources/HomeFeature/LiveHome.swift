@@ -125,7 +125,6 @@ public struct LiveHome: View {
         }
     }
 
-    /// Fetches today and the six days after it (`ImpactEngine.horizon`) and rebuilds Home at the current time.
     /// A surface's button or an App Intent can resume Impact from hours ago: bring Home to the present first, so
     /// the action counts at the time it runs and finds the card as the calendar has it now.
     private func run(_ request: RunRequest) {
@@ -137,6 +136,7 @@ public struct LiveHome: View {
         runRequest = request
     }
 
+    /// Fetches today and the six days after it (`ImpactEngine.horizon`) and rebuilds Home at the current time.
     private func refresh() {
         guard access == .granted else { return }
         let now = Date.now

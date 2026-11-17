@@ -123,8 +123,8 @@ extension ImpactEngine {
         card.start.addingTimeInterval(-10 * 60) ..< card.start.addingTimeInterval(card.kind == .inPerson ? 0 : 10 * 60)
     }
 
-    /// Next up among cards still to do, in start order: the first in its Soon or Now phase, else the last one
-    /// already started (a late joiner keeps it), else the first ahead.
+    /// Next up among cards still to do, which must come in start order: the first in its Soon or Now phase, else
+    /// the last one already started (a late joiner keeps it), else the first ahead.
     public static func nextUp(among toDo: [ImpactCard], now: Date) -> ImpactCard? {
         toDo.first { isSoonOrNow($0, now: now) } ?? toDo.last { $0.start <= now } ?? toDo.first
     }

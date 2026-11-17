@@ -18,6 +18,7 @@ public enum RunAction: Sendable, Hashable {
 /// Intent asked for.
 public struct RunRequest: Sendable, Hashable {
     public let cardID: String
+    /// The kind to run; nil runs the card's primary action.
     public let action: RunAction?
 
     public init(cardID: String, action: RunAction? = nil) {

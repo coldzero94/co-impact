@@ -8,7 +8,7 @@ import LiveSurfaces
 // Shortcuts table, in English and Korean. Not the default Localizable table: package views' `Text` looks up the
 // main bundle's, so a shared key would turn that line of an English screen Korean.
 
-/// A title or answer from the Shortcuts table.
+/// An answer from the Shortcuts table.
 private func shortcuts(_ value: String.LocalizationValue) -> LocalizedStringResource {
     LocalizedStringResource(value, table: "Shortcuts")
 }
@@ -53,7 +53,8 @@ struct WhatsNextIntent: AppIntent {
     }
 }
 
-/// "Join my next meeting in Impact": today's first meeting still to do with a link, joined through Impact.
+/// "Join my next meeting in Impact": Home's Next up among today's cards still to do with a meeting link, joined
+/// through Impact.
 struct JoinNextMeetingIntent: AppIntent {
     static let title = LocalizedStringResource("Join Next Meeting", table: "Shortcuts")
     static let description = IntentDescription(LocalizedStringResource(
@@ -70,7 +71,8 @@ struct JoinNextMeetingIntent: AppIntent {
     }
 }
 
-/// "Directions to my next appointment in Impact": today's first in-person card still to do, routed through Impact.
+/// "Directions to my next appointment in Impact": Home's Next up among today's cards still to do with a place,
+/// routed through Impact.
 struct DirectionsToNextIntent: AppIntent {
     static let title = LocalizedStringResource("Directions to Next Appointment", table: "Shortcuts")
     static let description = IntentDescription(LocalizedStringResource(

@@ -84,17 +84,23 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         #expect(moments.last?.date == at(24) && moments.last?.impactsToday == 0)
     }
 
-    @Test("Siri runs today's first card still to do with the action asked for, never tomorrow's")
+    @Test("Siri runs Home's Next up among today's cards still to do with the action asked for, never tomorrow's")
     func nextForIntents() throws {
         var visit = meeting("Visit", 14)
         visit.url = nil
         visit.structuredPlace = Place(title: "Synthetic clinic", latitude: 37.5, longitude: 127)
-        // Done (9:30) was joined, so Review (11:00) is the next meeting; Visit is the next place.
-        let events = [meeting("Done", 9.5), meeting("Review", 11), visit, meeting("Tomorrow", 8, day: 1)]
-        let state = SurfaceState(completed: ["Done": at(9.6)], suppressionRules: [])
+        var errand = visit
+        errand.id = "Errand"
+        errand.start = at(10.5)
+        errand.end = at(10.75)
+        // Done (9:30) was joined and Muted dismissed, so Review (11:00) is the next meeting; Errand (10:30), a place
+        // but no link, is not one. Errand is the next place.
+        let events = [meeting("Done", 9.5), errand, meeting("Muted", 10.75), meeting("Review", 11), visit,
+                      meeting("Tomorrow", 8, day: 1)]
+        let state = SurfaceState(completed: ["Done": at(9.6)], suppressionRules: [.occurrence(id: "Muted")])
         let home = NextCards.home(events: events, state: state, now: at(10), calendar: losAngeles, engine: engine)
         #expect(NextCards.next(.join, in: home, state: state, now: at(10), calendar: losAngeles)?.id == "Review")
-        #expect(NextCards.next(.directions, in: home, state: state, now: at(10), calendar: losAngeles)?.id == "Visit")
+        #expect(NextCards.next(.directions, in: home, state: state, now: at(10), calendar: losAngeles)?.id == "Errand")
         // In the evening Home lists tomorrow's meeting, but it is not joined the evening before.
         let evening = NextCards.home(events: events, state: state, now: at(20), calendar: losAngeles, engine: engine)
         #expect(evening.cards.contains { $0.id == "Tomorrow" })
@@ -103,6 +109,13 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         let backToBack = [meeting("Sync", 13), meeting("Review", 14)]
         let late = NextCards.home(events: backToBack, state: none, now: at(13.9), calendar: losAngeles, engine: engine)
         #expect(NextCards.next(.join, in: late, state: none, now: at(13.9), calendar: losAngeles)?.id == "Review")
+        // Overlapping: at 10:30 Home's Next up is Review (10:00), not the Workshop running since 9:00.
+        var workshop = meeting("Workshop", 9)
+        workshop.end = at(12)
+        let overlap = [workshop, meeting("Review", 10)]
+        let mid = NextCards.home(events: overlap, state: none, now: at(10.5), calendar: losAngeles, engine: engine)
+        #expect(mid.nextUp?.id == "Review")
+        #expect(NextCards.next(.join, in: mid, state: none, now: at(10.5), calendar: losAngeles)?.id == "Review")
     }
 
     @Test("A run request runs the primary action, or the kind an App Intent asked for if the card has it")
@@ -112,8 +125,12 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         let card = try #require(engine.card(for: hybrid, now: at(10)))
         let online = try #require(engine.card(for: meeting("Review", 11), now: at(10)))
         #expect(RunRequest(cardID: card.id).pick(from: card) == card.primaryAction)
-        #expect(RunRequest(cardID: card.id, action: .directions).pick(from: card).map { RunAction.directions.matches($0.kind) } == true)
-        #expect(RunRequest(cardID: card.id, action: .join).pick(from: card).map { RunAction.join.matches($0.kind) } == true)
+        let directions = try #require(RunRequest(cardID: card.id, action: .directions).pick(from: card))
+        let join = try #require(RunRequest(cardID: card.id, action: .join).pick(from: card))
+        guard case .directions = directions.kind, case .joinMeeting = join.kind else {
+            Issue.record("Picked \(directions.kind) and \(join.kind)")
+            return
+        }
         #expect(RunRequest(cardID: online.id, action: .directions).pick(from: online) == nil)
     }
 
