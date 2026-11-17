@@ -27,7 +27,12 @@ public enum NowAlerts {
     static func set(_ cards: [LiveCard]) async {
         let center = UNUserNotificationCenter.current()
         await remove(except: Set(cards.map(\.cardID)))
+        // Without permission an add fails (seen in the simulator): wait for it instead of failing on every sync.
+        let status = await center.notificationSettings().authorizationStatus
+        guard status != .notDetermined, status != .denied else { return }
         for card in cards {
+            // A newer sync replaced this one while it waited: it sets the alerts instead.
+            guard !Task.isCancelled else { return }
             do {
                 try await center.add(request(for: card, now: .now))
             } catch {

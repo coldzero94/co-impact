@@ -174,7 +174,7 @@ To verify before relying on it:
 
 - Whether Google Meet links from Google accounts synced via iOS Settings appear in EventKit (`url`, `location`, or `notes`). Check with a real account.
 - Current Live Activity duration limits and scheduled-start behavior on device.
-- The fallback Now alert on a device: the Time Sensitive capability on the App ID, delivery under a Focus and the silent switch, and that a request refused for a reason other than Live Activities being off (the system's limit) gets the alert.
+- The fallback Now alert on a device: the Time Sensitive capability on the App ID, delivery under a Focus and the silent switch, that a request refused for a reason other than Live Activities being off (the system's limit) gets the alert, and that tapping it on the Lock Screen and in Notification Center runs the action (in the simulator a tap on its banner did; AXe taps on it in Notification Center never reached Impact).
 - The App Shortcuts in Korean on a device: whether Siri hears the Korean phrases, with "Impact" said in Korean speech, and whether Spotlight lists the shortcuts in Korean (in the simulator set to Korean, Spotlight showed the app but not its shortcuts, 2026-11-17); and what "Join Next Meeting" does when the iPhone is locked.
 - How the Live Activity's compact, minimal, and limited-width views (the time-left ring) and its small layout look on a device, the Watch, and in CarPlay: in a simulator without Simulator.app, `simctl` screenshots showed no Dynamic Island at all, for PR #25's build and for main at `9bf617e` (2026-11-16).
 - Foundation Models availability in the Simulator on this Mac.
