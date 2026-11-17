@@ -99,6 +99,10 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         let evening = NextCards.home(events: events, state: state, now: at(20), calendar: losAngeles, engine: engine)
         #expect(evening.cards.contains { $0.id == "Tomorrow" })
         #expect(NextCards.next(.join, in: evening, state: state, now: at(20), calendar: losAngeles) == nil)
+        // Back to back: at 13:54 Sync (13:00, joined elsewhere, so not done here) is ending and Review is in Soon.
+        let backToBack = [meeting("Sync", 13), meeting("Review", 14)]
+        let late = NextCards.home(events: backToBack, state: none, now: at(13.9), calendar: losAngeles, engine: engine)
+        #expect(NextCards.next(.join, in: late, state: none, now: at(13.9), calendar: losAngeles)?.id == "Review")
     }
 
     @Test("A run request runs the primary action, or the kind an App Intent asked for if the card has it")

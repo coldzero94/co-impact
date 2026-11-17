@@ -24,18 +24,17 @@ public enum NextCards {
                     suppressionRules: state.suppressionRules)
     }
 
-    /// What "Join my next meeting" and "Directions to my next appointment" run: today's first card still to do
-    /// with that action, among the cards a run link reaches (`HomeModel.runnableCard`). Tomorrow's wait for
-    /// tomorrow, so a meeting is never joined the evening before.
+    /// What "Join my next meeting" and "Directions to my next appointment" run: Home's Next up rule among today's
+    /// cards still to do with that action, so a meeting about to start wins over one ending that was joined
+    /// elsewhere. Tomorrow's wait for tomorrow, so a meeting is never joined the evening before.
     public static func next(_ action: RunAction, in home: HomeSnapshot, state: SurfaceState, now: Date,
                             calendar: Calendar) -> ImpactCard? {
         let tomorrow = ImpactEngine.horizon(now: now, calendar: calendar).tomorrow
-        return (home.cards + home.liveActivityCards)
-            .filter { card in
-                card.start < tomorrow && !state.completed.keys.contains(card.id)
-                    && card.confirmedActions.contains { action.matches($0.kind) }
-            }
-            .min { ($0.start, $0.id) < ($1.start, $1.id) }
+        // Home lists every card of today, in start order.
+        return ImpactEngine.nextUp(among: home.cards.filter { card in
+            card.start < tomorrow && !state.completed.keys.contains(card.id)
+                && card.confirmedActions.contains { action.matches($0.kind) }
+        }, now: now)
     }
 
     /// One moment of the widgets: from `date` on, they show `card` (Home's Next up, else the first card ahead,

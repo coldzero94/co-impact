@@ -59,7 +59,7 @@ extension ImpactEngine {
         let todayCards = cards(todaysEvents)
         let notDone = { (card: ImpactCard) in !completedCardIDs.contains(card.id) }
         let toDo = todayCards.filter(notDone)
-        let nextUp = toDo.first { Self.isSoonOrNow($0, now: now) } ?? toDo.last { $0.start <= now } ?? toDo.first
+        let nextUp = Self.nextUp(among: toDo, now: now)
         let showTomorrow = calendar.component(.hour, from: now) >= 18 || todayCards.isEmpty
         let tomorrowCards = showTomorrow
             ? Array(cards(events.filter { $0.start >= tomorrow && $0.start < tomorrowNoon }).prefix(2)) : []
@@ -121,6 +121,12 @@ extension ImpactEngine {
     /// minutes before the appointment rather than before leaving.
     public static func nowPhase(of card: ImpactCard) -> Range<Date> {
         card.start.addingTimeInterval(-10 * 60) ..< card.start.addingTimeInterval(card.kind == .inPerson ? 0 : 10 * 60)
+    }
+
+    /// Next up among cards still to do, in start order: the first in its Soon or Now phase, else the last one
+    /// already started (a late joiner keeps it), else the first ahead.
+    public static func nextUp(among toDo: [ImpactCard], now: Date) -> ImpactCard? {
+        toDo.first { isSoonOrNow($0, now: now) } ?? toDo.last { $0.start <= now } ?? toDo.first
     }
 
     /// Soon or Now: in person until the start, online and hybrid until 10 minutes after it.
