@@ -1,8 +1,9 @@
 import Foundation
 @testable import HomeFeature
 import ImpactEngine
-import LiveSurfaces
+@testable import LiveSurfaces
 import Testing
+import UserNotifications
 
 private let start = Date(timeIntervalSince1970: 1_800_000_000)
 private let losAngeles: Calendar = {
@@ -89,6 +90,26 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         event.notes = nil; event.organizer = nil; event.attendees = []
         let bare = try #require(try ImpactEngine().card(for: event, now: start.addingTimeInterval(-3_600)))
         #expect(bare.organizer == nil && bare.attendees.isEmpty && bare.notes == nil)
+    }
+
+    @Test("The fallback Now alert shows the card's title and answer, Time Sensitive, at the start of its Now phase")
+    func fallbackAlert() throws {
+        let zoom = try card(.onlineMeeting, link: "https://zoom.us/j/1")
+        let live = try #require(LiveCard(zoom, runToken: "secret"))
+        let now = live.nowPhase.lowerBound.addingTimeInterval(-3_600)
+        let request = NowAlerts.request(for: live, now: now)
+        #expect(request.identifier == NowAlerts.identifier(for: live) && request.identifier.hasPrefix(NowAlerts.prefix))
+        // Moved to another time, the card's alert gets another identifier, so the old one is removed.
+        let later = live.start.addingTimeInterval(3_600)
+        let moved = LiveCard(cardID: live.cardID, title: live.title, answer: live.answer, symbol: live.symbol,
+                             actionLabel: live.actionLabel, start: later,
+                             nowPhase: later.addingTimeInterval(-600) ..< later.addingTimeInterval(600),
+                             runToken: "secret")
+        #expect(NowAlerts.identifier(for: moved) != request.identifier)
+        #expect(request.content.title == zoom.title && request.content.body == "Zoom link ready")
+        #expect(request.content.interruptionLevel == .timeSensitive)
+        #expect(request.content.userInfo["card"] as? String == zoom.id)
+        #expect((request.trigger as? UNTimeIntervalNotificationTrigger)?.timeInterval == 3_600)
     }
 
     @Test("A Live Activity carries the card's title, answer, primary action, and Now phase")

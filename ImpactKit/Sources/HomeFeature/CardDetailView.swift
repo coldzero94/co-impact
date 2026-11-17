@@ -38,6 +38,8 @@ struct CardDetailView: View {
                 }
             }
         }
+        // PRODUCT.md → Permissions: notifications are asked from the first card's detail, if not asked before.
+        .task { await NowAlerts.askOnce() }
         .actionFailureAlert($failed)
     }
 
