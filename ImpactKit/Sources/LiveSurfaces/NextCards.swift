@@ -38,7 +38,8 @@ public enum NextCards {
     /// in its Soon or Now phase, as its Live Activity runs it, ahead of one ending that was joined elsewhere.
     public static func runnable(in home: HomeSnapshot, now: Date, calendar: Calendar,
                                 where include: (ImpactCard) -> Bool = { _ in true }) -> ImpactCard? {
-        // Home lists every card of today, but with Next up first: back in start order, as the rule needs.
+        // Home lists today's cards (and tomorrow morning's from 18:00) with Next up first: back in start order, as
+        // the rule needs.
         ImpactEngine.nextUp(among: home.cards.filter { card in
             runsNow(card, now: now, calendar: calendar) && !home.doneCardIDs.contains(card.id) && include(card)
         }.sorted { ($0.start, $0.id) < ($1.start, $1.id) }, now: now)
