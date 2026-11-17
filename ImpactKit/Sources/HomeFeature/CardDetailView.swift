@@ -44,6 +44,8 @@ struct CardDetailView: View {
         // PRODUCT.md → Permissions: notifications are asked from the first card's detail, if not asked before.
         .task { await NowAlerts.askOnce() }
         .task(id: card.notes) {
+            // Changed or removed notes take their steps with them: quotes always come from the notes shown.
+            suggestions = []
             guard let notes = card.notes else { return }
             suggestions = await Suggestions.generate(title: card.title, notes: notes)
         }

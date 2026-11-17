@@ -8,11 +8,6 @@ import os
 public struct NextStep: Hashable, Sendable {
     public let text: String
     public let quote: String
-
-    public init(text: String, quote: String) {
-        self.text = text
-        self.quote = quote
-    }
 }
 
 /// Up to two next steps from one event's title and notes (PRODUCT.md → AI scope), with the on-device model only.
@@ -23,42 +18,49 @@ public enum Suggestions {
     static let notesLimit = 2_000
 
     /// Notes with enough text to act on: a few words beyond a link (PRODUCT.md → AI scope, When).
-    public static func worthAsking(_ notes: String) -> Bool {
+    /// shortcut: counts space-separated words, so Japanese or Chinese notes are never asked; count letters if those
+    /// users come.
+    static func worthAsking(_ notes: String) -> Bool {
         notes.split(whereSeparator: \.isWhitespace).count { !$0.contains("://") } >= 4
     }
 
-    /// The steps to show: at most two, each with text and a quote found verbatim in `notes` (quotation marks and
-    /// surrounding spaces around the quote aside); a step whose quote is not found is discarded.
-    public static func grounded(_ steps: [NextStep], in notes: String) -> [NextStep] {
+    /// The steps to show: at most two different ones, each with text and a quote of at least two words found
+    /// verbatim in `notes` (quotation marks and spaces around the quote aside), so a stray word like "the" justifies
+    /// nothing; a step whose quote is not found is discarded.
+    static func grounded(_ steps: [NextStep], in notes: String) -> [NextStep] {
         let marks = CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "\"'“”‘’「」『』"))
-        let kept = steps.compactMap { step -> NextStep? in
-            let text = step.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            let quote = step.quote.trimmingCharacters(in: marks)
-            guard !text.isEmpty, quote.count >= 3, notes.contains(quote) else { return nil }
-            return NextStep(text: text, quote: quote)
+        var seen: Set<NextStep> = []
+        let kept = steps.compactMap { raw -> NextStep? in
+            let step = NextStep(text: raw.text.trimmingCharacters(in: .whitespacesAndNewlines),
+                                quote: raw.quote.trimmingCharacters(in: marks))
+            guard !step.text.isEmpty, step.quote.split(whereSeparator: \.isWhitespace).count >= 2,
+                  notes.contains(step.quote), seen.insert(step).inserted else { return nil }
+            return step
         }
         return Array(kept.prefix(2))
     }
 
-    /// The grounded next steps for an event, generated once per title and notes and kept for the session.
+    /// The grounded next steps for an event. The model's answer is kept for the session per title and notes; no
+    /// answer (the model not ready, an error, the detail closed first) is asked again next time.
     @MainActor public static func generate(title: String, notes: String) async -> [NextStep] {
         let notes = String(notes.prefix(notesLimit))
         guard worthAsking(notes) else { return [] }
         let key = title + "\u{1F}" + notes
         if let known = cache[key] { return known }
-        let steps = await ask(title: title, notes: notes)
+        guard let steps = await ask(title: title, notes: notes) else { return [] }
         cache[key] = steps
         return steps
     }
 
     @MainActor private static var cache: [String: [NextStep]] = [:]
 
-    @MainActor private static func ask(title: String, notes: String) async -> [NextStep] {
+    /// The model's grounded answer, or nil when it gave none: unavailable, an unsupported language, or an error.
+    @MainActor private static func ask(title: String, notes: String) async -> [NextStep]? {
         let model = SystemLanguageModel.default
-        guard case .available = model.availability else { return [] }
+        guard case .available = model.availability else { return nil }
         // The notes' language decides (PRODUCT.md → AI scope, Language); one the model does not support is skipped.
         guard let language = NLLanguageRecognizer.dominantLanguage(for: notes),
-              model.supportsLocale(Locale(identifier: language.rawValue)) else { return [] }
+              model.supportsLocale(Locale(identifier: language.rawValue)) else { return nil }
         let session = LanguageModelSession(model: model, instructions: instructions)
         do {
             // The notes come from the event's organizer: they go in the prompt, never in the instructions.
@@ -66,7 +68,7 @@ public enum Suggestions {
             return grounded(plan.steps.map { NextStep(text: $0.text, quote: $0.quote) }, in: notes)
         } catch {
             intelligenceLog.notice("No suggestions: \(String(describing: type(of: error)), privacy: .public)")
-            return []
+            return nil
         }
     }
 

@@ -88,7 +88,7 @@ Executing an action marks it done in place (checkmark, subdued), except a primar
 
 Built in step 8: below the details, a "Suggested" section with `sparkles` lists up to two next steps, each above its quote from the notes in italics; VoiceOver reads "Suggested: … From the notes: …". It appears only when the on-device model returns steps whose quotes are in the notes, after the detail opens (PRODUCT.md → AI scope); otherwise nothing shows.
 
-Built in step 7: below any place, Details shows the organizer unless it is the user, the other people invited (not rooms or equipment; up to three names, else two and a count; a guest with neither a name nor an email address shows as "Unnamed guest", and such an organizer as "Organized by an unnamed guest", owner 2026-11-15), and up to six lines of the notes, as the calendar has them. Not built yet: Suggested, with Foundation Models (step 8).
+Built in step 7: below any place, Details shows the organizer unless it is the user, the other people invited (not rooms or equipment; up to three names, else two and a count; a guest with neither a name nor an email address shows as "Unnamed guest", and such an organizer as "Organized by an unnamed guest", owner 2026-11-15), and up to six lines of the notes, as the calendar has them.
 
 ### 5. Goal setup (sheet)
 

@@ -1,4 +1,4 @@
-import ImpactIntelligence
+@testable import ImpactIntelligence
 import Testing
 
 @Suite struct SuggestionsTests {
@@ -20,9 +20,11 @@ import Testing
             NextStep(text: "Read the Q3 plan", quote: "read the Q3 plan"),
             NextStep(text: "Bring the NDA", quote: "Bring the signed NDA."),
         ])
-        // No text, or a quote too short to show why, is no step.
+        // No text, or a quote of one word, which justifies nothing, is no step; a repeated step shows once.
         #expect(Suggestions.grounded([NextStep(text: " ", quote: "Bring the signed NDA."),
-                                      NextStep(text: "Bring it", quote: "Br")], in: notes).isEmpty)
+                                      NextStep(text: "Bring your laptop", quote: "the")], in: notes).isEmpty)
+        let twice = NextStep(text: "Bring the NDA", quote: "Bring the signed NDA.")
+        #expect(Suggestions.grounded([twice, twice], in: notes) == [twice])
     }
 
     @Test("Notes are worth asking about only with a few words beyond a link")
