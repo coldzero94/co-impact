@@ -85,7 +85,7 @@ extension CalendarEvent {
             title: event.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "",
             start: event.startDate, end: event.endDate,
             calendarKind: EventKitCalendar.kind(event.calendar),
-            isAllDay: event.isAllDay, isCanceled: event.status == .canceled,
+            isAllDay: event.isAllDay, isCanceled: event.status == .canceled, isFree: event.availability == .free,
             participation: Self.participation(me?.participantStatus),
             hasAttendees: event.hasAttendees,
             isUserOrganizer: organizer?.isCurrentUser ?? false,
