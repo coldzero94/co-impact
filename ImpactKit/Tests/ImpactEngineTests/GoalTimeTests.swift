@@ -54,6 +54,11 @@ private func card(
         #expect(card([book], now: at(17), sessions: ["book": blocked]) == nil)
         #expect(card([book], now: at(17), sessions: ["book": [session(19, day: -7), session(19, day: -2)]])?.slot
             == session(18, day: 0))
+        // The target is the goal's own times per week.
+        let three = Goal(id: "run", title: "Run", timesPerWeek: 3, window: .personal)
+        #expect(card([three], now: at(17), sessions: ["run": blocked]) != nil)
+        let once = Goal(id: "call", title: "Call home", timesPerWeek: 1, window: .personal)
+        #expect(card([once], now: at(17), sessions: ["call": [session(19, day: -3)]]) == nil)
     }
 
     @Test("PRODUCT.md: Workday at 11:00 with a meeting 13:00–14:00 and the next at 15:30 gives 14:10–15:10")
@@ -93,6 +98,7 @@ private func card(
     @Test("A goal's two sessions are never on the same day; the fewest sessions this week goes first")
     func spreadAndOrder() {
         #expect(card([book], now: at(17), sessions: ["book": [session(7, day: 0)]])?.slot == session(7, day: 1))
+        #expect(card([book], now: at(17), sessions: ["launch": [session(7, day: 0)]])?.slot == session(18, day: 0))
         let blocked = ["launch": [session(9, day: -1)]]
         #expect(card([launch, book], now: at(10), sessions: blocked)?.goal == book)
         #expect(card([launch, book], now: at(10))?.goal == launch)

@@ -1,7 +1,8 @@
 import Foundation
 
 /// One of the user's one to three goals (PRODUCT.md → Goals).
-/// Stored as its synthesized `Codable`: renaming a property or case breaks loading stored goals.
+/// Stored as its synthesized `Codable`, as are `WorkingHours` and `GoalAnswer`: renaming a property or case, or
+/// adding a non-optional property, breaks loading stored data. Setup keeps `timesPerWeek` within 1–5.
 public struct Goal: Sendable, Hashable, Codable, Identifiable {
     public enum Window: String, Sendable, Hashable, Codable { case workday, personal }
 
