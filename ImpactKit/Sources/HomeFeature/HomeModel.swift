@@ -18,18 +18,26 @@ public final class HomeModel {
     private var dismissals: Dismissals
     /// Goals and working hours (PRODUCT.md → Goals), edited in goal setup.
     public private(set) var goals: GoalSettings
+    /// The goal-time card Home shows below the time-bound cards, if any (PRODUCT.md → Goal-time rules v1).
+    public private(set) var goalCard: GoalTimeCard?
+    private var goalRecords: GoalRecords
+    private let blocks: BlockWriter
     /// Receives every Impact after one is recorded or restored, to store them.
     private let saveImpacts: ([String: Date]) -> Void
     /// Receives the dismissals after each dismissal, to store them.
     private let saveDismissals: (Dismissals) -> Void
     /// Receives the goal settings after each change, to store them.
     private let saveGoals: (GoalSettings) -> Void
+    /// Receives the goal records whenever they change, to store them.
+    private let saveGoalRecords: (GoalRecords) -> Void
 
     public init(events: [CalendarEvent], now: Date, calendar: Calendar, log: ActionLog = ActionLog(),
                 dismissals: Dismissals = Dismissals(), goals: GoalSettings = GoalSettings(),
+                goalRecords: GoalRecords = GoalRecords(), blocks: BlockWriter = .unavailable,
                 saveImpacts: @escaping ([String: Date]) -> Void = { _ in },
                 saveDismissals: @escaping (Dismissals) -> Void = { _ in },
-                saveGoals: @escaping (GoalSettings) -> Void = { _ in }) throws {
+                saveGoals: @escaping (GoalSettings) -> Void = { _ in },
+                saveGoalRecords: @escaping (GoalRecords) -> Void = { _ in }) throws {
         let engine = try ImpactEngine()
         snapshot = Self.home(engine, events, now, calendar, log, dismissals.pruned(now: now))
         self.now = now
@@ -42,6 +50,10 @@ public final class HomeModel {
         self.saveDismissals = saveDismissals
         self.goals = goals
         self.saveGoals = saveGoals
+        self.goalRecords = goalRecords
+        self.blocks = blocks
+        self.saveGoalRecords = saveGoalRecords
+        rebuildGoalCard()
     }
 
     /// Rebuilds the snapshot for newly fetched events at a new time.
@@ -108,6 +120,35 @@ public final class HomeModel {
     func setGoals(_ goals: [Goal], workingHours: WorkingHours) {
         self.goals = GoalSettings(goals: Array(Self.titled(goals).prefix(3)), workingHours: workingHours, offered: true)
         saveGoals(self.goals)
+        rebuildGoalCard()
+    }
+
+    /// Block time (PRODUCT.md → Block time): saves the card's slot as an event and records it; the next goal-time card
+    /// follows at once. Returns the session for Undo. Throws when the calendar refuses; nothing is recorded then.
+    func blockTime(_ card: GoalTimeCard) throws -> GoalSession {
+        let event = try blocks.add(card.goal.title, card.slot)
+        let session = GoalSession(goalID: card.goal.id, eventID: event.id, title: event.title, start: event.start,
+                                  end: event.end)
+        // Busy at once, before the calendar's change notice brings the next fetch.
+        events.append(event)
+        goalRecords.block(session, at: now)
+        rebuild(savingGoalRecords: true)
+        return session
+    }
+
+    /// Undo while Home offers it after Block time: removes the event Impact created, and its answer. Throws when the
+    /// calendar refuses; the block stays recorded then, as the event stays.
+    func undoBlock(_ session: GoalSession) throws {
+        try blocks.remove(session.eventID)
+        events.removeAll { $0.id == session.eventID }
+        goalRecords.undo(session)
+        rebuild(savingGoalRecords: true)
+    }
+
+    /// Not now: hides this goal's card until tomorrow.
+    func notNow(_ goal: Goal) {
+        goalRecords.notNow(goal, at: now)
+        rebuild(savingGoalRecords: true)
     }
 
     /// What the widgets and background refresh need to see cards as Home does (`SurfaceState`): the Impacts of the
@@ -135,8 +176,23 @@ public final class HomeModel {
         }
     }
 
-    private func rebuild() {
+    /// `savingGoalRecords`: the caller changed the goal records, so they are stored even if matching leaves them as is.
+    private func rebuild(savingGoalRecords: Bool = false) {
         snapshot = Self.home(engine, events, now, calendar, log, dismissals)
+        rebuildGoalCard(saving: savingGoalRecords)
+    }
+
+    /// Matches the blocked sessions to the calendar, stores them if that (or the caller) changed them, and picks the
+    /// goal-time card.
+    private func rebuildGoalCard(saving: Bool = false) {
+        let matched = goalRecords.matched(events: events, now: now, calendar: calendar)
+        if saving || matched != goalRecords {
+            goalRecords = matched
+            saveGoalRecords(matched)
+        }
+        goalCard = ImpactEngine.goalTimeCard(
+            goals: goals.goals, sessions: goalRecords.sessionsByGoal, answers: goalRecords.answers, events: events,
+            now: now, calendar: calendar, workingHours: goals.workingHours)
     }
 
     private static func home(
@@ -146,4 +202,23 @@ public final class HomeModel {
         engine.home(events: events, now: now, calendar: calendar, completedCardIDs: log.completedCardIDs,
                     impactsToday: log.impactCount(on: now, calendar: calendar), suppressionRules: dismissals.rules)
     }
+}
+
+/// Writes Block time's events: the calendar in the app (`LiveHome`), a stand-in in debug fixtures and tests.
+public struct BlockWriter {
+    /// Saves an event titled with the goal during the slot, and returns it as a fetch would.
+    let add: @MainActor (_ title: String, _ slot: DateInterval) throws -> CalendarEvent
+    /// Removes the event Impact created, by its ID.
+    let remove: @MainActor (_ eventID: String) throws -> Void
+
+    public init(add: @escaping @MainActor (String, DateInterval) throws -> CalendarEvent,
+                remove: @escaping @MainActor (String) throws -> Void) {
+        self.add = add
+        self.remove = remove
+    }
+
+    /// For models that never block time (previews).
+    public static var unavailable: BlockWriter { BlockWriter(add: { _, _ in throw BlockUnavailable() }, remove: { _ in }) }
+
+    struct BlockUnavailable: Error {}
 }

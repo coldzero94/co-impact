@@ -268,6 +268,75 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
         #expect(hours.end == 23 * 60 + 59)
     }
 
+    @Test("Goal records load from the key and format users have stored")
+    func goalRecordsStore() throws {
+        try withDefaults { defaults in
+            let json = #"{"sessions":[{"goalID":"book","eventID":"e1","title":"Write a book","#
+                + #""start":0,"end":3600}],"answers":[{"goalID":"book","date":0,"blocked":true}]}"#
+            defaults.set(Data(json.utf8), forKey: "goalRecords")
+            let start = Date(timeIntervalSinceReferenceDate: 0)
+            #expect(DefaultsStore<GoalRecords>(defaults).load() == GoalRecords(
+                sessions: [GoalSession(goalID: "book", eventID: "e1", title: "Write a book",
+                                       start: start, end: start.addingTimeInterval(3_600))],
+                answers: [GoalAnswer(goalID: "book", date: start, blocked: true)]))
+        }
+    }
+
+    @Test("Block time saves the slot, records it, and moves the card on; Undo and Not now; a refused save records nothing")
+    @MainActor func blockTime() throws {
+        var written: [CalendarEvent] = []
+        var removed: [String] = []
+        var saved: [GoalRecords] = []
+        let blocks = BlockWriter(add: { title, slot in
+            let event = CalendarEvent(id: "block-\(written.count)", calendarID: "personal", title: title,
+                                      start: slot.start, end: slot.end)
+            written.append(event)
+            return event
+        }, remove: { removed.append($0) })
+        // Friday 09:00: Personal time is free from 18:00, and again on Saturday.
+        let goal = Goal(id: "book", title: "Write a book", window: .personal)
+        let model = try HomeModel(events: [], now: morning, calendar: losAngeles,
+                                  goals: GoalSettings(goals: [goal], offered: true), blocks: blocks,
+                                  saveGoalRecords: { saved.append($0) })
+        let card = try #require(model.goalCard)
+        #expect(card.slot.start == morning.addingTimeInterval(9 * 3_600))
+
+        let session = try model.blockTime(card)
+        #expect(written.map(\.title) == ["Write a book"] && session.eventID == "block-0")
+        // The block is busy at once, and the goal's next session goes to another day.
+        #expect(try #require(model.goalCard).slot.start > losAngeles.startOfDay(for: morning).addingTimeInterval(86_400))
+        #expect(saved.last?.sessions == [session] && saved.last?.answers.count == 1)
+
+        try model.undoBlock(session)
+        #expect(removed == ["block-0"] && model.goalCard == card && saved.last == GoalRecords())
+
+        model.notNow(goal)
+        #expect(model.goalCard == nil && saved.last?.answers.map(\.blocked) == [false])
+
+        // A refused save records nothing.
+        var refusedSaves = 0
+        let refusing = try HomeModel(events: [], now: morning, calendar: losAngeles,
+                                     goals: GoalSettings(goals: [goal], offered: true),
+                                     saveGoalRecords: { _ in refusedSaves += 1 })
+        let offered = try #require(refusing.goalCard)
+        #expect(throws: (any Error).self) { try refusing.blockTime(offered) }
+        #expect(refusing.goalCard == offered && refusedSaves == 0)
+
+        // An Undo the calendar refuses keeps the block recorded, as the event stays.
+        struct Refused: Error {}
+        var kept: [GoalRecords] = []
+        let stuck = try HomeModel(events: [], now: morning, calendar: losAngeles,
+                                  goals: GoalSettings(goals: [goal], offered: true),
+                                  blocks: BlockWriter(add: { title, slot in
+                                      CalendarEvent(id: "stuck", calendarID: "personal", title: title, start: slot.start,
+                                                    end: slot.end)
+                                  }, remove: { _ in throw Refused() }),
+                                  saveGoalRecords: { kept.append($0) })
+        let stuckSession = try stuck.blockTime(try #require(stuck.goalCard))
+        #expect(throws: Refused.self) { try stuck.undoBlock(stuckSession) }
+        #expect(kept.last?.sessions == [stuckSession])
+    }
+
     @Test("Home offers goal setup once, after the first Impact; Done keeps up to three goals with a title")
     @MainActor func goalSetup() throws {
         var saved: [GoalSettings] = []

@@ -276,7 +276,7 @@
 				CODE_SIGN_ENTITLEMENTS = Impact/Impact.entitlements;
 				INFOPLIST_FILE = Impact/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Impact;
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Impact reads your events on this iPhone to find the ones that need you. Your calendar never leaves your device.";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Impact reads your events on this iPhone to find the ones that need you, and adds an event only when you tap Block time. Your calendar never leaves your device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -305,7 +305,7 @@
 				CODE_SIGN_ENTITLEMENTS = Impact/Impact.entitlements;
 				INFOPLIST_FILE = Impact/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Impact;
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Impact reads your events on this iPhone to find the ones that need you. Your calendar never leaves your device.";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Impact reads your events on this iPhone to find the ones that need you, and adds an event only when you tap Block time. Your calendar never leaves your device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
