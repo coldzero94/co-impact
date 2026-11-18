@@ -183,6 +183,7 @@ Deterministic, like event selection; AI never decides.
 - **Blocked sessions:** events Impact created for the goal this week that are still on the calendar.
 - A goal gets a card when it has fewer blocked sessions this week than its times per week **and** a free slot exists. The card proposes the earliest free slot; two sessions of one goal are never on the same day.
 - **Limits:** one goal-time card on Home at a time, at most two a day (hard rule 4). **Not now** hides that goal's card until tomorrow.
+- Built in step 11. Where the rules above leave a choice: slots start on 5-minute marks; when several goals wait, the one with the fewest sessions blocked this week goes first, then setup order; working hours end after they start, on the same day. The engine picks again each time Home refreshes and counts only answers (Block time or Not now) toward "two a day": an unanswered card's slot moves to the next free one once it is less than an hour away (so it never reaches "when the slot starts" below), and it gives way to another goal once its own has no slot left this week, so a day can show a third goal that way.
 
 | Situation | Result |
 |-----------|--------|

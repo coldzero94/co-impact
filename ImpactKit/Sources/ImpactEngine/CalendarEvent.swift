@@ -11,6 +11,8 @@ public struct CalendarEvent: Sendable, Hashable, Identifiable {
     public var end: Date
     public var isAllDay: Bool
     public var isCanceled: Bool
+    /// Shown as free, so it is not busy time for goals (PRODUCT.md → Goal-time rules v1).
+    public var isFree: Bool
     public var participation: Participation
     public var hasAttendees: Bool
     public var isUserOrganizer: Bool
@@ -32,7 +34,7 @@ public struct CalendarEvent: Sendable, Hashable, Identifiable {
     public init(
         id: String, calendarID: String, title: String, start: Date, end: Date,
         calendarKind: CalendarKind = .regular, isAllDay: Bool = false, isCanceled: Bool = false,
-        participation: Participation = .unknown, hasAttendees: Bool = false,
+        isFree: Bool = false, participation: Participation = .unknown, hasAttendees: Bool = false,
         isUserOrganizer: Bool = false, isUserAttendee: Bool = false, seriesID: String? = nil,
         location: String? = nil, url: URL? = nil, notes: String? = nil,
         organizer: String? = nil, attendees: [String] = [],
@@ -46,6 +48,7 @@ public struct CalendarEvent: Sendable, Hashable, Identifiable {
         self.end = end
         self.isAllDay = isAllDay
         self.isCanceled = isCanceled
+        self.isFree = isFree
         self.participation = participation
         self.hasAttendees = hasAttendees
         self.isUserOrganizer = isUserOrganizer
