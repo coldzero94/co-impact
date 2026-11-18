@@ -19,6 +19,12 @@
       "skillPath": "skills/apple-hig/SKILL.md",
       "computedHash": "afaaff1d44af251fbae66771d634e9ce6c41e00dc22932d1aae81c9447b5ac70"
     },
+    "apple-on-device-ai": {
+      "source": "dpearson2699/swift-ios-skills",
+      "sourceType": "github",
+      "skillPath": "skills/apple-on-device-ai/SKILL.md",
+      "computedHash": "0cad4e49558966a9a42a14cef0dc196545f57a49c0f22fab42b185b1a46319b0"
+    },
     "eventkit": {
       "source": "dpearson2699/swift-ios-skills",
       "sourceType": "github",
