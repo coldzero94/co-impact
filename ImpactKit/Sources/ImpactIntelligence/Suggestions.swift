@@ -26,14 +26,16 @@ public enum Suggestions {
 
     /// The steps to show: at most two with different text, each with a quote of at least two words found verbatim
     /// in `notes` (quotation marks and spaces around the quote aside), so a stray word like "the" justifies nothing;
-    /// a step whose quote is not found is discarded.
+    /// a step whose quote is not found is discarded, and so is one too long to read at a glance (text over 120
+    /// characters, quote over 240), so the view shows every step whole at any text size.
     static func grounded(_ steps: [NextStep], in notes: String) -> [NextStep] {
         let marks = CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "\"'“”‘’「」『』"))
         var seen: Set<String> = []
         let kept = steps.compactMap { raw -> NextStep? in
             let step = NextStep(text: raw.text.trimmingCharacters(in: .whitespacesAndNewlines),
                                 quote: raw.quote.trimmingCharacters(in: marks))
-            guard !step.text.isEmpty, step.quote.split(whereSeparator: \.isWhitespace).count >= 2,
+            guard !step.text.isEmpty, step.text.count <= 120, step.quote.count <= 240,
+                  step.quote.split(whereSeparator: \.isWhitespace).count >= 2,
                   notes.contains(step.quote), seen.insert(step.text).inserted else { return nil }
             return step
         }
@@ -62,9 +64,9 @@ public enum Suggestions {
             return nil
         }
         // The notes' language decides (PRODUCT.md → AI scope, Language); one the model does not support is skipped.
-        guard let language = NLLanguageRecognizer.dominantLanguage(for: notes),
-              model.supportsLocale(Locale(identifier: language.rawValue)) else {
-            intelligenceLog.notice("No suggestions: the notes' language is not supported")
+        let language = NLLanguageRecognizer.dominantLanguage(for: notes)
+        guard let language, model.supportsLocale(Locale(identifier: language.rawValue)) else {
+            intelligenceLog.notice("No suggestions: notes in \(language?.rawValue ?? "an unknown language", privacy: .public)")
             return nil
         }
         let session = LanguageModelSession(model: model, instructions: instructions)
@@ -73,7 +75,7 @@ public enum Suggestions {
             let plan = try await session.respond(to: "Event: \(title)\n\nNotes:\n\(notes)", generating: Plan.self).content
             let steps = grounded(plan.steps.map { NextStep(text: $0.text, quote: $0.quote) }, in: notes)
             // How often quotes hold up on a device (ARCHITECTURE.md → To verify), without content.
-            intelligenceLog.notice("Suggestions: \(steps.count, privacy: .public) of \(plan.steps.count, privacy: .public) steps grounded")
+            intelligenceLog.notice("Suggestions: \(steps.count, privacy: .public) of \(plan.steps.count, privacy: .public) steps kept")
             return steps
         } catch {
             // Type and code only: a description could carry the notes.

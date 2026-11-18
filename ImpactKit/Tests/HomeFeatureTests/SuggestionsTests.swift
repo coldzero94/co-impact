@@ -26,6 +26,9 @@ import Testing
         let twice = NextStep(text: "Bring the NDA", quote: "Bring the signed NDA.")
         #expect(Suggestions.grounded([twice, NextStep(text: "Bring the NDA", quote: "the signed NDA")], in: notes)
                 == [twice])
+        // Too long to read at a glance: dropped, so the view never cuts a step short.
+        let long = String(repeating: "Read the Q3 plan ", count: 8)
+        #expect(Suggestions.grounded([NextStep(text: long, quote: "read the Q3 plan")], in: notes).isEmpty)
     }
 
     @Test("Notes are worth asking about only with a few words beyond a link")

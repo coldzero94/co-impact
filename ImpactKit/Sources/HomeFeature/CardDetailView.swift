@@ -96,7 +96,7 @@ struct CardDetailView: View {
                 Label("Suggested", systemImage: "sparkles").font(.headline)
                 ForEach(suggestions, id: \.self) { step in
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(step.text).lineLimit(3)
+                        Text(step.text)
                         Text("“\(step.quote)”").font(.footnote).italic().foregroundStyle(.secondary)
                     }
                     .accessibilityElement(children: .ignore)
