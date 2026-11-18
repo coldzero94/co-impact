@@ -45,6 +45,7 @@ import WidgetKit
         let booking = schedule()
         await refresh()
         // Returning lets iOS suspend Impact: book the next run first.
+        // shortcut: the wait ignores the run's expiry; stop waiting on cancellation if a device shows overruns.
         await booking.value
     }
 
