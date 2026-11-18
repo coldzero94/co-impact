@@ -8,7 +8,8 @@ import WidgetKit
 /// Background refresh (ARCHITECTURE.md → Refresh and platform constraints): when iOS lets Impact run in the
 /// background, it reads the calendar and Impact's state as the widgets do, ends the Live Activities of cards that
 /// changed or left, gives the cards that should have one but do not the fallback alert (ActivityKit refuses
-/// requests from the background), and reloads the widgets.
+/// requests from the background), and reloads the widgets. Its cards must equal live Home's, or the sync ends their
+/// activities (`backgroundLiveCards` test): geocoded places (step 10) must reach this path too.
 @MainActor public enum BackgroundRefresh {
     /// Also listed in Info.plist → `BGTaskSchedulerPermittedIdentifiers`.
     public static let identifier = "io.github.coldzero94.impact.refresh"

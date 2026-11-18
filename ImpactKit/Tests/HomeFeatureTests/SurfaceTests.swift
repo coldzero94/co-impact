@@ -201,20 +201,22 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         #expect(store.load() == nil)
     }
 
-    @Test("Home tells the widgets the cards done in the last two days or still on Home, and its dismissal rules")
+    @Test("Home tells the widgets the cards done in the last two days or still fetched, and its dismissal rules")
     @MainActor func homeState() throws {
         var log = ActionLog()
         let review = try #require(engine.card(for: meeting("Review", 10), now: at(9.9)))
         _ = log.record(try #require(review.primaryAction), on: review, at: at(9.9))
-        // Long runs from three days ago to tomorrow and was joined on its first day: still on Home, so still done.
+        // Long runs from three days ago to tomorrow and was joined on its first day: still fetched, so still done.
         var long = meeting("Long", 9, day: -3)
         long.end = at(18, day: 1)
-        log.restore(["Old": at(9, day: -3), "Long": at(9, day: -3)])
-        let model = try HomeModel(events: [meeting("Review", 10), meeting("Sync", 13), long], now: at(10),
-                                  calendar: losAngeles, log: log)
+        // Moved was joined three days ago, then moved to the day after tomorrow: not on Home, but still fetched.
+        log.restore(["Old": at(9, day: -3), "Long": at(9, day: -3), "Moved": at(9, day: -3)])
+        let model = try HomeModel(events: [meeting("Review", 10), meeting("Sync", 13), long, meeting("Moved", 9, day: 2)],
+                                  now: at(10), calendar: losAngeles, log: log)
         model.dismiss(try #require(model.snapshot.cards.first { $0.id == "Sync" }), similar: false)
         let state = model.surfaceState(runToken: "secret")
-        #expect(state.completed == ["Review": at(9.9), "Long": at(9, day: -3)] && state.runToken == "secret")
+        #expect(state.completed == ["Review": at(9.9), "Long": at(9, day: -3), "Moved": at(9, day: -3)]
+                && state.runToken == "secret")
         #expect(state.suppressionRules == [.occurrence(id: "Sync")])
     }
 
