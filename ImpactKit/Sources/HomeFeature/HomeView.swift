@@ -21,6 +21,7 @@ public struct HomeView: View {
     @State private var justBlocked: JustBlocked?
     @State private var blockings = 0
     @State private var blockFailed = false
+    @State private var undoFailed = false
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -145,6 +146,11 @@ public struct HomeView: View {
         } message: {
             Text("Choose a default calendar in Settings → Apps → Calendar, then try again.")
         }
+        .alert("Couldn't remove the block", isPresented: $undoFailed) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Delete it in Calendar.")
+        }
         .onChange(of: scenePhase) { playPending() }
         .onChange(of: model.snapshot) { _, snapshot in
             // An open detail follows its card as Home refreshes, and closes once the card is gone (e.g. the event
@@ -166,6 +172,7 @@ public struct HomeView: View {
                         try model.undoBlock(shown.session)
                     } catch {
                         homeLog.error("Undo of Block time failed: \(error.logged, privacy: .public)")
+                        undoFailed = true
                     }
                     justBlocked = nil
                 }
@@ -178,6 +185,10 @@ public struct HomeView: View {
                     do {
                         justBlocked = JustBlocked(card: card, session: try model.blockTime(card))
                         blockings += 1
+                        // The button VoiceOver was on is gone: say what happened (UX.md → Motion).
+                        AccessibilityNotification.Announcement(
+                            "Blocked \(GoalCardView.day(card.slot.start, now: model.now, spoken: true)) for \(card.goal.title)"
+                        ).post()
                     } catch {
                         homeLog.error("Block time failed: \(error.logged, privacy: .public)")
                         blockFailed = true

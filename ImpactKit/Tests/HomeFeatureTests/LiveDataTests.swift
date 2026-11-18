@@ -268,6 +268,20 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
         #expect(hours.end == 23 * 60 + 59)
     }
 
+    @Test("Goal records load from the key and format users have stored")
+    func goalRecordsStore() throws {
+        try withDefaults { defaults in
+            let json = #"{"sessions":[{"goalID":"book","eventID":"e1","calendarID":"work","title":"Write a book","#
+                + #""start":0,"end":3600}],"answers":[{"goalID":"book","date":0,"blocked":true}]}"#
+            defaults.set(Data(json.utf8), forKey: "goalRecords")
+            let start = Date(timeIntervalSinceReferenceDate: 0)
+            #expect(DefaultsStore<GoalRecords>(defaults).load() == GoalRecords(
+                sessions: [GoalSession(goalID: "book", eventID: "e1", calendarID: "work", title: "Write a book",
+                                       start: start, end: start.addingTimeInterval(3_600))],
+                answers: [GoalAnswer(goalID: "book", date: start, blocked: true)]))
+        }
+    }
+
     @Test("Block time saves the slot, records it, and moves the card on; Undo and Not now; a refused save records nothing")
     @MainActor func blockTime() throws {
         var written: [CalendarEvent] = []

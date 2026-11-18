@@ -162,8 +162,8 @@ private func card(
     }
 
     private func event(of session: GoalSession, id: String? = nil, hour: Int? = nil) -> CalendarEvent {
-        var event = session.event
-        event.id = id ?? session.eventID
+        var event = CalendarEvent(id: id ?? session.eventID, calendarID: session.calendarID, title: session.title,
+                                  start: session.start, end: session.end)
         if let hour {
             event.start = at(hour, day: 1)
             event.end = at(hour + 1, day: 1)

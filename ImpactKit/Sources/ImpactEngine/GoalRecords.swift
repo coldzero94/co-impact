@@ -19,11 +19,6 @@ public struct GoalSession: Sendable, Hashable, Codable {
         self.start = start
         self.end = end
     }
-
-    /// The event as Home sees it until the next fetch has it.
-    public var event: CalendarEvent {
-        CalendarEvent(id: eventID, calendarID: calendarID, title: title, start: start, end: end)
-    }
 }
 
 /// What goal-time cards remember: the sessions Impact blocked, and the user's answers today.
