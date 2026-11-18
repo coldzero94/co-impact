@@ -8,7 +8,7 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 
 1. **One screen.** Home is the app. No tabs; goals appear only as cards; settings sit behind a toolbar button; everything else is a sheet over Home.
 2. **One card, one action.** Each card shows one primary action. Secondary actions live in card detail.
-3. **Only when needed.** Event cards follow the selection rules; goal-time suggestions appear at most twice a day (PRODUCT.md → Goal-time rules v1).
+3. **Only when needed.** Event cards follow the selection rules; goal-time suggestions stop for the day at the first Not now (PRODUCT.md → Goal-time rules v1).
 4. **Five-second rule.** Opening the app answers "what now?" within 5 seconds, without scrolling.
 5. **Setup in 30 seconds.** Goal setup and working hours take under 30 seconds, with defaults for everything but the goal's title.
 
@@ -122,7 +122,7 @@ Built in step 7: below any place, Details shows the organizer unless it is the u
 
 - Swipe a card or row → **Not needed**. It disappears with no confirmation.
 - Same menu: **Don't suggest for events like this** (mutes the recurring series, or the same title on the same calendar).
-- Goal-time cards offer **Not now** instead (hidden until tomorrow).
+- Goal-time cards offer **Not now** instead (no goal-time card until tomorrow).
 - Built in step 7: the swipe shows two icon buttons, Not needed (red, a full swipe runs it) and Don't suggest (gray); VoiceOver reads both as actions with their full names. A dismissed card still to do takes its ring segment with it; a done card's Impact still counts. Don't suggest on an untitled one-off only dismisses it, since nothing marks events like it (owner, 2026-11-15). A moved occurrence of a muted series can still show, and a full sync can bring a muted series or a dismissed occurrence back (ARCHITECTURE.md → Platform facts). Built in step 11: Not now, a gray swipe button (a full swipe runs it). Not built yet: a way to unmute in Settings.
 
 ## Motion (Proposed)

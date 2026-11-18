@@ -40,7 +40,7 @@ Impacts are recorded automatically; the user never logs anything by hand. They a
 | Scale | What happens | Where |
 |-------|--------------|-------|
 | Moment | An event card or a focus block reaches its Now phase: one tap to join, leave, or start focus | Home, Live Activity |
-| Day | At most two goal-time suggestions | Home |
+| Day | Goal-time suggestions, until the user says Not now | Home |
 | Week | Each goal gets its sessions blocked | Home (goal-time cards) |
 | End of day | The day's Impacts become the daily log; the user may add one line | Home, evening |
 | Year | One to three goals, set once in under 30 seconds | Goal setup |
@@ -182,8 +182,8 @@ Deterministic, like event selection; AI never decides.
 - **Free slot:** 60 minutes inside the goal's window, at least 10 minutes from any busy time, starting at least 1 hour from now and ending within the current week (weeks start on the locale's first weekday).
 - **Blocked sessions:** events Impact created for the goal this week that are still on the calendar.
 - A goal gets a card when it has fewer blocked sessions this week than its times per week **and** a free slot exists. The card proposes the earliest free slot; two sessions of one goal are never on the same day.
-- **Limits:** one goal-time card on Home at a time, at most two a day (hard rule 4). **Not now** hides that goal's card until tomorrow.
-- Built in step 11. Where the rules above leave a choice: slots start on 5-minute marks; when several goals wait, the one with the fewest sessions blocked this week goes first, then setup order; working hours end after they start, on the same day. The engine picks again each time Home refreshes and counts only answers (Block time or Not now) toward "two a day": an unanswered card's slot moves to the next free one once it is less than an hour away (so it never reaches "when the slot starts" below), and it gives way to another goal once its own has no slot left this week, so a day can show a third goal that way.
+- **Limits:** one goal-time card on Home at a time. **Not now** ends goal-time cards, for every goal, until tomorrow. Block time does not count: the next card follows, so the week's sessions can be blocked in one sitting (owner, 2026-11-19).
+- Built in step 11. Where the rules above leave a choice: slots start on 5-minute marks; when several goals wait, the one with the fewest sessions blocked this week goes first, then setup order; working hours end after they start, on the same day. The engine picks again each time Home refreshes: an unanswered card's slot moves to the next free one once it is less than an hour away (so it never reaches "when the slot starts" below), and it gives way to another goal once its own has no slot left this week.
 
 | Situation | Result |
 |-----------|--------|
@@ -191,7 +191,7 @@ Deterministic, like event selection; AI never decides.
 | Same goal, two sessions already blocked this week | No card (target met) |
 | "Ship the Q1 launch", Workday; now 11:00; a meeting 13:00–14:00, nothing else until 15:30 | Card: today 14:10–15:10 (12:00–13:00 is too close to the meeting) |
 | Only 50-minute gaps left in the window this week | No card (no slot) |
-| User tapped Not now on this goal's card today | No card until tomorrow |
+| User tapped Not now on any goal-time card today | No goal-time card until tomorrow |
 
 ### Block time
 

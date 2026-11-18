@@ -1,7 +1,7 @@
 import Foundation
 
 /// One of the user's one to three goals (PRODUCT.md → Goals).
-/// Stored as its synthesized `Codable`, as are `WorkingHours` and `GoalAnswer`: renaming a property or case, or
+/// Stored as its synthesized `Codable`, as is `WorkingHours`: renaming a property or case, or
 /// adding a non-optional property, breaks loading stored data. Setup keeps `timesPerWeek` within 1–5.
 public struct Goal: Sendable, Hashable, Codable, Identifiable {
     public enum Window: String, Sendable, Hashable, Codable { case workday, personal }
@@ -37,19 +37,6 @@ public struct WorkingHours: Sendable, Hashable, Codable {
     }
 }
 
-/// The user's answer to a goal-time card: Block time, or Not now (PRODUCT.md → Goal-time rules v1).
-public struct GoalAnswer: Sendable, Hashable, Codable {
-    public let goalID: String
-    public let date: Date
-    public let blocked: Bool
-
-    public init(goalID: String, date: Date, blocked: Bool) {
-        self.goalID = goalID
-        self.date = date
-        self.blocked = blocked
-    }
-}
-
 /// A goal-time card: the goal and the earliest free slot, computed from the calendar.
 public struct GoalTimeCard: Sendable, Hashable {
     public let goal: Goal
@@ -61,22 +48,21 @@ extension ImpactEngine {
     static let busyGap: TimeInterval = 10 * 60
 
     /// Goal-time rules v1 (PRODUCT.md): the one goal-time card Home shows, or nil. `sessions` holds, by goal ID, the
-    /// sessions Impact blocked that are still on the calendar (any week); `answers` the user's answers to goal-time
-    /// cards (any day). Nothing shows after two answers today; Not now hides its goal until tomorrow. The goal with
+    /// sessions Impact blocked that are still on the calendar (any week); `lastNotNow` when the user last tapped Not now.
+    /// Nothing shows on the day of a Not now; Block time does not count, so the next card follows. The goal with
     /// the fewest sessions this week goes first, then the order of `goals`. `events` must cover the rest of the week
     /// (`horizon` does). `calendar` sets the days, windows, and where the week starts. Each call picks again, so the
     /// slot of a card nobody answers moves later as time passes (PRODUCT.md → Goal-time rules v1).
     public static func goalTimeCard(
-        goals: [Goal], sessions: [String: [DateInterval]], answers: [GoalAnswer], events: [CalendarEvent],
+        goals: [Goal], sessions: [String: [DateInterval]], lastNotNow: Date?, events: [CalendarEvent],
         now: Date, calendar: Calendar, workingHours: WorkingHours
     ) -> GoalTimeCard? {
-        let answeredToday = answers.filter { calendar.isDate($0.date, inSameDayAs: now) }
-        guard answeredToday.count < 2, let week = calendar.dateInterval(of: .weekOfYear, for: now) else { return nil }
+        guard !(lastNotNow.map { calendar.isDate($0, inSameDayAs: now) } ?? false),
+              let week = calendar.dateInterval(of: .weekOfYear, for: now) else { return nil }
         let busy = events.filter { !$0.isAllDay && !$0.isCanceled && $0.participation != .declined && !$0.isFree }
             .map { $0.start ..< max($0.start, $0.end) }
         let earliest = now.addingTimeInterval(60 * 60)
         let waiting = goals.enumerated().compactMap { index, goal -> (Int, Int, GoalTimeCard)? in
-            guard !answeredToday.contains(where: { !$0.blocked && $0.goalID == goal.id }) else { return nil }
             // Not `week.contains`: it includes the week's end, which starts the next week.
             let blocked = (sessions[goal.id] ?? []).filter { week.start <= $0.start && $0.start < week.end }
             guard blocked.count < goal.timesPerWeek,

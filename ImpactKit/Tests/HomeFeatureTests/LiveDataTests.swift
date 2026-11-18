@@ -272,13 +272,13 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
     func goalRecordsStore() throws {
         try withDefaults { defaults in
             let json = #"{"sessions":[{"goalID":"book","eventID":"e1","title":"Write a book","#
-                + #""start":0,"end":3600}],"answers":[{"goalID":"book","date":0,"blocked":true}]}"#
+                + #""start":0,"end":3600}],"lastNotNow":0}"#
             defaults.set(Data(json.utf8), forKey: "goalRecords")
             let start = Date(timeIntervalSinceReferenceDate: 0)
             #expect(DefaultsStore<GoalRecords>(defaults).load() == GoalRecords(
                 sessions: [GoalSession(goalID: "book", eventID: "e1", title: "Write a book",
                                        start: start, end: start.addingTimeInterval(3_600))],
-                answers: [GoalAnswer(goalID: "book", date: start, blocked: true)]))
+                lastNotNow: start))
         }
     }
 
@@ -305,13 +305,13 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
         #expect(written.map(\.title) == ["Write a book"] && session.eventID == "block-0")
         // The block is busy at once, and the goal's next session goes to another day.
         #expect(try #require(model.goalCard).slot.start > losAngeles.startOfDay(for: morning).addingTimeInterval(86_400))
-        #expect(saved.last?.sessions == [session] && saved.last?.answers.count == 1)
+        #expect(saved.last?.sessions == [session])
 
         try model.undoBlock(session)
         #expect(removed == ["block-0"] && model.goalCard == card && saved.last == GoalRecords())
 
-        model.notNow(goal)
-        #expect(model.goalCard == nil && saved.last?.answers.map(\.blocked) == [false])
+        model.notNow()
+        #expect(model.goalCard == nil && saved.last?.lastNotNow == morning)
 
         // A refused save records nothing.
         var refusedSaves = 0
@@ -335,6 +335,8 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
         let stuckSession = try stuck.blockTime(try #require(stuck.goalCard))
         #expect(throws: Refused.self) { try stuck.undoBlock(stuckSession) }
         #expect(kept.last?.sessions == [stuckSession])
+        // Its event stays busy, so the next card is not on the same slot.
+        #expect(try #require(stuck.goalCard).slot.start != stuckSession.start)
     }
 
     @Test("Home offers goal setup once, after the first Impact; Done keeps up to three goals with a title")

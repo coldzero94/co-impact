@@ -35,9 +35,9 @@ private let launch = Goal(id: "launch", title: "Ship the Q1 launch")
 
 private func card(
     _ goals: [Goal], now: Date, events: [CalendarEvent] = [], sessions: [String: [DateInterval]] = [:],
-    answers: [GoalAnswer] = [], calendar: Calendar = calendar, workingHours: WorkingHours = WorkingHours()
+    lastNotNow: Date? = nil, calendar: Calendar = calendar, workingHours: WorkingHours = WorkingHours()
 ) -> GoalTimeCard? {
-    ImpactEngine.goalTimeCard(goals: goals, sessions: sessions, answers: answers, events: events, now: now,
+    ImpactEngine.goalTimeCard(goals: goals, sessions: sessions, lastNotNow: lastNotNow, events: events, now: now,
                               calendar: calendar, workingHours: workingHours)
 }
 
@@ -76,23 +76,11 @@ private func card(
             == DateInterval(start: at(16, 10, day: 1), end: at(17, 10, day: 1)))
     }
 
-    @Test("PRODUCT.md: Not now hides that goal until tomorrow; another goal can still show")
+    @Test("PRODUCT.md: Not now today ends goal-time cards, for every goal, until tomorrow")
     func notNow() {
-        let answers = [GoalAnswer(goalID: "book", date: at(9), blocked: false)]
-        #expect(card([book], now: at(17), answers: answers) == nil)
-        #expect(card([book, launch], now: at(10), answers: answers)?.goal == launch)
-        #expect(card([book], now: at(8, day: 1), answers: answers)?.goal == book)
-        // Block time does not hide its goal; only the session count and the daily limit hold it back.
-        #expect(card([book], now: at(17), answers: [GoalAnswer(goalID: "book", date: at(9), blocked: true)])?.goal == book)
-    }
-
-    @Test("Two answers today, Block time or Not now, end goal-time cards for the day")
-    func twoADay() {
-        let answers = [GoalAnswer(goalID: "launch", date: at(9), blocked: true),
-                       GoalAnswer(goalID: "launch", date: at(10), blocked: false)]
-        #expect(card([book], now: at(17), answers: answers) == nil)
-        #expect(card([book], now: at(17), answers: Array(answers.prefix(1))) != nil)
-        #expect(card([book], now: at(8, day: 1), answers: answers) != nil)
+        #expect(card([book, launch], now: at(10), lastNotNow: at(9)) == nil)
+        #expect(card([book], now: at(17), lastNotNow: at(9)) == nil)
+        #expect(card([book], now: at(8, day: 1), lastNotNow: at(9))?.goal == book)
     }
 
     @Test("A goal's two sessions are never on the same day; the fewest sessions this week goes first")
@@ -181,32 +169,26 @@ private func card(
         var canceled = event(of: blocked("canceled", 8, day: 1))
         canceled.isCanceled = true
         let records = GoalRecords(
-            sessions: [moved, renamedID, deleted, earlier, lastWeek, blocked("canceled", 8, day: 1)],
-            answers: [GoalAnswer(goalID: "book", date: at(9, day: -1), blocked: false),
-                      GoalAnswer(goalID: "book", date: at(9), blocked: true)])
+            sessions: [moved, renamedID, deleted, earlier, lastWeek, blocked("canceled", 8, day: 1)], lastNotNow: at(9))
         // A full sync can change the calendar's ID too.
         let events = [event(of: moved, hour: 20), event(of: renamedID, id: "new-id", calendar: "work-synced"), canceled]
         let matched = records.matched(events: events, now: at(10), calendar: calendar)
         #expect(matched.sessions.map(\.eventID) == ["moved", "new-id", "monday"])
         #expect(matched.sessions[0].start == at(20, day: 1))
-        #expect(matched.answers == [GoalAnswer(goalID: "book", date: at(9), blocked: true)])
+        #expect(matched.lastNotNow == at(9))
         #expect(matched.sessionsByGoal["book"]?.count == 3)
     }
 
-    @Test("Undo removes the session and its answer; Not now adds an answer")
-    func answers() {
+    @Test("Undo removes only its session; Not now keeps the time")
+    func undoAndNotNow() {
         var records = GoalRecords()
-        let session = blocked("e1", 19, day: 0)
-        records.block(session, at: at(9))
-        records.notNow(launch, at: at(9, 30))
-        #expect(records.sessions == [session] && records.answers.count == 2)
-        records.undo(session)
-        #expect(records.sessions.isEmpty && records.answers == [GoalAnswer(goalID: "launch", date: at(9, 30), blocked: false)])
-
-        // Undoing the same session again leaves an earlier block's answer alone.
         let earlier = blocked("e0", 7, day: 0)
-        records.block(earlier, at: at(8))
+        let session = blocked("e1", 19, day: 0)
+        records.block(earlier)
+        records.block(session)
         records.undo(session)
-        #expect(records.sessions == [earlier] && records.answers.filter(\.blocked).count == 1)
+        #expect(records.sessions == [earlier])
+        records.notNow(at: at(9, 30))
+        #expect(records.lastNotNow == at(9, 30))
     }
 }

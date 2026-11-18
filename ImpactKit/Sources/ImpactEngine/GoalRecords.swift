@@ -19,36 +19,31 @@ public struct GoalSession: Sendable, Hashable, Codable {
     }
 }
 
-/// What goal-time cards remember: the sessions Impact blocked, and the user's answers today.
-/// Stored as its synthesized `Codable` (and `GoalSession`'s and `GoalAnswer`'s): renaming a property, or adding a
+/// What goal-time cards remember: the sessions Impact blocked, and when the user last tapped Not now.
+/// Stored as its synthesized `Codable` (and `GoalSession`'s): renaming a property, or adding a
 /// non-optional one, sets stored records aside; `LiveDataTests.goalRecordsStore` pins the format.
 public struct GoalRecords: Sendable, Hashable, Codable {
     public private(set) var sessions: [GoalSession] = []
-    public private(set) var answers: [GoalAnswer] = []
+    public private(set) var lastNotNow: Date?
 
-    public init(sessions: [GoalSession] = [], answers: [GoalAnswer] = []) {
+    public init(sessions: [GoalSession] = [], lastNotNow: Date? = nil) {
         self.sessions = sessions
-        self.answers = answers
+        self.lastNotNow = lastNotNow
     }
 
-    /// Block time: records the event Impact created and the answer.
-    public mutating func block(_ session: GoalSession, at date: Date) {
+    /// Block time: records the event Impact created.
+    public mutating func block(_ session: GoalSession) {
         sessions.append(session)
-        answers.append(GoalAnswer(goalID: session.goalID, date: date, blocked: true))
     }
 
-    /// Undo after Block time: the event is gone, and so is the answer it gave. A session already undone changes nothing.
+    /// Undo after Block time: the event is gone.
     public mutating func undo(_ session: GoalSession) {
-        let count = sessions.count
         sessions.removeAll { $0.eventID == session.eventID }
-        guard sessions.count < count,
-              let last = answers.lastIndex(where: { $0.goalID == session.goalID && $0.blocked }) else { return }
-        answers.remove(at: last)
     }
 
-    /// Not now: hides the goal's card until tomorrow.
-    public mutating func notNow(_ goal: Goal, at date: Date) {
-        answers.append(GoalAnswer(goalID: goal.id, date: date, blocked: false))
+    /// Not now: no goal-time card for the rest of the day.
+    public mutating func notNow(at date: Date) {
+        lastNotNow = date
     }
 
     /// The records as the calendar has them now. `events` is Home's fetch, from the start of today: a session found
@@ -56,7 +51,7 @@ public struct GoalRecords: Sendable, Hashable, Codable {
     /// ARCHITECTURE.md → Platform facts), takes the event's ID, title, and times, so moving it in Calendar
     /// moves the block; one from today on that is not found was deleted (or moved out of reach) and is dropped. A
     /// fallback match only counts the event as a session; nothing is ever written to it. Sessions before today are kept as last seen,
-    /// until their week is over; answers only for today.
+    /// until their week is over.
     /// shortcut: the fallback needs the start unchanged since Impact last saw it; check how Google and Exchange keep
     /// IDs on a device (ARCHITECTURE.md → To verify) before relying on more.
     public func matched(events: [CalendarEvent], now: Date, calendar: Calendar) -> GoalRecords {
@@ -79,7 +74,7 @@ public struct GoalRecords: Sendable, Hashable, Codable {
             seen.end = event.end
             return seen
         }
-        return GoalRecords(sessions: kept, answers: answers.filter { calendar.isDate($0.date, inSameDayAs: now) })
+        return GoalRecords(sessions: kept, lastNotNow: lastNotNow)
     }
 
     /// `ImpactEngine.goalTimeCard(sessions:)`: the sessions by goal ID.
