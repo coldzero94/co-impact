@@ -30,7 +30,7 @@ public enum NowAlerts {
 
     /// Makes the fallback alerts exactly `cards`' (their Live Activities could not be scheduled): adds or updates
     /// theirs and removes the rest, so a card done, dismissed, changed, or scheduled after all keeps none. The alerts
-    /// of `inNow`, cards whose Now phase has just begun, stay: one may be due this instant.
+    /// of `inNow`, cards already in their Now phase without an activity, stay: one may be due this instant or shown.
     static func set(_ cards: [LiveCard], keeping inNow: [LiveCard]) async {
         let center = UNUserNotificationCenter.current()
         await remove(except: Set((cards + inNow).map(identifier)))
