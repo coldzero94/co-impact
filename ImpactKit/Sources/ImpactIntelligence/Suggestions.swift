@@ -74,7 +74,7 @@ public enum Suggestions {
             // The notes come from the event's organizer: they go in the prompt, never in the instructions.
             let plan = try await session.respond(to: "Event: \(title)\n\nNotes:\n\(notes)", generating: Plan.self).content
             let steps = grounded(plan.steps.map { NextStep(text: $0.text, quote: $0.quote) }, in: notes)
-            // How often quotes hold up on a device (ARCHITECTURE.md → To verify), without content.
+            // How many of the model's steps pass `grounded` on a device (ARCHITECTURE.md → To verify), without content.
             intelligenceLog.notice("Suggestions: \(steps.count, privacy: .public) of \(plan.steps.count, privacy: .public) steps kept")
             return steps
         } catch {
