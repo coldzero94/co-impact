@@ -98,10 +98,14 @@ public final class HomeModel {
         saveGoals(goals)
     }
 
-    /// Done in goal setup: keeps the goals with a title, at most three.
+    /// Done in goal setup: keeps the goals with a title, trimmed, at most three; none left removes them all.
     func setGoals(_ goals: [Goal], workingHours: WorkingHours) {
-        self.goals = GoalSettings(goals: Array(goals.filter { !$0.title.isEmpty }.prefix(3)), workingHours: workingHours,
-                                  offered: true)
+        let titled = goals.compactMap { goal -> Goal? in
+            var goal = goal
+            goal.title = goal.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            return goal.title.isEmpty ? nil : goal
+        }
+        self.goals = GoalSettings(goals: Array(titled.prefix(3)), workingHours: workingHours, offered: true)
         saveGoals(self.goals)
     }
 

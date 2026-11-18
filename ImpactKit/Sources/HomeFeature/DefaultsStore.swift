@@ -33,6 +33,15 @@ struct DefaultsStore<Value: Codable> {
     }
 }
 
+// The keys users' data is stored under: changing one loses it (`LiveDataTests` pins them).
+extension DefaultsStore<Dismissals> {
+    init(_ defaults: UserDefaults) { self.init(defaults: defaults, key: "dismissals") }
+}
+
+extension DefaultsStore<GoalSettings> {
+    init(_ defaults: UserDefaults) { self.init(defaults: defaults, key: "goals") }
+}
+
 /// The user's goals and working hours (PRODUCT.md → Goals), and whether Home has offered goal setup (UX.md →
 /// Onboarding). Stored as its synthesized `Codable` (and `Goal`'s and `WorkingHours`'): renaming a property, or
 /// adding a non-optional one, sets stored goals aside; `LiveDataTests.goalStore` pins the format.

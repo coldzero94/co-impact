@@ -2,7 +2,8 @@ import ImpactEngine
 import SwiftUI
 
 /// UX.md → Goal setup: up to three goals, each a title, times per week, and Workday or Personal time, with the working
-/// hours in one row below. Done keeps the goals with a title and is enabled once one has one.
+/// hours in one row below. Done keeps the goals with a title; it is enabled once one has one, or when goals were set
+/// before, so the last one can be removed.
 struct GoalSetupView: View {
     let model: HomeModel
     @State private var goals: [Goal]
@@ -44,21 +45,13 @@ struct GoalSetupView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
-                        model.setGoals(titled, workingHours: workingHours)
+                        model.setGoals(goals, workingHours: workingHours)
                         dismiss()
                     }
-                    .disabled(titled.isEmpty)
+                    .disabled(model.goals.goals.isEmpty
+                        && goals.allSatisfy { $0.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
                 }
             }
-        }
-    }
-
-    /// The goals with a title, trimmed.
-    private var titled: [Goal] {
-        goals.compactMap { goal in
-            var goal = goal
-            goal.title = goal.title.trimmingCharacters(in: .whitespacesAndNewlines)
-            return goal.title.isEmpty ? nil : goal
         }
     }
 

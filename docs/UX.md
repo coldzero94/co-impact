@@ -95,7 +95,7 @@ Built in step 7: below any place, Details shows the organizer unless it is the u
 - Up to three rows. Each row: a title field, times per week (stepper, 1–5, default 2), and Workday / Personal time (segmented, default Workday).
 - Working hours in one row below (default Mon–Fri 09:00–18:00).
 - Done is enabled as soon as one title exists. The first goal-time card can appear right after.
-- Built in step 11: a swipe removes a goal; Done drops rows without a title, Cancel keeps the goals as they were. Working hours open their own screen: each day as a switch, then start and end times; the end stays at least 15 minutes after the start, on the same day. At accessibility text sizes, Workday / Personal time is a menu, since segmented controls do not grow with the text. Not built yet: the goal-time card (step 11), and pausing a goal (PRODUCT.md → Goals).
+- Built in step 11: a swipe removes a goal; Done drops rows without a title (and is also enabled with none when goals were set before, so the last one can be removed); Cancel keeps the goals as they were. Working hours open their own screen: each day as a switch, then start and end times; the end stays at least 15 minutes after the start, on the same day. At accessibility text sizes, Workday / Personal time is a menu, since segmented controls do not grow with the text. Not built yet: the goal-time card (step 11), and pausing a goal (PRODUCT.md → Goals).
 
 ### 6. Daily review (sheet)
 

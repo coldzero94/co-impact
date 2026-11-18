@@ -220,7 +220,7 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
     @Test("Dismissals survive the store; data that does not decode is kept aside")
     func dismissalStore() throws {
         try withDefaults { defaults in
-            let store = DefaultsStore<Dismissals>(defaults: defaults, key: "dismissals")
+            let store = DefaultsStore<Dismissals>(defaults)
             #expect(store.load() == nil)
             var dismissals = Dismissals()
             dismissals.dismiss(meeting("recent", at: morning), at: morning.addingTimeInterval(-3_600))
@@ -242,7 +242,7 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
     @Test("Goals survive the store in the format users have stored")
     func goalStore() throws {
         try withDefaults { defaults in
-            let store = DefaultsStore<GoalSettings>(defaults: defaults, key: "goals")
+            let store = DefaultsStore<GoalSettings>(defaults)
             let settings = GoalSettings(goals: [Goal(id: "book", title: "Write a book", timesPerWeek: 3, window: .personal)],
                                         workingHours: WorkingHours(weekdays: [2, 3], start: 600, end: 960), offered: true)
             store.save(settings)
@@ -268,16 +268,20 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
         model.goalSetupOffered()
         #expect(!model.offersGoalSetup && saved == [GoalSettings(offered: true)])
 
-        let goals = ["A", "", "B", "C", "D"].map { Goal(id: $0.isEmpty ? "empty" : $0, title: $0) }
+        let goals = [" A ", "", "  ", "B", "C", "D"].enumerated().map { Goal(id: "\($0.offset)", title: $0.element) }
         let hours = WorkingHours(weekdays: [2], start: 480, end: 900)
         model.setGoals(goals, workingHours: hours)
-        #expect(model.goals == GoalSettings(goals: [goals[0], goals[2], goals[3]], workingHours: hours, offered: true))
-        #expect(saved.last == model.goals)
+        #expect(model.goals.goals.map(\.title) == ["A", "B", "C"] && model.goals.goals.map(\.id) == ["0", "3", "4"])
+        #expect(model.goals.workingHours == hours && model.goals.offered && saved.last == model.goals)
 
         // A model built with goals, as after a relaunch, has no offer even with Impacts.
         let relaunched = try HomeModel(events: [review], now: morning, calendar: losAngeles,
                                        log: ActionLog(impacts: ["review": morning]), goals: model.goals)
         #expect(!relaunched.offersGoalSetup)
+
+        // Done with every goal removed clears them.
+        model.setGoals([], workingHours: hours)
+        #expect(model.goals.goals.isEmpty && saved.last == model.goals)
     }
 
     @Test("Recording saves every Impact once; an update moves the clock and keeps them")

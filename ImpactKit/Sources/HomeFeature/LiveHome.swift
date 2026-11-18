@@ -176,8 +176,8 @@ public struct LiveHome: View {
         let stored = file?.load()
         impactFile = file
         storedImpactsUnread = file != nil && stored == nil
-        let dismissals = DefaultsStore<Dismissals>(defaults: .standard, key: "dismissals")
-        let goals = DefaultsStore<GoalSettings>(defaults: .standard, key: "goals")
+        let dismissals = DefaultsStore<Dismissals>(.standard)
+        let goals = DefaultsStore<GoalSettings>(.standard)
         do {
             model = try HomeModel(events: events, now: now, calendar: calendar, log: ActionLog(impacts: stored ?? [:]),
                                   dismissals: dismissals.load() ?? Dismissals(), goals: goals.load() ?? GoalSettings(),
