@@ -271,14 +271,19 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
     @Test("Goal records load from the key and format users have stored")
     func goalRecordsStore() throws {
         try withDefaults { defaults in
-            let json = #"{"sessions":[{"goalID":"book","eventID":"e1","title":"Write a book","#
-                + #""start":0,"end":3600}],"lastNotNow":0}"#
-            defaults.set(Data(json.utf8), forKey: "goalRecords")
+            let sessions = #"{"sessions":[{"goalID":"book","eventID":"e1","title":"Write a book","start":0,"end":3600}]"#
             let start = Date(timeIntervalSinceReferenceDate: 0)
-            #expect(DefaultsStore<GoalRecords>(defaults).load() == GoalRecords(
-                sessions: [GoalSession(goalID: "book", eventID: "e1", title: "Write a book",
-                                       start: start, end: start.addingTimeInterval(3_600))],
-                lastNotNow: start))
+            let session = GoalSession(goalID: "book", eventID: "e1", title: "Write a book", start: start,
+                                      end: start.addingTimeInterval(3_600))
+            // The first build stored today's answers; they no longer count, and its sessions still load.
+            let stored = [
+                (#","answers":[{"goalID":"book","date":0,"blocked":true}]}"#, GoalRecords(sessions: [session])),
+                (#","lastNotNow":0}"#, GoalRecords(sessions: [session], lastNotNow: start)),
+            ]
+            for (rest, records) in stored {
+                defaults.set(Data((sessions + rest).utf8), forKey: "goalRecords")
+                #expect(DefaultsStore<GoalRecords>(defaults).load() == records)
+            }
         }
     }
 
