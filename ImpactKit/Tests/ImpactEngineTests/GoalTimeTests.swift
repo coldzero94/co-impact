@@ -77,6 +77,8 @@ private func card(
         #expect(card([book], now: at(17), answers: answers) == nil)
         #expect(card([book, launch], now: at(10), answers: answers)?.goal == launch)
         #expect(card([book], now: at(8, day: 1), answers: answers)?.goal == book)
+        // Block time does not hide its goal; only the session count and the daily limit hold it back.
+        #expect(card([book], now: at(17), answers: [GoalAnswer(goalID: "book", date: at(9), blocked: true)])?.goal == book)
     }
 
     @Test("Two answers today, Block time or Not now, end goal-time cards for the day")
@@ -126,6 +128,8 @@ private func card(
         mondayFirst.firstWeekday = 2
         #expect(card([book], now: at(21, day: 2), calendar: mondayFirst)?.slot == session(7, day: 3))
         #expect(card([book], now: at(8, day: 2))?.slot == session(9, day: 2))
+        // A session moved to the next week's first minute counts for that week, not this one.
+        #expect(card([book], now: at(17), sessions: ["book": [session(19, day: -2), session(0, day: 3)]]) != nil)
     }
 
     @Test("Working hours set both windows: Personal time on a working day is 07:00–22:00 outside them")
@@ -135,5 +139,12 @@ private func card(
         #expect(card([book], now: at(7), workingHours: hours)?.slot == session(8, day: 0))
         #expect(card([book], now: at(9), workingHours: hours)?.slot == session(16, day: 0))
         #expect(card([launch], now: at(7), workingHours: hours)?.slot == session(10, day: 0))
+        // Personal time stays within 07:00–22:00 when working hours fall outside it.
+        #expect(card([book], now: at(5), workingHours: WorkingHours(start: 0, end: 6 * 60))?.slot == session(7, day: 0))
+    }
+
+    @Test("An event ending before it starts does not crash the search")
+    func invertedEvent() {
+        #expect(card([launch], now: at(11), events: [busy(12) { $0.end = at(11) }]) != nil)
     }
 }

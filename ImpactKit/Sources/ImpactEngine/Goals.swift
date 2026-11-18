@@ -24,6 +24,8 @@ public struct WorkingHours: Sendable, Hashable, Codable {
     /// `Calendar` weekday numbers: 1 is Sunday.
     public var weekdays: Set<Int>
     /// Minutes after midnight; a day without `start < end` has no Workday window.
+    /// shortcut: overnight working hours (20:00–04:00) are not supported: they give no Workday window and Personal
+    /// time all of 07:00–22:00; goal setup must keep `end` after `start`; support them if setup ever allows it.
     public var start: Int
     public var end: Int
 
@@ -61,7 +63,8 @@ extension ImpactEngine {
     /// sessions Impact blocked that are still on the calendar (any week); `answers` the user's answers to goal-time
     /// cards (any day). Nothing shows after two answers today; Not now hides its goal until tomorrow. The goal with
     /// the fewest sessions this week goes first, then the order of `goals`. `events` must cover the rest of the week
-    /// (`horizon` does). `calendar` sets the days, windows, and where the week starts.
+    /// (`horizon` does). `calendar` sets the days, windows, and where the week starts. Each call picks again, so the
+    /// slot of a card nobody answers moves later as time passes (PRODUCT.md → Goal-time rules v1).
     public static func goalTimeCard(
         goals: [Goal], sessions: [String: [DateInterval]], answers: [GoalAnswer], events: [CalendarEvent],
         now: Date, calendar: Calendar, workingHours: WorkingHours
@@ -73,7 +76,8 @@ extension ImpactEngine {
         let earliest = now.addingTimeInterval(60 * 60)
         let waiting = goals.enumerated().compactMap { index, goal -> (Int, Int, GoalTimeCard)? in
             guard !answeredToday.contains(where: { !$0.blocked && $0.goalID == goal.id }) else { return nil }
-            let blocked = (sessions[goal.id] ?? []).filter { week.contains($0.start) }
+            // Not `week.contains`: it includes the week's end, which starts the next week.
+            let blocked = (sessions[goal.id] ?? []).filter { week.start <= $0.start && $0.start < week.end }
             guard blocked.count < goal.timesPerWeek,
                   let slot = freeSlot(
                       in: goal.window, busy: busy, skipping: Set(blocked.map { calendar.startOfDay(for: $0.start) }),
