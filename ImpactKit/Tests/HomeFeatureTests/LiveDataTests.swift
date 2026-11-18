@@ -248,11 +248,24 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
             store.save(settings)
             #expect(store.load() == settings)
 
-            let json = #"{"goals":[{"id":"run","title":"Run","timesPerWeek":2,"window":"workday"}],"#
+            let json = #"{"goals":[{"id":"run","title":"Run","timesPerWeek":2,"window":"workday"},"#
+                + #"{"id":"book","title":"Book","timesPerWeek":1,"window":"personal"}],"#
                 + #""workingHours":{"weekdays":[2,3,4,5,6],"start":540,"end":1080},"offered":false}"#
             defaults.set(Data(json.utf8), forKey: "goals")
-            #expect(store.load() == GoalSettings(goals: [Goal(id: "run", title: "Run")]))
+            #expect(store.load() == GoalSettings(goals: [Goal(id: "run", title: "Run"),
+                                                         Goal(id: "book", title: "Book", timesPerWeek: 1, window: .personal)]))
         }
+    }
+
+    @Test("A new start keeps the working day's end at least 15 minutes after it, by 23:59")
+    func workingHoursStart() {
+        var hours = WorkingHours()
+        hours.setStart(17 * 60 + 50)
+        #expect(hours.start == 17 * 60 + 50 && hours.end == 18 * 60 + 50)
+        hours.setStart(9 * 60)
+        #expect(hours.end == 18 * 60 + 50)
+        hours.setStart(23 * 60 + 44)
+        #expect(hours.end == 23 * 60 + 59)
     }
 
     @Test("Home offers goal setup once, after the first Impact; Done keeps up to three goals with a title")
@@ -267,6 +280,7 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
         model.goalSetupOffered()
         model.goalSetupOffered()
         #expect(!model.offersGoalSetup && saved == [GoalSettings(offered: true)])
+        #expect(!model.canSaveGoals([Goal(id: "blank", title: "  ")]) && model.canSaveGoals([Goal(id: "a", title: "A")]))
 
         let goals = [" A ", "", "  ", "B", "C", "D"].enumerated().map { Goal(id: "\($0.offset)", title: $0.element) }
         let hours = WorkingHours(weekdays: [2], start: 480, end: 900)
@@ -280,6 +294,7 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
         #expect(!relaunched.offersGoalSetup)
 
         // Done with every goal removed clears them.
+        #expect(model.canSaveGoals([]))
         model.setGoals([], workingHours: hours)
         #expect(model.goals.goals.isEmpty && saved.last == model.goals)
     }

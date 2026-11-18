@@ -8,11 +8,15 @@ struct GoalSetupView: View {
     let model: HomeModel
     @State private var goals: [Goal]
     @State private var workingHours: WorkingHours
+    /// The rows as the sheet opened (with its empty first row), to tell whether anything was edited.
+    @State private var opened: [Goal]
     @Environment(\.dismiss) private var dismiss
 
     init(model: HomeModel) {
         self.model = model
-        _goals = State(initialValue: model.goals.goals.isEmpty ? [Self.newGoal()] : model.goals.goals)
+        let goals = model.goals.goals.isEmpty ? [Self.newGoal()] : model.goals.goals
+        _goals = State(initialValue: goals)
+        _opened = State(initialValue: goals)
         _workingHours = State(initialValue: model.goals.workingHours)
     }
 
@@ -48,11 +52,12 @@ struct GoalSetupView: View {
                         model.setGoals(goals, workingHours: workingHours)
                         dismiss()
                     }
-                    .disabled(model.goals.goals.isEmpty
-                        && goals.allSatisfy { $0.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
+                    .disabled(!model.canSaveGoals(goals))
                 }
             }
         }
+        // A swipe down would drop the edits without asking; Cancel says so.
+        .interactiveDismissDisabled(goals != opened || workingHours != model.goals.workingHours)
     }
 
     private static func newGoal() -> Goal { Goal(id: UUID().uuidString, title: "") }
@@ -107,8 +112,7 @@ private struct WorkingHoursView: View {
                 DatePicker("Start", selection: Binding {
                     WorkingHours.time(hours.start)
                 } set: {
-                    hours.start = WorkingHours.minutes($0)
-                    if hours.end < hours.start + 15 { hours.end = min(hours.start + 60, WorkingHours.lastMinute) }
+                    hours.setStart(WorkingHours.minutes($0))
                 }, in: WorkingHours.time(0)...WorkingHours.time(WorkingHours.lastMinute - 15), displayedComponents: .hourAndMinute)
                 DatePicker("End", selection: Binding {
                     WorkingHours.time(hours.end)
@@ -124,6 +128,13 @@ private struct WorkingHoursView: View {
 
 extension WorkingHours {
     static let lastMinute = 23 * 60 + 59
+
+    /// Sets the start, moving an end less than 15 minutes after it to an hour after it (at most 23:59), so the end
+    /// stays after the start on the same day, as the engine needs (`WorkingHours.start`).
+    mutating func setStart(_ minutes: Int) {
+        start = minutes
+        if end < start + 15 { end = min(start + 60, Self.lastMinute) }
+    }
 
     /// "Mon–Fri, 09:00–18:00": a run of days as a range, other days listed.
     var summary: String {

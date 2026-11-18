@@ -10,6 +10,12 @@ struct DefaultsStore<Value: Codable> {
     let defaults: UserDefaults
     let key: String
 
+    /// Private: the per-value initializers below fix the keys users' data is stored under.
+    private init(defaults: UserDefaults, key: String) {
+        self.defaults = defaults
+        self.key = key
+    }
+
     /// The stored value; nil before the first save. Data that does not decode is kept under another key for diagnosis,
     /// and the value starts over.
     func load() -> Value? {
@@ -46,10 +52,10 @@ extension DefaultsStore<GoalSettings> {
 /// Onboarding). Stored as its synthesized `Codable` (and `Goal`'s and `WorkingHours`'): renaming a property, or
 /// adding a non-optional one, sets stored goals aside; `LiveDataTests.goalStore` pins the format.
 public struct GoalSettings: Sendable, Hashable, Codable {
-    /// One to three, in setup order; empty before setup.
+    /// One to three, in setup order; empty before setup or after the user removed them all.
     public var goals: [Goal] = []
     public var workingHours = WorkingHours()
-    /// Home's one-time "Set up to three goals" row was opened or swiped away.
+    /// Home's one-time "Set up to three goals" row was opened or swiped away, or goals were saved.
     public var offered = false
 
     public init(goals: [Goal] = [], workingHours: WorkingHours = WorkingHours(), offered: Bool = false) {

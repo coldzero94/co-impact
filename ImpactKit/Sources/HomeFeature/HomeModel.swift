@@ -4,7 +4,7 @@ import LiveSurfaces
 import Observation
 import os
 
-/// Home's state: the fetched events, the clock, the action log, and dismissals, with the snapshot built from them.
+/// Home's state: the fetched events, the clock, the action log, dismissals, and goals, with the snapshot built from them.
 @Observable @MainActor
 public final class HomeModel {
     public private(set) var snapshot: HomeSnapshot
@@ -48,7 +48,7 @@ public final class HomeModel {
     public func update(events: [CalendarEvent], now: Date) {
         self.events = events
         self.now = now
-        // Lapse dismissals as loading does, so the result never depends on whether the app was relaunched.
+        // Lapse dismissals as init does, so the result never depends on whether the app was relaunched.
         dismissals = dismissals.pruned(now: now)
         rebuild()
     }
@@ -98,14 +98,15 @@ public final class HomeModel {
         saveGoals(goals)
     }
 
+    /// Whether goal setup's Done can save these rows: one has a title, or goals were set before (so the last one can
+    /// be removed).
+    func canSaveGoals(_ goals: [Goal]) -> Bool {
+        !self.goals.goals.isEmpty || !Self.titled(goals).isEmpty
+    }
+
     /// Done in goal setup: keeps the goals with a title, trimmed, at most three; none left removes them all.
     func setGoals(_ goals: [Goal], workingHours: WorkingHours) {
-        let titled = goals.compactMap { goal -> Goal? in
-            var goal = goal
-            goal.title = goal.title.trimmingCharacters(in: .whitespacesAndNewlines)
-            return goal.title.isEmpty ? nil : goal
-        }
-        self.goals = GoalSettings(goals: Array(titled.prefix(3)), workingHours: workingHours, offered: true)
+        self.goals = GoalSettings(goals: Array(Self.titled(goals).prefix(3)), workingHours: workingHours, offered: true)
         saveGoals(self.goals)
     }
 
@@ -124,6 +125,14 @@ public final class HomeModel {
     /// Now phase on. Either way Home lists the card by then (tomorrow morning's from 18:00).
     func runnableCard(id: String) -> ImpactCard? {
         snapshot.cards.first { $0.id == id }
+    }
+
+    private static func titled(_ goals: [Goal]) -> [Goal] {
+        goals.compactMap { goal in
+            var goal = goal
+            goal.title = goal.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            return goal.title.isEmpty ? nil : goal
+        }
     }
 
     private func rebuild() {
