@@ -154,3 +154,52 @@ private func card(
         #expect(card([launch], now: at(11), events: [busy(12) { $0.end = at(11) }]) != nil)
     }
 }
+
+@Suite struct GoalRecordsTests {
+    private func blocked(_ id: String, _ hour: Int, day: Int, goal: String = "book") -> GoalSession {
+        GoalSession(goalID: goal, eventID: id, calendarID: "work", title: "Write a book", start: at(hour, day: day),
+                    end: at(hour + 1, day: day))
+    }
+
+    private func event(of session: GoalSession, id: String? = nil, hour: Int? = nil) -> CalendarEvent {
+        var event = session.event
+        event.id = id ?? session.eventID
+        if let hour {
+            event.start = at(hour, day: 1)
+            event.end = at(hour + 1, day: 1)
+        }
+        return event
+    }
+
+    @Test("Matching follows a moved block, finds one whose ID changed, and drops a deleted one; past days stay this week")
+    func matched() {
+        let moved = blocked("moved", 19, day: 1)
+        let renamedID = blocked("old-id", 7, day: 2)
+        let deleted = blocked("deleted", 19, day: 2)
+        let earlier = blocked("monday", 19, day: -3)
+        let lastWeek = blocked("last-week", 19, day: -7)
+        var canceled = event(of: blocked("canceled", 8, day: 1))
+        canceled.isCanceled = true
+        let records = GoalRecords(
+            sessions: [moved, renamedID, deleted, earlier, lastWeek, blocked("canceled", 8, day: 1)],
+            answers: [GoalAnswer(goalID: "book", date: at(9, day: -1), blocked: false),
+                      GoalAnswer(goalID: "book", date: at(9), blocked: true)])
+        let events = [event(of: moved, hour: 20), event(of: renamedID, id: "new-id"), canceled]
+        let matched = records.matched(events: events, now: at(10), calendar: calendar)
+        #expect(matched.sessions.map(\.eventID) == ["moved", "new-id", "monday"])
+        #expect(matched.sessions[0].start == at(20, day: 1))
+        #expect(matched.answers == [GoalAnswer(goalID: "book", date: at(9), blocked: true)])
+        #expect(matched.sessionsByGoal["book"]?.count == 3)
+    }
+
+    @Test("Undo removes the session and its answer; Not now adds an answer")
+    func answers() {
+        var records = GoalRecords()
+        let session = blocked("e1", 19, day: 0)
+        records.block(session, at: at(9))
+        records.notNow(launch, at: at(9, 30))
+        #expect(records.sessions == [session] && records.answers.count == 2)
+        records.undo(session)
+        #expect(records.sessions.isEmpty && records.answers == [GoalAnswer(goalID: "launch", date: at(9, 30), blocked: false)])
+    }
+}

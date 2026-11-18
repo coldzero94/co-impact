@@ -21,7 +21,12 @@ public enum CalendarAccess: Sendable {
     }
 }
 
-/// The user's calendar through EventKit: the fetch and normalize steps of ARCHITECTURE.md → Pipeline.
+public enum BlockError: Error {
+    /// No default calendar for new events, or one Impact may not write to.
+    case noWritableCalendar
+}
+
+/// The user's calendar through EventKit: the fetch and normalize steps of ARCHITECTURE.md → Pipeline, and Block time.
 @MainActor
 public final class EventKitCalendar {
     /// Posted whenever the calendar database changes: other processes (including account syncs), this app's
@@ -49,6 +54,31 @@ public final class EventKitCalendar {
               store.calendars(for: .event).contains(where: { Self.kind($0) == .regular }) else { return nil }
         return store.events(matching: store.predicateForEvents(withStart: start, end: end, calendars: nil))
             .map(CalendarEvent.init)
+    }
+
+    /// Block time (PRODUCT.md → Block time): saves an event titled with the goal, without attendees or alarms, to the
+    /// default calendar for new events, and returns it as Home will fetch it.
+    /// shortcut: with no writable default calendar this throws, and Home says so; let the user pick a writable calendar
+    /// once (PRODUCT.md) if that happens on devices.
+    public func addBlock(title: String, during slot: DateInterval) throws -> CalendarEvent {
+        guard let calendar = store.defaultCalendarForNewEvents, calendar.allowsContentModifications else {
+            throw BlockError.noWritableCalendar
+        }
+        let event = EKEvent(eventStore: store)
+        event.calendar = calendar
+        event.title = title
+        event.startDate = slot.start
+        event.endDate = slot.end
+        event.alarms = nil
+        try store.save(event, span: .thisEvent, commit: true)
+        return CalendarEvent(event)
+    }
+
+    /// Undo after Block time: removes the event Impact just created, by its item ID. Never call it for another event
+    /// (hard rule 8, PRODUCT.md → Block time). An event already gone is not an error.
+    public func removeBlock(eventID: String) throws {
+        guard let event = store.calendarItem(withIdentifier: eventID) as? EKEvent else { return }
+        try store.remove(event, span: .thisEvent, commit: true)
     }
 
     /// Subscription and Birthdays calendars are not the user's own (PRODUCT.md → Exclusions, D12). A CalDAV

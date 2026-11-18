@@ -63,7 +63,8 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 - **Tomorrow morning** follows PRODUCT.md → Horizon.
 - Events that need nothing are counted but not listed; Home is not a calendar.
 - Tapping Next up opens the card's detail; its button runs the primary action in one tap.
-- Not built yet: goal-time and focus cards (steps 11–12); the ring tap and the "Today" row from 18:00, with the daily review (step 13). Leave-by times are not drawn: rows and answers show the place, which stays the fallback when no route exists (PRODUCT.md → Card timeline). Locations without coordinates are not geocoded yet (after a device check of Apple's geocoding, step 10), so only events with a structured location with coordinates get in-person cards. Calendars shared into the user's account are not marked in EventKit, so their events without attendees can get cards; calendars of delegated accounts count as the user's own (PRODUCT.md D12).
+- Built in step 11: the goal-time card, between Later today and Tomorrow morning: the goal's title, "Today 18:10 is free" (Today, Tomorrow, else the weekday), and Block time as a bordered button, so Next up's action stays the one filled button on Home. Block time plays the success haptic and shows a checkmark, "Blocked", and Undo for 5 seconds, then the next card; a full swipe is Not now.
+- Not built yet: focus cards (step 12); the ring tap and the "Today" row from 18:00, with the daily review (step 13). Leave-by times are not drawn: rows and answers show the place, which stays the fallback when no route exists (PRODUCT.md → Card timeline). Locations without coordinates are not geocoded yet (after a device check of Apple's geocoding, step 10), so only events with a structured location with coordinates get in-person cards. Calendars shared into the user's account are not marked in EventKit, so their events without attendees can get cards; calendars of delegated accounts count as the user's own (PRODUCT.md D12).
 
 ### 3. Empty state
 
@@ -95,7 +96,7 @@ Built in step 7: below any place, Details shows the organizer unless it is the u
 - Up to three rows. Each row: a title field, times per week (stepper, 1–5, default 2), and Workday / Personal time (segmented, default Workday).
 - Working hours in one row below (default Mon–Fri 09:00–18:00).
 - Done is enabled as soon as one title exists. The first goal-time card can appear right after.
-- Built in step 11: a swipe removes a goal; Done drops rows without a title (and is also enabled with none when goals were set before, so the last one can be removed); Cancel keeps the goals as they were. Once something is edited, a swipe down does not close the sheet (it would drop the edits without asking); Cancel or Done does. Working hours open their own screen: each day as a switch, then start and end times; the end stays at least 15 minutes after the start, on the same day. At accessibility text sizes, Workday / Personal time is a menu, since segmented controls do not grow with the text. Not built yet: the goal-time card (step 11), and pausing a goal (PRODUCT.md → Goals).
+- Built in step 11: a swipe removes a goal; Done drops rows without a title (and is also enabled with none when goals were set before, so the last one can be removed); Cancel keeps the goals as they were. Once something is edited, a swipe down does not close the sheet (it would drop the edits without asking); Cancel or Done does. Working hours open their own screen: each day as a switch, then start and end times; the end stays at least 15 minutes after the start, on the same day. At accessibility text sizes, Workday / Personal time is a menu, since segmented controls do not grow with the text. Not built yet: pausing a goal (PRODUCT.md → Goals).
 
 ### 6. Daily review (sheet)
 
@@ -122,7 +123,7 @@ Built in step 7: below any place, Details shows the organizer unless it is the u
 - Swipe a card or row → **Not needed**. It disappears with no confirmation.
 - Same menu: **Don't suggest for events like this** (mutes the recurring series, or the same title on the same calendar).
 - Goal-time cards offer **Not now** instead (hidden until tomorrow).
-- Built in step 7: the swipe shows two icon buttons, Not needed (red, a full swipe runs it) and Don't suggest (gray); VoiceOver reads both as actions with their full names. A dismissed card still to do takes its ring segment with it; a done card's Impact still counts. Don't suggest on an untitled one-off only dismisses it, since nothing marks events like it (owner, 2026-11-15). A moved occurrence of a muted series can still show, and a full sync can bring a muted series or a dismissed occurrence back (ARCHITECTURE.md → Platform facts). Not built yet: Not now (step 11), and a way to unmute in Settings.
+- Built in step 7: the swipe shows two icon buttons, Not needed (red, a full swipe runs it) and Don't suggest (gray); VoiceOver reads both as actions with their full names. A dismissed card still to do takes its ring segment with it; a done card's Impact still counts. Don't suggest on an untitled one-off only dismisses it, since nothing marks events like it (owner, 2026-11-15). A moved occurrence of a muted series can still show, and a full sync can bring a muted series or a dismissed occurrence back (ARCHITECTURE.md → Platform facts). Built in step 11: Not now, a gray swipe button (a full swipe runs it). Not built yet: a way to unmute in Settings.
 
 ## Motion (Proposed)
 

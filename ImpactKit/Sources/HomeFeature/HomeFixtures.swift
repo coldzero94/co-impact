@@ -60,7 +60,12 @@ public enum HomeFixtures {
         }
         var dismissals = Dismissals()
         if hour >= 20 { dismissals.dismiss(events[6], at: at(20)) }
-        return try HomeModel(events: events, now: at(hour), calendar: calendar, log: log, dismissals: dismissals)
+        // Block time keeps its events in memory: fixtures never write to the calendar.
+        let blocks = BlockWriter(add: { title, slot in
+            CalendarEvent(id: UUID().uuidString, calendarID: "work", title: title, start: slot.start, end: slot.end)
+        }, remove: { _ in })
+        return try HomeModel(events: events, now: at(hour), calendar: calendar, log: log, dismissals: dismissals,
+                             blocks: blocks)
     }
 }
 #endif

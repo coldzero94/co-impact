@@ -17,6 +17,10 @@ public struct HomeView: View {
     @State private var flying: Moment?
     @State private var landings = 0
     @State private var settingUpGoals = false
+    /// Block time's session, while its card shows "Blocked" with Undo (5 seconds).
+    @State private var justBlocked: JustBlocked?
+    @State private var blockings = 0
+    @State private var blockFailed = false
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -70,6 +74,7 @@ public struct HomeView: View {
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
                 section("Later today", snapshot.laterToday, done: snapshot.doneCardIDs)
+                goalSection
                 section("Tomorrow morning", snapshot.tomorrowMorning, done: snapshot.doneCardIDs)
                 if model.offersGoalSetup {
                     Section {
@@ -129,6 +134,17 @@ public struct HomeView: View {
             run(action, on: card) { failed = $0 }
         }
         .sensoryFeedback(.success, trigger: landings)
+        .sensoryFeedback(.success, trigger: blockings)
+        .task(id: justBlocked) {
+            guard justBlocked != nil else { return }
+            try? await Task.sleep(for: .seconds(5))
+            if !Task.isCancelled { justBlocked = nil }
+        }
+        .alert("Couldn't add to your calendar", isPresented: $blockFailed) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Choose a default calendar in Settings → Apps → Calendar, then try again.")
+        }
         .onChange(of: scenePhase) { playPending() }
         .onChange(of: model.snapshot) { _, snapshot in
             // An open detail follows its card as Home refreshes, and closes once the card is gone (e.g. the event
@@ -136,6 +152,44 @@ public struct HomeView: View {
             // card expired), so no action runs on a stale card.
             guard let shown = selected else { return }
             selected = snapshot.cards.first { $0.id == shown.id }
+        }
+    }
+
+    /// The goal-time card (UX.md → Home): "Blocked" with Undo for 5 seconds after Block time, then the next one; a swipe
+    /// offers Not now.
+    @ViewBuilder
+    private var goalSection: some View {
+        if let shown = justBlocked {
+            Section {
+                GoalCardView(card: shown.card, now: model.now, blocked: true, block: {}) {
+                    do {
+                        try model.undoBlock(shown.session)
+                    } catch {
+                        homeLog.error("Undo of Block time failed: \(error.logged, privacy: .public)")
+                    }
+                    justBlocked = nil
+                }
+            }
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.card)
+        } else if let card = model.goalCard {
+            Section {
+                GoalCardView(card: card, now: model.now, blocked: false, block: {
+                    do {
+                        justBlocked = JustBlocked(card: card, session: try model.blockTime(card))
+                        blockings += 1
+                    } catch {
+                        homeLog.error("Block time failed: \(error.logged, privacy: .public)")
+                        blockFailed = true
+                    }
+                }, undo: {})
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button("Not now", systemImage: "moon.zzz") { model.notNow(card.goal) }
+                        .tint(.gray)
+                }
+            }
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.card)
         }
     }
 
@@ -225,6 +279,11 @@ public struct HomeView: View {
 private final class MomentFrames {
     var cards: [String: CGRect] = [:]
     var ring: CGRect?
+}
+
+private struct JustBlocked: Equatable {
+    let card: GoalTimeCard
+    let session: GoalSession
 }
 
 private struct RowButtonStyle: ButtonStyle {
