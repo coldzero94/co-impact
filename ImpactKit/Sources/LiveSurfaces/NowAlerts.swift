@@ -3,8 +3,9 @@ import os
 import UserNotifications
 
 /// The fallback Now alert (PRODUCT.md → Interruptions): a local notification at the start of a card's Now phase,
-/// only when its Live Activity could not be scheduled (Live Activities off, or a request refused). Tapping it runs
-/// the card's primary action through Impact, as the Live Activity's button does (owner, 2026-11-17).
+/// only when its Live Activity could not be scheduled (Live Activities off, a request refused, or Impact in the
+/// background, `LiveActivities.sync`). Tapping it runs the card's primary action through Impact, as the Live
+/// Activity's button does (owner, 2026-11-17).
 @MainActor
 public enum NowAlerts {
     /// Every fallback alert's identifier starts with this.

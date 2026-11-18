@@ -7,33 +7,61 @@ import WidgetKit
 
 /// Background refresh (ARCHITECTURE.md → Refresh and platform constraints): when iOS lets Impact run in the
 /// background, it reads the calendar and Impact's state as the widgets do, ends the Live Activities of cards that
-/// changed or left, gives the cards that should have one but do not the fallback alert (ActivityKit refuses
-/// requests from the background), and reloads the widgets. Its cards must equal live Home's, or the sync ends their
-/// activities (`backgroundLiveCards` test): geocoded places (step 10) must reach this path too.
+/// changed or left, gives the cards that should have one but do not, and whose Now phase is ahead, the fallback
+/// alert (ActivityKit refuses requests from the background), and reloads the widgets. Its cards must equal live
+/// Home's, or the sync ends their activities (`backgroundLiveCards` test): geocoded places (step 10) must reach this
+/// path too.
+/// shortcut: a run is not cancelled when Impact comes to the front, so one overlapping the front sync can add a
+/// fallback alert the front sync just removed (two alerts for that card); make syncs wait for each other if a device
+/// shows it.
 @MainActor public enum BackgroundRefresh {
     /// Also listed in Info.plist → `BGTaskSchedulerPermittedIdentifiers`.
     public static let identifier = "io.github.coldzero94.impact.refresh"
 
     /// Asks iOS to run `run()` in 15 minutes at the earliest; it decides when, possibly never.
     public static func schedule() {
+        let identifier = identifier
+        guard #available(iOS 27, *) else {
+            do {
+                try BGTaskScheduler.shared.submit(request(identifier))
+            } catch {
+                notScheduled(error)
+            }
+            return
+        }
+        // iOS 27 deprecates `submit`, which misses some errors; its replacement must not run on the main thread.
+        Task.detached {
+            do {
+                try await BGTaskScheduler.shared.submitTaskRequest(request(identifier))
+            } catch {
+                await notScheduled(error)
+            }
+        }
+    }
+
+    private nonisolated static func request(_ identifier: String) -> BGAppRefreshTaskRequest {
         let request = BGAppRefreshTaskRequest(identifier: identifier)
         request.earliestBeginDate = .now.addingTimeInterval(15 * 60)
-        do {
-            try BGTaskScheduler.shared.submit(request)
-        } catch {
-            homeLog.error("Background refresh not scheduled: \((error as NSError).code, privacy: .public)")
-        }
+        return request
+    }
+
+    /// Code 1 (unavailable) also means background refresh is off for Impact, or the simulator (Platform facts).
+    private static func notScheduled(_ error: any Error) {
+        homeLog.error("Background refresh not scheduled: \((error as NSError).code, privacy: .public)")
     }
 
     public static func run() async {
         schedule()
         let now = Date.now
         let calendar = Calendar.autoupdatingCurrent
-        // Without Impact's state (none written yet, or locked before the first unlock after a reboot) it does
-        // nothing: syncing cards without the run token or the done cards would end every activity.
-        guard let (events, state, engine) = NextCards.read(now: now, calendar: calendar),
-              let token = state.runToken else {
-            homeLog.notice("Background refresh: the calendar or Impact's state cannot be read")
+        // Without the calendar or Impact's state (none written yet, or locked before the first unlock after a reboot)
+        // it does nothing: syncing cards without the run token or the done cards would end every activity.
+        guard let (events, state, engine) = NextCards.read(now: now, calendar: calendar) else {
+            homeLog.notice("Background refresh: the calendar cannot be read")
+            return
+        }
+        guard let token = state.runToken else {
+            homeLog.notice("Background refresh: Impact's state cannot be read")
             return
         }
         let home = NextCards.home(events: events, state: state, now: now, calendar: calendar, engine: engine)

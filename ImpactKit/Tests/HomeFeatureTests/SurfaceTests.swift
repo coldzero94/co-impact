@@ -225,13 +225,16 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         var log = ActionLog()
         let review = try #require(engine.card(for: meeting("Review", 10), now: at(9.9)))
         _ = log.record(try #require(review.primaryAction), on: review, at: at(9.9))
-        let events = [meeting("Review", 10), meeting("Sync", 13), meeting("Call", 15), meeting("Plan", 16)]
+        // Moved was joined three days ago, then moved to tomorrow morning.
+        log.restore(["Moved": at(9, day: -3)])
+        let events = [meeting("Review", 10), meeting("Sync", 13), meeting("Call", 15), meeting("Moved", 9, day: 1)]
         let model = try HomeModel(events: events, now: at(10), calendar: losAngeles, log: log)
         model.dismiss(try #require(model.snapshot.cards.first { $0.id == "Sync" }), similar: false)
         let home = NextCards.home(events: events, state: model.surfaceState(runToken: "secret"), now: at(10),
                                   calendar: losAngeles, engine: engine)
-        // Done Review and dismissed Sync stay out: otherwise a background sync would end Call's and Plan's activities.
-        #expect(model.liveCards(runToken: "secret").map(\.cardID) == ["Call", "Plan"])
+        // Done Review and Moved and dismissed Sync stay out: otherwise a background sync would end Call's activity
+        // for a second card or give a done card an alert.
+        #expect(model.liveCards(runToken: "secret").map(\.cardID) == ["Call"])
         #expect(home.liveActivityCards.compactMap { LiveCard($0, runToken: "secret") } == model.liveCards(runToken: "secret"))
     }
 
