@@ -18,40 +18,37 @@ import WidgetKit
     /// Also listed in Info.plist → `BGTaskSchedulerPermittedIdentifiers`.
     public static let identifier = "io.github.coldzero94.impact.refresh"
 
-    /// Asks iOS to run `run()` in 15 minutes at the earliest; it decides when, possibly never.
-    public static func schedule() {
+    /// Asks iOS to run `run()` in 15 minutes at the earliest; it decides when, possibly never. The request goes out
+    /// asynchronously: await the task to know it was made.
+    @discardableResult public static func schedule() -> Task<Void, Never> {
         let identifier = identifier
-        guard #available(iOS 27, *) else {
+        // Off the main thread, where iOS 27's `submitTaskRequest` must not run (`submit` may run anywhere).
+        return Task.detached {
+            let request = BGAppRefreshTaskRequest(identifier: identifier)
+            request.earliestBeginDate = .now.addingTimeInterval(15 * 60)
             do {
-                try BGTaskScheduler.shared.submit(request(identifier))
+                if #available(iOS 27, *) {
+                    // iOS 27 deprecates `submit`, which misses some errors.
+                    try await BGTaskScheduler.shared.submitTaskRequest(request)
+                } else {
+                    try BGTaskScheduler.shared.submit(request)
+                }
             } catch {
-                notScheduled(error)
-            }
-            return
-        }
-        // iOS 27 deprecates `submit`, which misses some errors; its replacement must not run on the main thread.
-        Task.detached {
-            do {
-                try await BGTaskScheduler.shared.submitTaskRequest(request(identifier))
-            } catch {
-                await notScheduled(error)
+                // `BGTaskSchedulerErrorDomain` 1 (unavailable) also means background refresh is off for Impact, or
+                // the simulator (Platform facts).
+                homeLog.error("Background refresh not scheduled: \(error.logged, privacy: .public)")
             }
         }
-    }
-
-    private nonisolated static func request(_ identifier: String) -> BGAppRefreshTaskRequest {
-        let request = BGAppRefreshTaskRequest(identifier: identifier)
-        request.earliestBeginDate = .now.addingTimeInterval(15 * 60)
-        return request
-    }
-
-    /// Code 1 (unavailable) also means background refresh is off for Impact, or the simulator (Platform facts).
-    private static func notScheduled(_ error: any Error) {
-        homeLog.error("Background refresh not scheduled: \((error as NSError).code, privacy: .public)")
     }
 
     public static func run() async {
-        schedule()
+        let booking = schedule()
+        await refresh()
+        // Returning lets iOS suspend Impact: book the next run first.
+        await booking.value
+    }
+
+    private static func refresh() async {
         let now = Date.now
         let calendar = Calendar.autoupdatingCurrent
         // Without the calendar or Impact's state (none written yet, or locked before the first unlock after a reboot)
