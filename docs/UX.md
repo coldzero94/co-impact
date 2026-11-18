@@ -20,7 +20,7 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 - Request full calendar access. The usage string says events are analyzed on device only.
 - If denied: explain what the app needs and link to Settings. No demo data in release builds (mock data is for previews and debug only).
 - Built in step 7 (Home refreshes on the built triggers in ARCHITECTURE.md → Refresh and platform constraints). If access is restricted (device management or Screen Time), the screen says so without a Settings button. With access but no regular calendar (only subscriptions or Birthdays), Home says "No calendars to read" instead of an empty day.
-- Not built yet: the goal-setup row after the first Impact (step 11).
+- Built in step 11: the goal-setup row after the first Impact. It stays until it is opened or swiped away (Hide). Until Settings exists, a Goals button (a flag) in Home's toolbar opens goal setup.
 - No other permission here. Notifications and location are asked in context (PRODUCT.md → Permissions).
 - No goal setup here. After the first Impact, Home offers it once as a quiet row under the cards ("Set up to three goals for this year"); afterwards it is in Settings.
 
@@ -95,6 +95,7 @@ Built in step 7: below any place, Details shows the organizer unless it is the u
 - Up to three rows. Each row: a title field, times per week (stepper, 1–5, default 2), and Workday / Personal time (segmented, default Workday).
 - Working hours in one row below (default Mon–Fri 09:00–18:00).
 - Done is enabled as soon as one title exists. The first goal-time card can appear right after.
+- Built in step 11: a swipe removes a goal; Done drops rows without a title (and is also enabled with none when goals were set before, so the last one can be removed); Cancel keeps the goals as they were. Once something is edited, a swipe down does not close the sheet (it would drop the edits without asking); Cancel or Done does. Working hours open their own screen: each day as a switch, then start and end times; the end stays at least 15 minutes after the start, on the same day. At accessibility text sizes, Workday / Personal time is a menu, since segmented controls do not grow with the text. Not built yet: the goal-time card (step 11), and pausing a goal (PRODUCT.md → Goals).
 
 ### 6. Daily review (sheet)
 

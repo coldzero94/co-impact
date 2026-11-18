@@ -16,6 +16,7 @@ public struct HomeView: View {
     @State private var pending: Moment?
     @State private var flying: Moment?
     @State private var landings = 0
+    @State private var settingUpGoals = false
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -33,58 +34,84 @@ public struct HomeView: View {
 
     public var body: some View {
         let snapshot = model.snapshot
-        List {
-            Section {
-                if let next = snapshot.nextUp {
-                    NextUpCard(card: next, now: model.now, details: { selected = next }, primary: { action in
-                        // Within a second of an Impact, Next up already shows the next card, so a tap is
-                        // treated as the second half of a double tap and ignored. A later one first plays a
-                        // moment still queued because the app never left (see playPending).
-                        if let pending, ProcessInfo.processInfo.systemUptime - pending.recorded < 1 { return }
-                        playPending()
-                        run(action, on: next) { failed = $0 }
-                    })
-                        .recordingFrame { momentFrames.cards[next.id] = $0 }
-                        // A new view per card, so the promoted card records its own frame.
-                        .id(next.id)
-                        .dismissible { model.dismiss(next, similar: $0) }
-                } else {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Nothing needs you today.")
-                            .font(.title3.weight(.semibold))
-                        if let next = snapshot.next {
-                            Text("Next: \(next.start, format: .dateTime.weekday(.abbreviated).hour().minute()) · \(next.title)")
-                                .foregroundStyle(.secondary)
+        NavigationStack {
+            List {
+                Section {
+                    if let next = snapshot.nextUp {
+                        NextUpCard(card: next, now: model.now, details: { selected = next }, primary: { action in
+                            // Within a second of an Impact, Next up already shows the next card, so a tap is
+                            // treated as the second half of a double tap and ignored. A later one first plays a
+                            // moment still queued because the app never left (see playPending).
+                            if let pending, ProcessInfo.processInfo.systemUptime - pending.recorded < 1 { return }
+                            playPending()
+                            run(action, on: next) { failed = $0 }
+                        })
+                            .recordingFrame { momentFrames.cards[next.id] = $0 }
+                            // A new view per card, so the promoted card records its own frame.
+                            .id(next.id)
+                            .dismissible { model.dismiss(next, similar: $0) }
+                    } else {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Nothing needs you today.")
+                                .font(.title3.weight(.semibold))
+                            if let next = snapshot.next {
+                                Text("Next: \(next.start, format: .dateTime.weekday(.abbreviated).hour().minute()) · \(next.title)")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(20)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.card, in: .rect(cornerRadius: 24))
+                    }
+                } header: {
+                    // A header, not a row: rows clip the large title's first glyph at the cell's edge.
+                    header(snapshot).textCase(nil).foregroundStyle(.primary).padding(.bottom, 16)
+                }
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                section("Later today", snapshot.laterToday, done: snapshot.doneCardIDs)
+                section("Tomorrow morning", snapshot.tomorrowMorning, done: snapshot.doneCardIDs)
+                if model.offersGoalSetup {
+                    Section {
+                        // UX.md → Onboarding: a quiet row, offered once.
+                        Button {
+                            model.goalSetupOffered()
+                            settingUpGoals = true
+                        } label: {
+                            // The section headers' gray: quiet, at about 5.5:1 in light mode.
+                            Label("Set up to three goals for this year", systemImage: "flag")
+                                .foregroundStyle(Color.primary.opacity(0.6))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button("Hide", systemImage: "xmark", role: .destructive) { model.goalSetupOffered() }
                         }
                     }
-                    .padding(20)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.card, in: .rect(cornerRadius: 24))
-                }
-            } header: {
-                // A header, not a row: rows clip the large title's first glyph at the cell's edge.
-                header(snapshot).textCase(nil).foregroundStyle(.primary).padding(.bottom, 16)
-            }
-            .listRowInsets(EdgeInsets())
-            .listRowBackground(Color.clear)
-            section("Later today", snapshot.laterToday, done: snapshot.doneCardIDs)
-            section("Tomorrow morning", snapshot.tomorrowMorning, done: snapshot.doneCardIDs)
-        }
-        .homeListStyle()
-        .contentMargins(.top, 8, for: .scrollContent)
-        .scrollContentBackground(.hidden)
-        .background(Color.page)
-        .overlay {
-            GeometryReader { proxy in
-                let origin = proxy.frame(in: .global).origin
-                if let flying, let from = flying.from, let to = momentFrames.ring {
-                    ImpactToken(symbol: flying.symbol, from: from.offsetBy(dx: -origin.x, dy: -origin.y),
-                                to: to.offsetBy(dx: -origin.x, dy: -origin.y), onLanded: land)
-                        .id(flying.id)
+                    .listRowBackground(Color.card)
                 }
             }
-            .allowsHitTesting(false)
+            .homeListStyle()
+            .contentMargins(.top, 8, for: .scrollContent)
+            .scrollContentBackground(.hidden)
+            .background(Color.page)
+            .overlay {
+                GeometryReader { proxy in
+                    let origin = proxy.frame(in: .global).origin
+                    if let flying, let from = flying.from, let to = momentFrames.ring {
+                        ImpactToken(symbol: flying.symbol, from: from.offsetBy(dx: -origin.x, dy: -origin.y),
+                                    to: to.offsetBy(dx: -origin.x, dy: -origin.y), onLanded: land)
+                            .id(flying.id)
+                    }
+                }
+                .allowsHitTesting(false)
+            }
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Goals", systemImage: "flag") { settingUpGoals = true }
+                }
+            }
         }
+        .sheet(isPresented: $settingUpGoals, onDismiss: playPending) { GoalSetupView(model: model) }
         .sheet(item: $selected, onDismiss: playPending) { card in
             CardDetailView(card: card, model: model) { action, failed in run(action, on: card, failed: failed) }
                 .presentationDetents(typeSize.isAccessibilitySize ? [.large] : [.medium, .large])
@@ -167,7 +194,7 @@ public struct HomeView: View {
     /// sheet open (UX.md → The Impact moment). If an action never left, the next Next up tap or sheet close
     /// plays it.
     private func playPending() {
-        guard scenePhase == .active, selected == nil, flying == nil, let moment = pending else { return }
+        guard scenePhase == .active, selected == nil, !settingUpGoals, flying == nil, let moment = pending else { return }
         if reduceMotion || moment.from == nil || momentFrames.ring == nil {
             land()
         } else {

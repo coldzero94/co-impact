@@ -4,7 +4,7 @@ import LiveSurfaces
 import Observation
 import os
 
-/// Home's state: the fetched events, the clock, the action log, and dismissals, with the snapshot built from them.
+/// Home's state: the fetched events, the clock, the action log, dismissals, and goals, with the snapshot built from them.
 @Observable @MainActor
 public final class HomeModel {
     public private(set) var snapshot: HomeSnapshot
@@ -16,15 +16,20 @@ public final class HomeModel {
     private let calendar: Calendar
     private let engine: ImpactEngine
     private var dismissals: Dismissals
+    /// Goals and working hours (PRODUCT.md → Goals), edited in goal setup.
+    public private(set) var goals: GoalSettings
     /// Receives every Impact after one is recorded or restored, to store them.
     private let saveImpacts: ([String: Date]) -> Void
     /// Receives the dismissals after each dismissal, to store them.
     private let saveDismissals: (Dismissals) -> Void
+    /// Receives the goal settings after each change, to store them.
+    private let saveGoals: (GoalSettings) -> Void
 
     public init(events: [CalendarEvent], now: Date, calendar: Calendar, log: ActionLog = ActionLog(),
-                dismissals: Dismissals = Dismissals(),
+                dismissals: Dismissals = Dismissals(), goals: GoalSettings = GoalSettings(),
                 saveImpacts: @escaping ([String: Date]) -> Void = { _ in },
-                saveDismissals: @escaping (Dismissals) -> Void = { _ in }) throws {
+                saveDismissals: @escaping (Dismissals) -> Void = { _ in },
+                saveGoals: @escaping (GoalSettings) -> Void = { _ in }) throws {
         let engine = try ImpactEngine()
         snapshot = Self.home(engine, events, now, calendar, log, dismissals.pruned(now: now))
         self.now = now
@@ -35,13 +40,15 @@ public final class HomeModel {
         self.dismissals = dismissals.pruned(now: now)
         self.saveImpacts = saveImpacts
         self.saveDismissals = saveDismissals
+        self.goals = goals
+        self.saveGoals = saveGoals
     }
 
     /// Rebuilds the snapshot for newly fetched events at a new time.
     public func update(events: [CalendarEvent], now: Date) {
         self.events = events
         self.now = now
-        // Lapse dismissals as loading does, so the result never depends on whether the app was relaunched.
+        // Lapse dismissals as init does, so the result never depends on whether the app was relaunched.
         dismissals = dismissals.pruned(now: now)
         rebuild()
     }
@@ -79,6 +86,30 @@ public final class HomeModel {
         return recorded
     }
 
+    /// UX.md → Onboarding: after the first Impact, Home offers goal setup once, until it is opened or swiped away.
+    public var offersGoalSetup: Bool {
+        !log.impacts.isEmpty && goals.goals.isEmpty && !goals.offered
+    }
+
+    /// The offer was opened or swiped away: Home stops showing it.
+    func goalSetupOffered() {
+        guard !goals.offered else { return }
+        goals.offered = true
+        saveGoals(goals)
+    }
+
+    /// Whether goal setup's Done can save these rows: one has a title, or goals were set before (so the last one can
+    /// be removed).
+    func canSaveGoals(_ goals: [Goal]) -> Bool {
+        !self.goals.goals.isEmpty || !Self.titled(goals).isEmpty
+    }
+
+    /// Done in goal setup: keeps the goals with a title, trimmed, at most three; none left removes them all.
+    func setGoals(_ goals: [Goal], workingHours: WorkingHours) {
+        self.goals = GoalSettings(goals: Array(Self.titled(goals).prefix(3)), workingHours: workingHours, offered: true)
+        saveGoals(self.goals)
+    }
+
     /// What the widgets and background refresh need to see cards as Home does (`SurfaceState`): the Impacts of the
     /// last two days or of events still fetched (e.g. a multi-day event joined on its first day, or a meeting joined
     /// and then moved), the dismissals' rules, and the run links' secret.
@@ -94,6 +125,14 @@ public final class HomeModel {
     /// Now phase on. Either way Home lists the card by then (tomorrow morning's from 18:00).
     func runnableCard(id: String) -> ImpactCard? {
         snapshot.cards.first { $0.id == id }
+    }
+
+    private static func titled(_ goals: [Goal]) -> [Goal] {
+        goals.compactMap { goal in
+            var goal = goal
+            goal.title = goal.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            return goal.title.isEmpty ? nil : goal
+        }
     }
 
     private func rebuild() {
