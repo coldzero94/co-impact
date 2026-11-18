@@ -79,13 +79,13 @@ public final class HomeModel {
         return recorded
     }
 
-    /// What the widgets need to show cards as Home does (`SurfaceState`): the Impacts of the last two days or of
-    /// cards still on Home (e.g. a multi-day event joined on its first day), the dismissals' rules, and the run
-    /// links' secret.
+    /// What the widgets and background refresh need to see cards as Home does (`SurfaceState`): the Impacts of the
+    /// last two days or of events still fetched (e.g. a multi-day event joined on its first day, or a meeting joined
+    /// and then moved), the dismissals' rules, and the run links' secret.
     func surfaceState(runToken: String) -> SurfaceState {
         let since = now.addingTimeInterval(-2 * 86_400)
-        let onHome = Set((snapshot.cards + snapshot.liveActivityCards).map(\.id))
-        return SurfaceState(completed: log.impacts.filter { $0.value > since || onHome.contains($0.key) },
+        let fetched = Set(events.map(\.id))
+        return SurfaceState(completed: log.impacts.filter { $0.value > since || fetched.contains($0.key) },
                             suppressionRules: dismissals.rules, runToken: runToken)
     }
 

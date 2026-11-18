@@ -201,21 +201,41 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         #expect(store.load() == nil)
     }
 
-    @Test("Home tells the widgets the cards done in the last two days or still on Home, and its dismissal rules")
+    @Test("Home tells the widgets the cards done in the last two days or still fetched, and its dismissal rules")
     @MainActor func homeState() throws {
         var log = ActionLog()
         let review = try #require(engine.card(for: meeting("Review", 10), now: at(9.9)))
         _ = log.record(try #require(review.primaryAction), on: review, at: at(9.9))
-        // Long runs from three days ago to tomorrow and was joined on its first day: still on Home, so still done.
+        // Long runs from three days ago to tomorrow and was joined on its first day: still fetched, so still done.
         var long = meeting("Long", 9, day: -3)
         long.end = at(18, day: 1)
-        log.restore(["Old": at(9, day: -3), "Long": at(9, day: -3)])
-        let model = try HomeModel(events: [meeting("Review", 10), meeting("Sync", 13), long], now: at(10),
-                                  calendar: losAngeles, log: log)
+        // Moved was joined three days ago, then moved to the day after tomorrow: not on Home, but still fetched.
+        log.restore(["Old": at(9, day: -3), "Long": at(9, day: -3), "Moved": at(9, day: -3)])
+        let model = try HomeModel(events: [meeting("Review", 10), meeting("Sync", 13), long, meeting("Moved", 9, day: 2)],
+                                  now: at(10), calendar: losAngeles, log: log)
         model.dismiss(try #require(model.snapshot.cards.first { $0.id == "Sync" }), similar: false)
         let state = model.surfaceState(runToken: "secret")
-        #expect(state.completed == ["Review": at(9.9), "Long": at(9, day: -3)] && state.runToken == "secret")
+        #expect(state.completed == ["Review": at(9.9), "Long": at(9, day: -3), "Moved": at(9, day: -3)]
+                && state.runToken == "secret")
         #expect(state.suppressionRules == [.occurrence(id: "Sync")])
+    }
+
+    @Test("Background refresh, from the widgets' state, wants the Live Activities Home requested")
+    @MainActor func backgroundLiveCards() throws {
+        var log = ActionLog()
+        let review = try #require(engine.card(for: meeting("Review", 10), now: at(9.9)))
+        _ = log.record(try #require(review.primaryAction), on: review, at: at(9.9))
+        // Moved was joined three days ago, then moved to tomorrow morning.
+        log.restore(["Moved": at(9, day: -3)])
+        let events = [meeting("Review", 10), meeting("Sync", 13), meeting("Call", 15), meeting("Moved", 9, day: 1)]
+        let model = try HomeModel(events: events, now: at(10), calendar: losAngeles, log: log)
+        model.dismiss(try #require(model.snapshot.cards.first { $0.id == "Sync" }), similar: false)
+        let home = NextCards.home(events: events, state: model.surfaceState(runToken: "secret"), now: at(10),
+                                  calendar: losAngeles, engine: engine)
+        // Done Review and Moved and dismissed Sync stay out: otherwise a background sync would end Call's activity
+        // for a second card or give a done card an alert.
+        #expect(model.liveCards(runToken: "secret").map(\.cardID) == ["Call"])
+        #expect(home.liveActivityCards.compactMap { LiveCard($0, runToken: "secret") } == model.liveCards(runToken: "secret"))
     }
 
     @Test("A run request reaches the cards Home lists, Next up past its Now phase included, not tomorrow's early")

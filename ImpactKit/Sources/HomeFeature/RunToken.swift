@@ -9,8 +9,8 @@ enum RunToken {
 
     /// The stored token, made on first use.
     /// shortcut: a read that fails (e.g. before the first unlock after a reboot) looks like a missing token and
-    /// replaces it, so existing activities' buttons only open Impact until the next sync; tell the two apart once
-    /// Impact launches in the background (step 10).
+    /// replaces it, so existing activities' buttons only open Impact until the next sync. Background refresh reads
+    /// the App Group's copy instead (`BackgroundRefresh`); tell the two apart if a background launch ever loads it.
     static func load(_ defaults: UserDefaults = .standard) -> String {
         if let token = defaults.string(forKey: key), !token.isEmpty { return token }
         let token = UUID().uuidString

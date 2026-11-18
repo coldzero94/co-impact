@@ -63,8 +63,9 @@ public struct LiveCard: Codable, Hashable, Sendable {
         return id
     }
 
-    /// Which wanted cards a sync requests (`LiveActivities.sync`): those without an activity yet, started at once
-    /// if already in their Now phase (no alert: Impact is in front), else scheduled for its start (with its alert).
+    /// The wanted cards without an activity yet (`LiveActivities.sync`): `startNow`, already in their Now phase,
+    /// which Impact in front starts at once without an alert; `schedule`, the rest, scheduled for their Now phase with
+    /// its alert, or given the fallback alert where that cannot be.
     public static func toRequest(wanted: [LiveCard], existing: Set<LiveCard>, now: Date)
         -> (startNow: [LiveCard], schedule: [LiveCard]) {
         let missing = wanted.filter { !existing.contains($0) }

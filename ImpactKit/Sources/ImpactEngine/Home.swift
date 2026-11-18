@@ -28,8 +28,8 @@ public struct HomeSnapshot: Sendable, Hashable {
     /// tomorrow morning's first cards get their alert though Impact may not run again tonight. At most two, so
     /// back-to-back events both get one, while few are pending: a pending start alerts even if its event moved
     /// since, until Impact runs again (research/system-surfaces.md).
-    /// shortcut: a third card, or one after tomorrow noon, waits for Impact to run again (background refresh,
-    /// step 10).
+    /// shortcut: a third card, or one after tomorrow noon, waits for Impact to run again; from the background
+    /// (background refresh) it gets the fallback alert, and its Live Activity waits for Impact in front.
     public let liveActivityCards: [ImpactCard]
 
     /// Every card Home lists, in screen order.
