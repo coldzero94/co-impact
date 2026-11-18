@@ -6,15 +6,13 @@ public struct GoalSession: Sendable, Hashable, Codable {
     /// The event's `CalendarEvent.id`; it can change after a sync, as can its calendar's ID, so `GoalRecords.matched`
     /// falls back to the title and start.
     public var eventID: String
-    public var calendarID: String
     public var title: String
     public var start: Date
     public var end: Date
 
-    public init(goalID: String, eventID: String, calendarID: String, title: String, start: Date, end: Date) {
+    public init(goalID: String, eventID: String, title: String, start: Date, end: Date) {
         self.goalID = goalID
         self.eventID = eventID
-        self.calendarID = calendarID
         self.title = title
         self.start = start
         self.end = end
@@ -55,7 +53,7 @@ public struct GoalRecords: Sendable, Hashable, Codable {
 
     /// The records as the calendar has them now. `events` is Home's fetch, from the start of today: a session found
     /// there by its event ID, or else by title and start (a full sync can change both the event's and its calendar's ID,
-    /// ARCHITECTURE.md → Platform facts), takes the event's ID, calendar, title, and times, so moving it in Calendar
+    /// ARCHITECTURE.md → Platform facts), takes the event's ID, title, and times, so moving it in Calendar
     /// moves the block; one from today on that is not found was deleted (or moved out of reach) and is dropped. A
     /// fallback match only counts the event as a session; nothing is ever written to it. Sessions before today are kept as last seen,
     /// until their week is over; answers only for today.
@@ -76,7 +74,6 @@ public struct GoalRecords: Sendable, Hashable, Codable {
             taken.insert(event.id)
             var seen = session
             seen.eventID = event.id
-            seen.calendarID = event.calendarID
             seen.title = event.title
             seen.start = event.start
             seen.end = event.end

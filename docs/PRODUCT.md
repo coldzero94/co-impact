@@ -197,7 +197,7 @@ Deterministic, like event selection; AI never decides.
 
 - Saves an event titled with the goal to the default calendar for new events, if the OS allows modifying it. Otherwise the user picks a writable calendar once, at the first Block time. Never a calendar the OS does not let Impact write to (hard rule 8).
 - No attendees, no alarms from Impact. Impact keeps the identifiers of the events it created, on device, with a fallback match because identifiers can change after a sync (ARCHITECTURE.md → Platform facts). It never edits or deletes any other event.
-- Undo for 5 seconds removes the event. Moving the event in Calendar moves the block; deleting it removes the block.
+- Undo for 5 seconds (15 with VoiceOver, UX.md → Home) removes the event. Moving the event in Calendar moves the block; deleting it removes the block.
 - Built in step 11. Without a default calendar Impact may write to, Block time says so and asks the user to choose one in Settings; picking a writable calendar in Impact is not built. A block whose ID changed after a sync (its calendar's ID can change too) is found again only while its title and start are unchanged (ARCHITECTURE.md → To verify). If Undo cannot remove the event, Home says so and asks the user to delete it in Calendar. Blocks on earlier days of the week count as Impact last saw them, since Home reads the calendar from today: deleting one does not give its session back.
 
 ### Focus blocks

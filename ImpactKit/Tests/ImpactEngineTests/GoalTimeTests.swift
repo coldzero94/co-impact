@@ -157,12 +157,12 @@ private func card(
 
 @Suite struct GoalRecordsTests {
     private func blocked(_ id: String, _ hour: Int, day: Int, goal: String = "book") -> GoalSession {
-        GoalSession(goalID: goal, eventID: id, calendarID: "work", title: "Write a book", start: at(hour, day: day),
+        GoalSession(goalID: goal, eventID: id, title: "Write a book", start: at(hour, day: day),
                     end: at(hour + 1, day: day))
     }
 
     private func event(of session: GoalSession, id: String? = nil, calendar: String? = nil, hour: Int? = nil) -> CalendarEvent {
-        var event = CalendarEvent(id: id ?? session.eventID, calendarID: calendar ?? session.calendarID,
+        var event = CalendarEvent(id: id ?? session.eventID, calendarID: calendar ?? "work",
                                   title: session.title, start: session.start, end: session.end)
         if let hour {
             event.start = at(hour, day: 1)
@@ -188,7 +188,7 @@ private func card(
         let events = [event(of: moved, hour: 20), event(of: renamedID, id: "new-id", calendar: "work-synced"), canceled]
         let matched = records.matched(events: events, now: at(10), calendar: calendar)
         #expect(matched.sessions.map(\.eventID) == ["moved", "new-id", "monday"])
-        #expect(matched.sessions[0].start == at(20, day: 1) && matched.sessions[1].calendarID == "work-synced")
+        #expect(matched.sessions[0].start == at(20, day: 1))
         #expect(matched.answers == [GoalAnswer(goalID: "book", date: at(9), blocked: true)])
         #expect(matched.sessionsByGoal["book"]?.count == 3)
     }

@@ -127,8 +127,8 @@ public final class HomeModel {
     /// follows at once. Returns the session for Undo. Throws when the calendar refuses; nothing is recorded then.
     func blockTime(_ card: GoalTimeCard) throws -> GoalSession {
         let event = try blocks.add(card.goal.title, card.slot)
-        let session = GoalSession(goalID: card.goal.id, eventID: event.id, calendarID: event.calendarID,
-                                  title: event.title, start: event.start, end: event.end)
+        let session = GoalSession(goalID: card.goal.id, eventID: event.id, title: event.title, start: event.start,
+                                  end: event.end)
         // Busy at once, before the calendar's change notice brings the next fetch.
         events.append(event)
         goalRecords.block(session, at: now)
@@ -136,7 +136,8 @@ public final class HomeModel {
         return session
     }
 
-    /// Undo within 5 seconds of Block time: removes the event Impact created, and its answer.
+    /// Undo while Home offers it after Block time: removes the event Impact created, and its answer. Throws when the
+    /// calendar refuses; the block stays recorded then, as the event stays.
     func undoBlock(_ session: GoalSession) throws {
         try blocks.remove(session.eventID)
         events.removeAll { $0.id == session.eventID }

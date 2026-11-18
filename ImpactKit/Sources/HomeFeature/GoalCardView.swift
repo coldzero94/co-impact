@@ -2,7 +2,7 @@ import ImpactEngine
 import SwiftUI
 
 /// UX.md → Home: the goal-time card, below the time-bound cards. It names the goal and its free slot with Block time;
-/// for 5 seconds after Block time it shows "Blocked" with Undo instead.
+/// while Undo is offered after Block time (UX.md → Home) it shows "Blocked" with Undo instead.
 struct GoalCardView: View {
     let card: GoalTimeCard
     let now: Date
@@ -22,10 +22,13 @@ struct GoalCardView: View {
                     Label("Blocked", systemImage: "checkmark")
                         .font(.headline)
                     Spacer()
-                    // Borderless: a default-style button in a List row takes taps anywhere in the row.
-                    Button("Undo", action: undo)
-                        .buttonStyle(.borderless)
-                        .font(.headline)
+                    // Borderless: a default-style button in a List row takes taps anywhere in the row. The frame keeps
+                    // the 44-point minimum tap target (UX.md → Accessibility).
+                    Button(action: undo) {
+                        Text("Undo").frame(minWidth: 44, minHeight: 44).contentShape(.rect)
+                    }
+                    .buttonStyle(.borderless)
+                    .font(.headline)
                         .accessibilityLabel("Undo, remove the block for \(card.goal.title)")
                 }
             } else {

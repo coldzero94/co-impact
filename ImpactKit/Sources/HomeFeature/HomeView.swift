@@ -18,7 +18,7 @@ public struct HomeView: View {
     @State private var flying: Moment?
     @State private var landings = 0
     @State private var settingUpGoals = false
-    /// Block time's session, while its card shows "Blocked" with Undo (5 seconds).
+    /// Block time's session, while its card shows "Blocked" with Undo (UX.md → Home: 5 seconds, 15 with VoiceOver).
     @State private var justBlocked: JustBlocked?
     @State private var blockings = 0
     @State private var blockFailed = false
@@ -167,7 +167,7 @@ public struct HomeView: View {
         }
     }
 
-    /// The goal-time card (UX.md → Home): "Blocked" with Undo for 5 seconds after Block time, then the next one; a swipe
+    /// The goal-time card (UX.md → Home): "Blocked" with Undo for a while after Block time, then the next one; a swipe
     /// offers Not now.
     @ViewBuilder
     private var goalSection: some View {

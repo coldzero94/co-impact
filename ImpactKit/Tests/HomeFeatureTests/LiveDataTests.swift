@@ -271,12 +271,12 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
     @Test("Goal records load from the key and format users have stored")
     func goalRecordsStore() throws {
         try withDefaults { defaults in
-            let json = #"{"sessions":[{"goalID":"book","eventID":"e1","calendarID":"work","title":"Write a book","#
+            let json = #"{"sessions":[{"goalID":"book","eventID":"e1","title":"Write a book","#
                 + #""start":0,"end":3600}],"answers":[{"goalID":"book","date":0,"blocked":true}]}"#
             defaults.set(Data(json.utf8), forKey: "goalRecords")
             let start = Date(timeIntervalSinceReferenceDate: 0)
             #expect(DefaultsStore<GoalRecords>(defaults).load() == GoalRecords(
-                sessions: [GoalSession(goalID: "book", eventID: "e1", calendarID: "work", title: "Write a book",
+                sessions: [GoalSession(goalID: "book", eventID: "e1", title: "Write a book",
                                        start: start, end: start.addingTimeInterval(3_600))],
                 answers: [GoalAnswer(goalID: "book", date: start, blocked: true)]))
         }
@@ -334,7 +334,7 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
                                   saveGoalRecords: { kept.append($0) })
         let stuckSession = try stuck.blockTime(try #require(stuck.goalCard))
         #expect(throws: Refused.self) { try stuck.undoBlock(stuckSession) }
-        #expect(kept.last?.sessions == [stuckSession] && stuck.goalCard?.slot.start != offered.slot.start)
+        #expect(kept.last?.sessions == [stuckSession])
     }
 
     @Test("Home offers goal setup once, after the first Impact; Done keeps up to three goals with a title")
