@@ -161,9 +161,9 @@ private func card(
                     end: at(hour + 1, day: day))
     }
 
-    private func event(of session: GoalSession, id: String? = nil, hour: Int? = nil) -> CalendarEvent {
-        var event = CalendarEvent(id: id ?? session.eventID, calendarID: session.calendarID, title: session.title,
-                                  start: session.start, end: session.end)
+    private func event(of session: GoalSession, id: String? = nil, calendar: String? = nil, hour: Int? = nil) -> CalendarEvent {
+        var event = CalendarEvent(id: id ?? session.eventID, calendarID: calendar ?? session.calendarID,
+                                  title: session.title, start: session.start, end: session.end)
         if let hour {
             event.start = at(hour, day: 1)
             event.end = at(hour + 1, day: 1)
@@ -171,7 +171,7 @@ private func card(
         return event
     }
 
-    @Test("Matching follows a moved block, finds one whose ID changed, and drops a deleted one; past days stay this week")
+    @Test("Matching follows a moved block, finds one whose IDs changed, and drops a deleted one; past days stay this week")
     func matched() {
         let moved = blocked("moved", 19, day: 1)
         let renamedID = blocked("old-id", 7, day: 2)
@@ -184,10 +184,11 @@ private func card(
             sessions: [moved, renamedID, deleted, earlier, lastWeek, blocked("canceled", 8, day: 1)],
             answers: [GoalAnswer(goalID: "book", date: at(9, day: -1), blocked: false),
                       GoalAnswer(goalID: "book", date: at(9), blocked: true)])
-        let events = [event(of: moved, hour: 20), event(of: renamedID, id: "new-id"), canceled]
+        // A full sync can change the calendar's ID too.
+        let events = [event(of: moved, hour: 20), event(of: renamedID, id: "new-id", calendar: "work-synced"), canceled]
         let matched = records.matched(events: events, now: at(10), calendar: calendar)
         #expect(matched.sessions.map(\.eventID) == ["moved", "new-id", "monday"])
-        #expect(matched.sessions[0].start == at(20, day: 1))
+        #expect(matched.sessions[0].start == at(20, day: 1) && matched.sessions[1].calendarID == "work-synced")
         #expect(matched.answers == [GoalAnswer(goalID: "book", date: at(9), blocked: true)])
         #expect(matched.sessionsByGoal["book"]?.count == 3)
     }
@@ -201,5 +202,11 @@ private func card(
         #expect(records.sessions == [session] && records.answers.count == 2)
         records.undo(session)
         #expect(records.sessions.isEmpty && records.answers == [GoalAnswer(goalID: "launch", date: at(9, 30), blocked: false)])
+
+        // Undoing the same session again leaves an earlier block's answer alone.
+        let earlier = blocked("e0", 7, day: 0)
+        records.block(earlier, at: at(8))
+        records.undo(session)
+        #expect(records.sessions == [earlier] && records.answers.filter(\.blocked).count == 1)
     }
 }

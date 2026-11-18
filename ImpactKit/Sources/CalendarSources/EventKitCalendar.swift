@@ -24,6 +24,8 @@ public enum CalendarAccess: Sendable {
 public enum BlockError: Error {
     /// No default calendar for new events, or one Impact may not write to.
     case noWritableCalendar
+    /// Undo found no event with the ID Block time saved.
+    case notFound
 }
 
 /// The user's calendar through EventKit: the fetch and normalize steps of ARCHITECTURE.md → Pipeline, and Block time.
@@ -75,9 +77,10 @@ public final class EventKitCalendar {
     }
 
     /// Undo after Block time: removes the event Impact just created, by its item ID. Never call it for another event
-    /// (hard rule 8, PRODUCT.md → Block time). An event already gone is not an error.
+    /// (hard rule 8, PRODUCT.md → Block time). Throws when the ID finds nothing: more likely a changed ID than an event
+    /// already deleted, so the user is asked to delete it in Calendar.
     public func removeBlock(eventID: String) throws {
-        guard let event = store.calendarItem(withIdentifier: eventID) as? EKEvent else { return }
+        guard let event = store.calendarItem(withIdentifier: eventID) as? EKEvent else { throw BlockError.notFound }
         try store.remove(event, span: .thisEvent, commit: true)
     }
 

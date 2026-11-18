@@ -22,7 +22,9 @@ struct GoalCardView: View {
                     Label("Blocked", systemImage: "checkmark")
                         .font(.headline)
                     Spacer()
+                    // Borderless: a default-style button in a List row takes taps anywhere in the row.
                     Button("Undo", action: undo)
+                        .buttonStyle(.borderless)
                         .font(.headline)
                         .accessibilityLabel("Undo, remove the block for \(card.goal.title)")
                 }

@@ -1,4 +1,5 @@
 import Accessibility
+import CalendarSources
 import ImpactEngine
 import LiveSurfaces
 import os
@@ -21,6 +22,9 @@ public struct HomeView: View {
     @State private var justBlocked: JustBlocked?
     @State private var blockings = 0
     @State private var blockFailed = false
+    /// Block time failed for want of a writable default calendar, which the user can choose in Settings.
+    @State private var noWritableCalendar = false
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @State private var undoFailed = false
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
@@ -138,13 +142,15 @@ public struct HomeView: View {
         .sensoryFeedback(.success, trigger: blockings)
         .task(id: justBlocked) {
             guard justBlocked != nil else { return }
-            try? await Task.sleep(for: .seconds(5))
+            // VoiceOver first reads the announcement, then needs time to reach Undo.
+            try? await Task.sleep(for: .seconds(voiceOver ? 15 : 5))
             if !Task.isCancelled { justBlocked = nil }
         }
         .alert("Couldn't add to your calendar", isPresented: $blockFailed) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Choose a default calendar in Settings → Apps → Calendar, then try again.")
+            Text(noWritableCalendar ? "Choose a default calendar in Settings → Apps → Calendar, then try again."
+                 : "Try again in a moment.")
         }
         .alert("Couldn't remove the block", isPresented: $undoFailed) {
             Button("OK", role: .cancel) {}
@@ -191,6 +197,7 @@ public struct HomeView: View {
                         ).post()
                     } catch {
                         homeLog.error("Block time failed: \(error.logged, privacy: .public)")
+                        noWritableCalendar = (error as? BlockError) == .noWritableCalendar
                         blockFailed = true
                     }
                 }, undo: {})

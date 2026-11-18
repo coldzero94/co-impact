@@ -314,11 +314,27 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
         #expect(model.goalCard == nil && saved.last?.answers.map(\.blocked) == [false])
 
         // A refused save records nothing.
+        var refusedSaves = 0
         let refusing = try HomeModel(events: [], now: morning, calendar: losAngeles,
-                                     goals: GoalSettings(goals: [goal], offered: true))
+                                     goals: GoalSettings(goals: [goal], offered: true),
+                                     saveGoalRecords: { _ in refusedSaves += 1 })
         let offered = try #require(refusing.goalCard)
         #expect(throws: (any Error).self) { try refusing.blockTime(offered) }
-        #expect(refusing.goalCard == offered)
+        #expect(refusing.goalCard == offered && refusedSaves == 0)
+
+        // An Undo the calendar refuses keeps the block recorded, as the event stays.
+        struct Refused: Error {}
+        var kept: [GoalRecords] = []
+        let stuck = try HomeModel(events: [], now: morning, calendar: losAngeles,
+                                  goals: GoalSettings(goals: [goal], offered: true),
+                                  blocks: BlockWriter(add: { title, slot in
+                                      CalendarEvent(id: "stuck", calendarID: "personal", title: title, start: slot.start,
+                                                    end: slot.end)
+                                  }, remove: { _ in throw Refused() }),
+                                  saveGoalRecords: { kept.append($0) })
+        let stuckSession = try stuck.blockTime(try #require(stuck.goalCard))
+        #expect(throws: Refused.self) { try stuck.undoBlock(stuckSession) }
+        #expect(kept.last?.sessions == [stuckSession] && stuck.goalCard?.slot.start != offered.slot.start)
     }
 
     @Test("Home offers goal setup once, after the first Impact; Done keeps up to three goals with a title")
