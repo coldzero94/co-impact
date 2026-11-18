@@ -218,6 +218,21 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         #expect(state.suppressionRules == [.occurrence(id: "Sync")])
     }
 
+    @Test("Background refresh, from the widgets' state, wants the Live Activities Home requested")
+    @MainActor func backgroundLiveCards() throws {
+        var log = ActionLog()
+        let review = try #require(engine.card(for: meeting("Review", 10), now: at(9.9)))
+        _ = log.record(try #require(review.primaryAction), on: review, at: at(9.9))
+        let events = [meeting("Review", 10), meeting("Sync", 13), meeting("Call", 15), meeting("Plan", 16)]
+        let model = try HomeModel(events: events, now: at(10), calendar: losAngeles, log: log)
+        model.dismiss(try #require(model.snapshot.cards.first { $0.id == "Sync" }), similar: false)
+        let home = NextCards.home(events: events, state: model.surfaceState(runToken: "secret"), now: at(10),
+                                  calendar: losAngeles, engine: engine)
+        // Done Review and dismissed Sync stay out: otherwise a background sync would end Call's and Plan's activities.
+        #expect(model.liveCards(runToken: "secret").map(\.cardID) == ["Call", "Plan"])
+        #expect(home.liveActivityCards.compactMap { LiveCard($0, runToken: "secret") } == model.liveCards(runToken: "secret"))
+    }
+
     @Test("A run request reaches the cards Home lists, Next up past its Now phase included, not tomorrow's early")
     @MainActor func runnableCards() throws {
         var log = ActionLog()

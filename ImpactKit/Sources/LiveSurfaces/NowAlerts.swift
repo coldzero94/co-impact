@@ -11,7 +11,7 @@ public enum NowAlerts {
     nonisolated static let prefix = "now."
 
     /// A fallback alert's identifier: the card ID and its Now phase's start, so a card moved to another time drops
-    /// its old alert even where Impact only removes (the background), as its changed Live Activity ends.
+    /// its old alert, as its changed Live Activity ends.
     nonisolated static func identifier(for card: LiveCard) -> String {
         prefix + card.cardID + "@" + String(Int(card.nowPhase.lowerBound.timeIntervalSince1970))
     }
@@ -43,8 +43,7 @@ public enum NowAlerts {
             return
         }
         for card in cards {
-            // A newer sync replaced this one while it waited: it takes over (from the background it only removes,
-            // and the next sync in front adds what is missing).
+            // A newer sync replaced this one while it waited: it takes over.
             guard !Task.isCancelled else { return }
             do {
                 try await center.add(request(for: card, now: .now))
@@ -55,9 +54,7 @@ public enum NowAlerts {
     }
 
     /// Removes the fallback alerts, pending or delivered, whose identifiers (`identifier(for:)`) are not in `kept`.
-    /// From the background, where Impact cannot request Live Activities, this is all it does, with the wanted
-    /// cards' identifiers: their alerts stay.
-    static func remove(except kept: Set<String>) async {
+    private static func remove(except kept: Set<String>) async {
         let center = UNUserNotificationCenter.current()
         let isStale = { (id: String) in id.hasPrefix(prefix) && !kept.contains(id) }
         center.removePendingNotificationRequests(withIdentifiers: await center.pendingNotificationRequests()

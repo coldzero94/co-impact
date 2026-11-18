@@ -15,8 +15,9 @@ public enum LiveActivities {
     /// and their fallback alerts, which works from the background too. With `request`, which needs Impact in front,
     /// also requests the missing ones (`LiveCard.toRequest`): scheduled ones start with their Now phase and alert
     /// then (PRODUCT.md → Interruptions; whether the alert shows under a Focus is unverified, ARCHITECTURE.md → To
-    /// verify). A scheduled one that cannot be requested, Live Activities being off included, gets the fallback
-    /// alert instead (`NowAlerts`); one already in its Now phase gets none, as its activity would have none.
+    /// verify). A scheduled one that cannot be requested, Live Activities being off or Impact in the background
+    /// included, gets the fallback alert instead (`NowAlerts`) until Impact next requests in front; one already in
+    /// its Now phase gets none, as its activity would have none.
     /// shortcut: an activity the user swiped away is requested again once the system forgets it.
     public static func sync(_ cards: [LiveCard], request: Bool) async {
         var existing: Set<LiveCard> = []
@@ -27,13 +28,14 @@ public enum LiveActivities {
                 await activity.end(nil, dismissalPolicy: .immediate)
             }
         }
-        // A newer sync replaced this one, or Impact left the front, while it waited: only one sync requests, and only
-        // in front.
-        guard request, !Task.isCancelled else {
-            if !request { await NowAlerts.remove(except: Set(cards.map(NowAlerts.identifier))) }
+        let (startNow, schedule) = LiveCard.toRequest(wanted: cards, existing: existing, now: .now)
+        // ActivityKit refuses requests from the background (a moved card, or one new since Impact was in front).
+        guard request else {
+            await NowAlerts.set(schedule, keeping: startNow)
             return
         }
-        let (startNow, schedule) = LiveCard.toRequest(wanted: cards, existing: existing, now: .now)
+        // A newer sync replaced this one, or Impact left the front, while it waited: that one takes over.
+        guard !Task.isCancelled else { return }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
             liveLog.notice("Live Activities are off for Impact: \(schedule.count, privacy: .public) cards need the fallback alert")
             await NowAlerts.set(schedule, keeping: startNow)
