@@ -23,6 +23,14 @@ private func withFile(_ body: (ImpactFile) throws -> Void) throws {
     try body(ImpactFile(url: folder.appending(path: "impacts.json")))
 }
 
+/// A fresh `UserDefaults` suite, removed after the test.
+private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
+    let suite = "impact-tests-\(UUID().uuidString)"
+    let defaults = try #require(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    try body(defaults)
+}
+
 @Suite struct LiveDataTests {
     @Test("Impacts survive a save and load, to the sub-second; no file yet means none and leaves no file")
     func roundTrip() throws {
@@ -209,27 +217,67 @@ private func withFile(_ body: (ImpactFile) throws -> Void) throws {
         #expect(model.snapshot.tomorrowMorning.map(\.id) == ["review"])
     }
 
-    @Test("Dismissals survive the store, without lapsed ones; data that does not decode is kept aside")
+    @Test("Dismissals survive the store; data that does not decode is kept aside")
     func dismissalStore() throws {
-        let suite = "impact-tests-\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
-        let store = DismissalStore(defaults: defaults)
-        #expect(store.load(now: morning) == Dismissals())
-        var dismissals = Dismissals()
-        dismissals.dismiss(meeting("old", at: morning.addingTimeInterval(-3 * 86_400)), at: morning.addingTimeInterval(-3 * 86_400))
-        dismissals.dismiss(meeting("recent", at: morning), at: morning.addingTimeInterval(-3_600))
-        store.save(dismissals)
-        #expect(store.load(now: morning).occurrences.keys.sorted() == ["recent"])
+        try withDefaults { defaults in
+            let store = DefaultsStore<Dismissals>(defaults: defaults, key: "dismissals")
+            #expect(store.load() == nil)
+            var dismissals = Dismissals()
+            dismissals.dismiss(meeting("recent", at: morning), at: morning.addingTimeInterval(-3_600))
+            store.save(dismissals)
+            #expect(store.load() == dismissals)
 
-        // The key and format users have stored: a new format sets every user's dismissals aside, a new key loses them.
-        let json = #"{"occurrences":{"recent":900000000},"muted":[{"title":{"calendarID":"work","title":"Review"}}]}"#
-        defaults.set(Data(json.utf8), forKey: "dismissals")
-        #expect(store.load(now: morning).muted == [.title(calendarID: "work", title: "Review")])
+            // The key and format users have stored: a new format sets every user's dismissals aside, a new key loses them.
+            let json = #"{"occurrences":{"recent":900000000},"muted":[{"title":{"calendarID":"work","title":"Review"}}]}"#
+            defaults.set(Data(json.utf8), forKey: "dismissals")
+            #expect(store.load()?.muted == [.title(calendarID: "work", title: "Review")])
 
-        defaults.set(Data("not json".utf8), forKey: "dismissals")
-        #expect(store.load(now: morning) == Dismissals())
-        #expect(defaults.data(forKey: "dismissals.unreadable") == Data("not json".utf8))
+            defaults.set(Data("not json".utf8), forKey: "dismissals")
+            #expect(store.load() == nil)
+            #expect(defaults.data(forKey: "dismissals.unreadable") == Data("not json".utf8))
+            #expect(defaults.data(forKey: "dismissals") == nil)
+        }
+    }
+
+    @Test("Goals survive the store in the format users have stored")
+    func goalStore() throws {
+        try withDefaults { defaults in
+            let store = DefaultsStore<GoalSettings>(defaults: defaults, key: "goals")
+            let settings = GoalSettings(goals: [Goal(id: "book", title: "Write a book", timesPerWeek: 3, window: .personal)],
+                                        workingHours: WorkingHours(weekdays: [2, 3], start: 600, end: 960), offered: true)
+            store.save(settings)
+            #expect(store.load() == settings)
+
+            let json = #"{"goals":[{"id":"run","title":"Run","timesPerWeek":2,"window":"workday"}],"#
+                + #""workingHours":{"weekdays":[2,3,4,5,6],"start":540,"end":1080},"offered":false}"#
+            defaults.set(Data(json.utf8), forKey: "goals")
+            #expect(store.load() == GoalSettings(goals: [Goal(id: "run", title: "Run")]))
+        }
+    }
+
+    @Test("Home offers goal setup once, after the first Impact; Done keeps up to three goals with a title")
+    @MainActor func goalSetup() throws {
+        var saved: [GoalSettings] = []
+        let review = meeting("review", at: morning.addingTimeInterval(600))
+        let model = try HomeModel(events: [review], now: morning, calendar: losAngeles, saveGoals: { saved.append($0) })
+        #expect(!model.offersGoalSetup)
+        let card = try #require(model.snapshot.nextUp)
+        _ = model.record(try #require(card.primaryAction), on: card)
+        #expect(model.offersGoalSetup)
+        model.goalSetupOffered()
+        model.goalSetupOffered()
+        #expect(!model.offersGoalSetup && saved == [GoalSettings(offered: true)])
+
+        let goals = ["A", "", "B", "C", "D"].map { Goal(id: $0.isEmpty ? "empty" : $0, title: $0) }
+        let hours = WorkingHours(weekdays: [2], start: 480, end: 900)
+        model.setGoals(goals, workingHours: hours)
+        #expect(model.goals == GoalSettings(goals: [goals[0], goals[2], goals[3]], workingHours: hours, offered: true))
+        #expect(saved.last == model.goals)
+
+        // A model built with goals, as after a relaunch, has no offer even with Impacts.
+        let relaunched = try HomeModel(events: [review], now: morning, calendar: losAngeles,
+                                       log: ActionLog(impacts: ["review": morning]), goals: model.goals)
+        #expect(!relaunched.offersGoalSetup)
     }
 
     @Test("Recording saves every Impact once; an update moves the clock and keeps them")

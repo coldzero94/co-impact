@@ -26,9 +26,9 @@ ImpactKit/                     Local Swift package: all logic and UI features
 │                              ring (ActivityKit and WidgetKit code iOS-only)
 ├── Sources/ImpactIntelligence/ Foundation Models: up to two next steps from one event's title and notes, each kept
 │                              only with a verbatim quote (no UI, no EventKit)
-├── Sources/HomeFeature/       SwiftUI onboarding, Home, card detail, actions, Impact moment, live
-│                              refresh, background refresh, stored Impacts, Live Activity sync and run links,
-│                              synthetic fixtures
+├── Sources/HomeFeature/       SwiftUI onboarding, Home, card detail, actions, Impact moment, goal setup,
+│                              live refresh, background refresh, stored Impacts and goals, Live Activity sync and
+│                              run links, synthetic fixtures
 ├── Tests/ImpactEngineTests/   Swift Testing
 ├── Tests/CalendarSourcesTests/ Swift Testing
 └── Tests/HomeFeatureTests/    Swift Testing
@@ -123,8 +123,9 @@ Live Activities are started **without a server** by scheduling them at analysis 
 - Built (step 7): recorded Impacts, as card IDs and times, in one JSON file in the app's Application Support folder. Which secondary actions ran is not stored. A file that does not decode is renamed aside; one that cannot be read at the moment is left alone, each save first tries reading it again and skips until it can, and each refresh tries too and adds what it reads to Home. Merges keep each card's earlier stamp. Without a usable file, Impacts count until the app quits.
 - Built (step 9): what widgets need from Impact (`SurfaceState`): the Impacts (card IDs and times) of the last two days or of events still fetched (step 10: a meeting joined and then moved stays done for background refresh too), the dismissals' rules (so muted titles too), and the run links' secret, as JSON in the App Group's defaults, rewritten whenever it changes. The widgets read events from the calendar themselves, so no other calendar content is stored; Impacts and dismissals stay where they are, Impact being the only writer.
 - Proposed: card and action state in SwiftData in an App Group container (shared with widgets), once background refresh (step 10) or the daily log (step 13) needs more than `SurfaceState`.
-- Proposed: goals, Impact records, daily-log lines, and the identifiers of events Impact created, in SwiftData in the same container.
+- Proposed: Impact records, daily-log lines, and the identifiers of events Impact created, in SwiftData in the same container.
 - Built (step 7): dismissals, as JSON in standard `UserDefaults`: occurrence IDs with when they lapse (the later of the event's end and two days after the dismissal) and the calendar IDs with the series IDs or titles the user muted (muted titles are the only calendar text stored). Data that does not decode is kept under another key. Widgets get their rules through `SurfaceState` (above). If background refresh (step 10) needs them, they move to the App Group; since they are loaded once and saved whole, saves must then never overwrite dismissals that could not be read, as Impact saves already do.
+- Built (step 11): goals, working hours, and whether Home has offered goal setup, as one JSON value in standard `UserDefaults`, stored the way dismissals are (`DefaultsStore`: saved whole, data that does not decode kept under another key). Only Home reads them; they move to the App Group if a widget or background refresh ever needs them.
 - Proposed: settings in `UserDefaults` in the App Group.
 - No calendar content is persisted beyond what card state needs; re-read from EventKit instead.
 

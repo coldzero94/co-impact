@@ -176,14 +176,15 @@ public struct LiveHome: View {
         let stored = file?.load()
         impactFile = file
         storedImpactsUnread = file != nil && stored == nil
-        let dismissals = DismissalStore(defaults: .standard)
+        let dismissals = DefaultsStore<Dismissals>(defaults: .standard, key: "dismissals")
+        let goals = DefaultsStore<GoalSettings>(defaults: .standard, key: "goals")
         do {
             model = try HomeModel(events: events, now: now, calendar: calendar, log: ActionLog(impacts: stored ?? [:]),
-                                  dismissals: dismissals.load(now: now),
+                                  dismissals: dismissals.load() ?? Dismissals(), goals: goals.load() ?? GoalSettings(),
                                   saveImpacts: file?.saver(stored: stored) ?? { impacts in
                                       homeLog.fault("\(impacts.count, privacy: .public) Impacts not saved: no place to store them")
                                   },
-                                  saveDismissals: dismissals.save)
+                                  saveDismissals: dismissals.save, saveGoals: goals.save)
         } catch {
             homeLog.fault("Impact could not start: \(error.logged, privacy: .public)")
             startFailure = "Impact could not start: \(error.localizedDescription)"

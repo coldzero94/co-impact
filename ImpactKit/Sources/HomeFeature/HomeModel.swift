@@ -16,15 +16,20 @@ public final class HomeModel {
     private let calendar: Calendar
     private let engine: ImpactEngine
     private var dismissals: Dismissals
+    /// Goals and working hours (PRODUCT.md → Goals), edited in goal setup.
+    public private(set) var goals: GoalSettings
     /// Receives every Impact after one is recorded or restored, to store them.
     private let saveImpacts: ([String: Date]) -> Void
     /// Receives the dismissals after each dismissal, to store them.
     private let saveDismissals: (Dismissals) -> Void
+    /// Receives the goal settings after each change, to store them.
+    private let saveGoals: (GoalSettings) -> Void
 
     public init(events: [CalendarEvent], now: Date, calendar: Calendar, log: ActionLog = ActionLog(),
-                dismissals: Dismissals = Dismissals(),
+                dismissals: Dismissals = Dismissals(), goals: GoalSettings = GoalSettings(),
                 saveImpacts: @escaping ([String: Date]) -> Void = { _ in },
-                saveDismissals: @escaping (Dismissals) -> Void = { _ in }) throws {
+                saveDismissals: @escaping (Dismissals) -> Void = { _ in },
+                saveGoals: @escaping (GoalSettings) -> Void = { _ in }) throws {
         let engine = try ImpactEngine()
         snapshot = Self.home(engine, events, now, calendar, log, dismissals.pruned(now: now))
         self.now = now
@@ -35,6 +40,8 @@ public final class HomeModel {
         self.dismissals = dismissals.pruned(now: now)
         self.saveImpacts = saveImpacts
         self.saveDismissals = saveDismissals
+        self.goals = goals
+        self.saveGoals = saveGoals
     }
 
     /// Rebuilds the snapshot for newly fetched events at a new time.
@@ -77,6 +84,25 @@ public final class HomeModel {
         rebuild()
         if recorded { saveImpacts(log.impacts) }
         return recorded
+    }
+
+    /// UX.md → Onboarding: after the first Impact, Home offers goal setup once, until it is opened or swiped away.
+    public var offersGoalSetup: Bool {
+        !log.impacts.isEmpty && goals.goals.isEmpty && !goals.offered
+    }
+
+    /// The offer was opened or swiped away: Home stops showing it.
+    func goalSetupOffered() {
+        guard !goals.offered else { return }
+        goals.offered = true
+        saveGoals(goals)
+    }
+
+    /// Done in goal setup: keeps the goals with a title, at most three.
+    func setGoals(_ goals: [Goal], workingHours: WorkingHours) {
+        self.goals = GoalSettings(goals: Array(goals.filter { !$0.title.isEmpty }.prefix(3)), workingHours: workingHours,
+                                  offered: true)
+        saveGoals(self.goals)
     }
 
     /// What the widgets and background refresh need to see cards as Home does (`SurfaceState`): the Impacts of the
