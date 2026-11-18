@@ -9,7 +9,7 @@ struct GoalCardView: View {
     let blocked: Bool
     let block: () -> Void
     let undo: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -30,14 +30,21 @@ struct GoalCardView: View {
                 Text("\(Self.day(card.slot.start, now: now)) is free")
                     .font(.title3.weight(.semibold))
                 Button(action: block) {
-                    Label("Block time", systemImage: "calendar.badge.plus")
-                        .font(.headline)
+                    // At accessibility sizes the symbol leaves the label too little room in the capsule.
+                    Group {
+                        if typeSize.isAccessibilitySize {
+                            Text("Block time")
+                        } else {
+                            Label("Block time", systemImage: "calendar.badge.plus")
+                        }
+                    }
+                    .font(.headline)
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
-                // Bordered, not filled: Next up's action stays the one filled button on Home.
+                // Bordered, not filled: Next up's action stays the one filled button on Home. The default accent, not
+                // `accentFill` (darkened for white text), keeps the label readable in dark mode.
                 .buttonStyle(.bordered)
                 .buttonBorderShape(.capsule)
-                .tint(.accentFill(colorScheme))
                 .accessibilityLabel("Block \(Self.day(card.slot.start, now: now, spoken: true)) for \(card.goal.title)")
             }
         }
