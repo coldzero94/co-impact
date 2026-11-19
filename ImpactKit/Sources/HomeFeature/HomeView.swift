@@ -88,7 +88,8 @@ public struct HomeView: View {
                 .listRowBackground(Color.clear)
                 if model.showsTodayRow {
                     Section {
-                        Button { reviewing = true } label: { TodayRow(impacts: snapshot.impactsToday) }
+                        // It can appear where End focus was a moment ago: a double tap's second half does not open it.
+                        Button { if !justSwapped { reviewing = true } } label: { TodayRow(impacts: snapshot.impactsToday) }
                         .buttonStyle(RowButtonStyle())
                         .accessibilityHint("Opens the daily review")
                     }
@@ -257,7 +258,7 @@ public struct HomeView: View {
             // The ring fills the moment's segment only when its token lands.
             let unshown = (pending == nil ? 0 : 1) + (flying == nil ? 0 : 1)
             // Tapping the ring opens the daily review (UX.md → Home).
-            Button { reviewing = true } label: {
+            Button { if !justSwapped { reviewing = true } } label: {
                 ImpactRing(filled: max(0, snapshot.impactsToday - unshown), segments: snapshot.ringSegments)
                     .frame(width: ringSize, height: ringSize)
                     .shadow(color: Color.accentColor.opacity(glowing ? 0.9 : 0), radius: glowing ? 14 : 0)

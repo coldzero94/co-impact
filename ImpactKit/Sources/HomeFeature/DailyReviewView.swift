@@ -7,8 +7,9 @@ import SwiftUI
 /// (UX.md → The Impact moment).
 struct DailyReviewView: View {
     let model: HomeModel
-    /// The day the review opened on: its line stays that day's, even if the sheet stays open past midnight.
-    private let day: Date
+    /// The day the review opened on: its line stays that day's, even if the sheet stays open past midnight. State, so
+    /// Home's refresh, which makes this view again each minute, does not move it.
+    @State private var day: Date
     @State private var line: String
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
@@ -17,7 +18,7 @@ struct DailyReviewView: View {
 
     init(model: HomeModel) {
         self.model = model
-        day = model.now
+        _day = State(initialValue: model.now)
         _line = State(initialValue: model.line(on: model.now))
     }
 
@@ -80,7 +81,8 @@ private struct EntryRow: View {
         let layout = typeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout(spacing: 12))
         layout {
-            Text(entry.date, format: entry.timeFormat)
+            // A string: `Text(_:format:)` would put the environment's time zone in place of the entry's.
+            Text(entry.date.formatted(entry.timeFormat))
                 .monospacedDigit().foregroundStyle(.secondary)
                 .frame(minWidth: typeSize.isAccessibilitySize ? nil : timeWidth, alignment: .leading)
             Label(entry.text, systemImage: entry.kind.symbol).labelStyle(.titleAndIcon)
@@ -89,14 +91,16 @@ private struct EntryRow: View {
     }
 }
 
-/// Today's Impact ring with its tokens. When `gather` is true on appearing, the tokens travel up into the ring one by
-/// one and fill it, then `gathered` runs; with Reduce Motion, the ring fills with a cross-fade instead.
+/// Today's Impact ring with its tokens. When `gather` is true as the review opens, the tokens travel up into the ring
+/// one by one and fill it, then `gathered` runs; with Reduce Motion, the ring fills with a cross-fade instead.
 private struct GatheringRing: View {
     let symbols: [String]
     let segments: Int
-    let gather: Bool
     let gathered: () -> Void
-    @State private var landed: Int?
+    /// Whether the tokens gather: decided once, as the review opens, and false again once they have, so an Impact
+    /// added while the review is open just counts.
+    @State private var gathering: Bool
+    @State private var landed = 0
     @State private var success = 0
     /// The count's height, which the tokens rise past; it grows with Dynamic Type.
     @State private var labelHeight = 22.0
@@ -108,20 +112,27 @@ private struct GatheringRing: View {
     private let token = 30.0
     private let spacing = 8.0
 
+    init(symbols: [String], segments: Int, gather: Bool, gathered: @escaping () -> Void) {
+        self.symbols = symbols
+        self.segments = segments
+        self.gathered = gathered
+        _gathering = State(initialValue: gather)
+    }
+
     var body: some View {
         let tokens = Array(symbols.prefix(Self.shown))
         VStack(spacing: 14) {
             // Empty from the first frame when it gathers, so the filling is seen, with Reduce Motion too.
-            ImpactRing(filled: landed ?? (gather ? 0 : symbols.count), segments: segments, lineWidth: 7)
+            ImpactRing(filled: gathering ? landed : symbols.count, segments: segments, lineWidth: 7)
                 .frame(width: ringSize, height: ringSize)
                 .accessibilityHidden(true) // the count below says it
             Text("\(symbols.count) \(symbols.count == 1 ? "Impact" : "Impacts") today")
                 .font(.headline)
                 .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { labelHeight = $0 }
-            if gather || landed != nil, !reduceMotion {
+            if gathering, !reduceMotion {
                 HStack(spacing: spacing) {
                     ForEach(tokens.indices, id: \.self) { index in
-                        Token(symbol: tokens[index], inRing: index < (landed ?? 0),
+                        Token(symbol: tokens[index], inRing: index < landed,
                               offset: offset(index, of: tokens.count))
                             .frame(width: token, height: token)
                     }
@@ -132,20 +143,23 @@ private struct GatheringRing: View {
         .padding(.vertical, 8)
         .sensoryFeedback(.success, trigger: success)
         .task {
-            guard gather else { return }
+            guard gathering else { return }
             // After the sheet has risen, so the filling is not lost under it.
             try? await Task.sleep(for: .seconds(0.4))
             if reduceMotion {
                 withAnimation(.easeInOut(duration: 0.3)) { landed = symbols.count }
             } else {
-                for count in 1...tokens.count {
-                    withAnimation(.spring(duration: 0.45)) { landed = count }
+                for index in tokens.indices {
+                    withAnimation(.spring(duration: 0.45)) { landed = index + 1 }
                     try? await Task.sleep(for: .seconds(0.18))
                 }
                 withAnimation(.spring(duration: 0.4)) { landed = symbols.count }
             }
+            // Closed before it finished: it plays the next time the review opens this evening.
+            guard !Task.isCancelled else { return }
             success += 1
             gathered()
+            gathering = false
         }
     }
 

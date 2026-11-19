@@ -66,7 +66,7 @@ public enum HomeFixtures {
                 throw FixtureError.noCard(event.title)
             }
             log.record(primary, on: card, at: event.start)
-            DailyLog.Entry(impactOf: card, at: event.start, calendar: calendar).map { dailyLog.add($0) }
+            if let entry = DailyLog.Entry(impactOf: card, at: event.start, calendar: calendar) { dailyLog.add(entry) }
         }
         var dismissals = Dismissals()
         if hour >= 20 { dismissals.dismiss(events[7], at: at(20)) }
