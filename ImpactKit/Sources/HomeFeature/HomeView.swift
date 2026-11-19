@@ -164,8 +164,8 @@ public struct HomeView: View {
         .onChange(of: scenePhase) { playPending() }
         // A focus session ended with an Impact: by End focus, or with its block, possibly while Impact was away.
         .onChange(of: model.focusImpact) {
-            guard let impact = model.focusImpact else { return }
-            pending = Moment(symbol: ActionKind.startFocus.symbol, from: momentFrames.cards[impact.cardID], large: true)
+            guard let cardID = model.focusImpact else { return }
+            pending = Moment(symbol: ActionKind.startFocus.symbol, from: momentFrames.cards[cardID], large: true)
             playPending()
         }
         .onChange(of: model.snapshot) { _, snapshot in

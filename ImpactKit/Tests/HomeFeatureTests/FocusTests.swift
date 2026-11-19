@@ -72,19 +72,25 @@ private let records = GoalRecords(sessions: [
         #expect(model.startFocus(on: try blockCard(model)))
         model.update(events: [block, meeting], now: at(10))
         #expect(model.endFocus())
-        #expect(saved.impacts.last == ["block": at(10)] && model.focusImpact?.cardID == "block")
+        #expect(saved.impacts.last == ["block": at(10)] && model.focusImpact == "block")
         #expect(model.snapshot.doneCardIDs == ["block"] && model.snapshot.impactsToday == 1)
     }
 
-    @Test("A session ends with its block, or once its block leaves Home, and records its Impact then", arguments: [
-        "ended", "deleted", "dismissed",
-    ])
+    @Test("A session ends with its block, or once its block leaves its Soon or Now phase on Home, with its Impact",
+          arguments: ["ended", "moved", "deleted", "dismissed"])
     func sessionEnds(_ way: String) throws {
         let saved = Saved()
         let model = try model(at: at(10), saved: saved)
         #expect(model.startFocus(on: try blockCard(model)))
         switch way {
         case "ended": model.update(events: [block, meeting], now: at(11, 5))
+        case "moved":
+            // Moved to the afternoon in Calendar: still listed, but no longer the block the session ran in.
+            var later = block
+            later.start = at(15)
+            later.end = at(16)
+            model.update(events: [later, meeting], now: at(10, 30))
+            #expect(model.snapshot.cards.contains { $0.id == "block" })
         case "deleted": model.update(events: [meeting], now: at(10, 30))
         default:
             model.update(events: [block, meeting], now: at(10, 30))
@@ -93,7 +99,7 @@ private let records = GoalRecords(sessions: [
         #expect(model.focus == nil && saved.focus.last == .some(nil))
         // A session stops at its block's end, however late Impact sees it.
         #expect(saved.impacts.last == ["block": way == "ended" ? at(11) : at(10, 30)])
-        #expect(model.focusImpact?.cardID == "block")
+        #expect(model.focusImpact == "block")
     }
 
     @Test("A stored session runs on after a relaunch; one whose block ended meanwhile ends at launch with its Impact")

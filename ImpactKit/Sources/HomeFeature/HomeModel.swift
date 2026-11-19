@@ -24,9 +24,9 @@ public final class HomeModel {
     private let blocks: BlockWriter
     /// The running focus session (PRODUCT.md → Focus blocks), if any.
     private(set) var focus: FocusSession?
-    /// Set each time a focus session ends with an Impact, so Home plays the larger Impact moment (UX.md → The Impact
-    /// moment).
-    private(set) var focusImpact: FocusImpact?
+    /// The focus block whose session last ended with an Impact, so Home plays the larger Impact moment (UX.md → The
+    /// Impact moment). A block records one Impact, so each new one is another ID.
+    private(set) var focusImpact: String?
     /// Receives every Impact after one is recorded or restored, to store them.
     private let saveImpacts: ([String: Date]) -> Void
     /// Receives the dismissals after each dismissal, to store them.
@@ -211,8 +211,8 @@ public final class HomeModel {
     }
 
     /// Matches the blocked sessions to the calendar and stores them if that (or the caller, with `savingGoalRecords`)
-    /// changed them; builds the snapshot with their focus blocks; ends a focus session whose block ended or left Home
-    /// (deleted, moved away, or dismissed); and picks the goal-time card.
+    /// changed them; builds the snapshot with their focus blocks; ends a focus session whose block is no longer in its
+    /// Soon or Now phase on Home (it ended, was moved, deleted, or dismissed); and picks the goal-time card.
     private func rebuild(savingGoalRecords: Bool = false) {
         let matched = goalRecords.matched(events: events, now: now, calendar: calendar)
         if savingGoalRecords || matched != goalRecords {
@@ -220,7 +220,7 @@ public final class HomeModel {
             saveGoalRecords(matched)
         }
         snapshot = Self.home(engine, events, focusBlocks: focusBlocks, now, calendar, log, dismissals)
-        if let focus, now >= focus.end || !snapshot.cards.contains(where: { $0.id == focus.cardID }) {
+        if let focus, !snapshot.cards.contains(where: { $0.id == focus.cardID && ImpactEngine.isSoonOrNow($0, now: now) }) {
             if finishFocus() { snapshot = Self.home(engine, events, focusBlocks: focusBlocks, now, calendar, log, dismissals) }
         }
         goalCard = ImpactEngine.goalTimeCard(
@@ -236,7 +236,7 @@ public final class HomeModel {
         saveFocus(nil)
         guard log.recordFocus(session, endedAt: now) else { return false }
         saveImpacts(log.impacts)
-        focusImpact = FocusImpact(cardID: session.cardID)
+        focusImpact = session.cardID
         return true
     }
 
@@ -260,12 +260,6 @@ public final class HomeModel {
         return engine.home(events: events, now: now, calendar: calendar, completedCardIDs: log.completedCardIDs,
                            impactsToday: log.impactCount(on: now, calendar: calendar), suppressionRules: dismissals.rules)
     }
-}
-
-/// A focus session that ended with an Impact (`HomeModel.focusImpact`); each one is new, so Home sees every one.
-struct FocusImpact: Equatable {
-    let id = UUID()
-    let cardID: String
 }
 
 /// Writes Block time's events: the calendar in the app (`LiveHome`), a stand-in in debug fixtures and tests.
