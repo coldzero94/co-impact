@@ -40,4 +40,16 @@ import Testing
         #expect(!Suggestions.worthAsking("See you there"))
         #expect(Suggestions.worthAsking("회의 전에 3분기 계획서를 읽어 주세요"))
     }
+
+    @Test("A weekly summary shows trimmed, at most 280 characters, and with no number the log does not hold")
+    func weeklySummary() {
+        let log = "Monday\n- Joined Design review\n- 50 min on Write a book\n\nTuesday\n- Left for Dentist"
+        #expect(WeeklySummary.grounded("  You joined Design review and spent 50 min on Write a book.\n", in: log)
+                == "You joined Design review and spent 50 min on Write a book.")
+        // A count the log does not hold is invented: no summary.
+        #expect(WeeklySummary.grounded("A meeting, a focus session, and a trip to the dentist.", in: log) != nil)
+        #expect(WeeklySummary.grounded("You focused for 90 minutes.", in: log) == nil)
+        #expect(WeeklySummary.grounded(" ", in: log) == nil)
+        #expect(WeeklySummary.grounded(String(repeating: "A calm week. ", count: 30), in: log) == nil)
+    }
 }

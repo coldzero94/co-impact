@@ -353,6 +353,33 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
         #expect(!empty.showsTodayRow)
     }
 
+    @Test("The weekly summary reads the week's days in order, from three entries on; other weeks stay out")
+    @MainActor func weekLog() throws {
+        // Friday 2027-01-15; the week starts on Sunday in this calendar (Gregorian, `firstWeekday` 1).
+        let entry = { (id: String, kind: DailyLog.Entry.Kind, days: Double) in
+            DailyLog.Entry(cardID: id, kind: kind, title: id, date: morning.addingTimeInterval(days * 86_400),
+                           calendar: losAngeles)
+        }
+        var log = DailyLog(entries: [entry("Standup", .joined, -3), entry("Dentist", .left, -1),
+                                     entry("Last week", .joined, -7)])
+        log.setLine("Long walk", on: morning.addingTimeInterval(-86_400), calendar: losAngeles)
+        let two = try HomeModel(events: [], now: morning, calendar: losAngeles, dailyLog: log)
+        #expect(two.weekLog(on: morning) == nil)
+        log.add(entry("Write a book", .focused(minutes: 50), 0))
+        let three = try HomeModel(events: [], now: morning, calendar: losAngeles, dailyLog: log)
+        #expect(three.weekLog(on: morning) == """
+            Tuesday
+            - Joined Standup
+
+            Thursday
+            - Left for Dentist
+            Line: Long walk
+
+            Friday
+            - 50 min on Write a book
+            """)
+    }
+
     @Test("Block time saves the slot, records it, and moves the card on; Undo and Not now; a refused save records nothing")
     @MainActor func blockTime() throws {
         var written: [CalendarEvent] = []
