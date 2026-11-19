@@ -145,6 +145,16 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         #expect(LiveCard.cardID(fromRunURL: try #require(URL(string: "impact://run?card=&token=secret")), token: "secret") == nil)
     }
 
+    @Test("Daily log entries read as UX.md → Daily review shows them")
+    func entryText() {
+        let date = Date(timeIntervalSinceReferenceDate: 0)
+        #expect(DailyLog.Entry(cardID: "r", kind: .joined, title: "Design review", date: date, calendar: losAngeles).text == "Joined Design review")
+        #expect(DailyLog.Entry(cardID: "d", kind: .left, title: "Dentist", date: date, calendar: losAngeles).text == "Left for Dentist")
+        #expect(DailyLog.Entry(cardID: "b", kind: .focused(minutes: 50), title: "Write a book", date: date,
+                               calendar: losAngeles).text
+                == "50 min on Write a book")
+    }
+
     @Test("The run token is made once and kept")
     func runToken() throws {
         let suite = "impact-tests-\(UUID().uuidString)"

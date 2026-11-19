@@ -24,6 +24,7 @@ public struct HomeView: View {
     /// Home refreshes).
     @State private var swapped: TimeInterval?
     @State private var settingUpGoals = false
+    @State private var reviewing = false
     /// Block time's session, while its card shows "Blocked" with Undo (UX.md → Home: 5 seconds, 15 with VoiceOver).
     @State private var justBlocked: JustBlocked?
     @State private var blockings = 0
@@ -85,6 +86,28 @@ public struct HomeView: View {
                 }
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
+                if model.showsTodayRow {
+                    Section {
+                        Button { reviewing = true } label: {
+                            HStack {
+                                Text("Today").fontWeight(.medium)
+                                Spacer()
+                                if snapshot.impactsToday > 0 {
+                                    Text("\(snapshot.impactsToday) \(snapshot.impactsToday == 1 ? "Impact" : "Impacts")")
+                                        .foregroundStyle(.secondary)
+                                }
+                                Image(systemName: "chevron.forward").font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .padding(.horizontal, 16).padding(.vertical, 15)
+                            .contentShape(.rect)
+                        }
+                        .buttonStyle(RowButtonStyle())
+                        .accessibilityHint("Opens the daily review")
+                    }
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.card)
+                }
                 section("Later today", snapshot.laterToday, done: snapshot.doneCardIDs)
                 goalSection
                 section("Tomorrow morning", snapshot.tomorrowMorning, done: snapshot.doneCardIDs)
@@ -129,6 +152,7 @@ public struct HomeView: View {
             }
         }
         .sheet(isPresented: $settingUpGoals, onDismiss: playPending) { GoalSetupView(model: model) }
+        .sheet(isPresented: $reviewing, onDismiss: playPending) { DailyReviewView(model: model) }
         .sheet(item: $selected, onDismiss: playPending) { card in
             CardDetailView(card: card, model: model, run: { action, failed in
                 // Card detail swaps Start focus and End focus in place too. Only taps: a run request never waits.
@@ -245,10 +269,15 @@ public struct HomeView: View {
             if !typeSize.isAccessibilitySize { Spacer() }
             // The ring fills the moment's segment only when its token lands.
             let unshown = (pending == nil ? 0 : 1) + (flying == nil ? 0 : 1)
-            ImpactRing(filled: max(0, snapshot.impactsToday - unshown), segments: snapshot.ringSegments)
-                .frame(width: ringSize, height: ringSize)
-                .shadow(color: Color.accentColor.opacity(glowing ? 0.9 : 0), radius: glowing ? 14 : 0)
-                .recordingFrame { momentFrames.ring = $0 }
+            // Tapping the ring opens the daily review (UX.md → Home).
+            Button { reviewing = true } label: {
+                ImpactRing(filled: max(0, snapshot.impactsToday - unshown), segments: snapshot.ringSegments)
+                    .frame(width: ringSize, height: ringSize)
+                    .shadow(color: Color.accentColor.opacity(glowing ? 0.9 : 0), radius: glowing ? 14 : 0)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Opens the daily review")
+            .recordingFrame { momentFrames.ring = $0 }
         }
     }
 
@@ -304,7 +333,8 @@ public struct HomeView: View {
     /// sheet open (UX.md → The Impact moment). If an action never left, the next Next up tap or sheet close
     /// plays it.
     private func playPending() {
-        guard scenePhase == .active, selected == nil, !settingUpGoals, flying == nil, let moment = pending else { return }
+        guard scenePhase == .active, selected == nil, !settingUpGoals, !reviewing, flying == nil, let moment = pending
+        else { return }
         if reduceMotion || moment.from == nil || momentFrames.ring == nil {
             land()
         } else {

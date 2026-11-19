@@ -330,6 +330,26 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
                 && model.dailyLog == saved.last)
     }
 
+    @Test("The daily review: today's one line is stored when it changes; the Today row from 18:00 or after the last card")
+    @MainActor func dailyReview() throws {
+        var saved: [DailyLog] = []
+        let model = try HomeModel(events: [meeting("review", at: morning.addingTimeInterval(600))], now: morning,
+                                  calendar: losAngeles, saveDailyLog: { saved.append($0) })
+        // A card still to do in the morning: no Today row.
+        #expect(!model.showsTodayRow)
+        model.setTodaysLine("  Shipped the beta ")
+        model.setTodaysLine("Shipped the beta")
+        #expect(model.todaysLine == "Shipped the beta" && saved.count == 1)
+        #expect(model.reviewDays.first?.line == "Shipped the beta")
+        // Once the day's last card is done, the row shows, as from 18:00 on any day.
+        let review = try #require(model.snapshot.nextUp)
+        #expect(model.record(try #require(review.primaryAction), on: review) && model.showsTodayRow)
+        let evening = try HomeModel(events: [], now: morning.addingTimeInterval(9 * 3_600), calendar: losAngeles)
+        #expect(evening.showsTodayRow)
+        let empty = try HomeModel(events: [], now: morning, calendar: losAngeles)
+        #expect(!empty.showsTodayRow)
+    }
+
     @Test("Block time saves the slot, records it, and moves the card on; Undo and Not now; a refused save records nothing")
     @MainActor func blockTime() throws {
         var written: [CalendarEvent] = []
