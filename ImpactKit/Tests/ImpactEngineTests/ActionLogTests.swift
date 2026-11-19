@@ -145,6 +145,7 @@ private func hybridCard() throws -> ImpactCard {
         let early = try #require(FocusSession(card: card, now: start.addingTimeInterval(-15 * 60)))
         #expect(early.cardID == "block" && early.start == start.addingTimeInterval(-15 * 60) && early.end == card.end)
         #expect(FocusSession(card: card, now: card.end.addingTimeInterval(-1)) != nil)
+        #expect(FocusSession(card: card, now: card.end) == nil)
         #expect(FocusSession(card: try hybridCard(), now: start) == nil)
     }
 

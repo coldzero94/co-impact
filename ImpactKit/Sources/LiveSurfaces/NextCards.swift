@@ -80,14 +80,17 @@ public enum NextCards {
         let first = home(now)
         let ahead = first.cards + first.liveActivityCards
         // In person: Soon (−30 min), start, expiry (15 minutes after the start, or the end if sooner). Online and
-        // hybrid: Soon (−15), start, end of Now (+10), expiry (the end). A card of tomorrow also at the start of its
-        // Now phase, when it starts to run (`runsNow`).
+        // hybrid: Soon (−15), start, end of Now (+10), expiry (the end). A focus block: Soon (−15), start, and its end,
+        // where Now and the block end together. A card of tomorrow also at the start of its Now phase, when it starts
+        // to run (`runsNow`).
         let tomorrow = ImpactEngine.horizon(now: now, calendar: calendar).tomorrow
         let changes = Set(ahead.flatMap { card in
-            (card.kind == .inPerson
-                ? [card.start - 30 * 60, card.start, min(card.start + 15 * 60, card.end)]
-                : [card.start - 15 * 60, card.start, card.start + 10 * 60, card.end])
-                + (card.start >= tomorrow ? [ImpactEngine.nowPhase(of: card).lowerBound] : [])
+            let phases: [Date] = switch card.kind {
+            case .inPerson: [card.start - 30 * 60, card.start, min(card.start + 15 * 60, card.end)]
+            case .onlineMeeting, .hybrid: [card.start - 15 * 60, card.start, card.start + 10 * 60, card.end]
+            case .focusBlock: [card.start - 15 * 60, card.start, card.end]
+            }
+            return phases + (card.start >= tomorrow ? [ImpactEngine.nowPhase(of: card).lowerBound] : [])
         } + [tomorrow]).filter { $0 > now }
         return ([now] + changes.sorted().prefix(23)).map { date in
             let snapshot = date == now ? first : home(date)
