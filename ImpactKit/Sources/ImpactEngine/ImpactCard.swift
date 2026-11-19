@@ -17,6 +17,8 @@ public enum ActionKind: Sendable, Hashable {
     case directions(to: Place)
     case openLink(URL)
     case call(String)
+    /// Starts an in-app focus session on a focus block (PRODUCT.md → Focus blocks); Home runs it, nothing opens.
+    case startFocus
 }
 
 public struct ImpactAction: Sendable, Hashable, Identifiable {
@@ -25,7 +27,8 @@ public struct ImpactAction: Sendable, Hashable, Identifiable {
     public let provenance: Provenance
 }
 
-public enum CardKind: Sendable, Hashable { case onlineMeeting, inPerson, hybrid }
+/// `focusBlock`: an event Impact created with Block time (PRODUCT.md → Focus blocks).
+public enum CardKind: Sendable, Hashable { case onlineMeeting, inPerson, hybrid, focusBlock }
 
 public struct ImpactCard: Sendable, Hashable, Identifiable {
     public let id: String
@@ -45,6 +48,6 @@ public struct ImpactCard: Sendable, Hashable, Identifiable {
 
     /// The card's one primary action (UX.md → Simplicity rules): the first confirmed one. Running it once it
     /// counts (`ActionLog.countsFrom`) makes the card done and records its Impact (PRODUCT.md →
-    /// Completion semantics).
+    /// Completion semantics); a focus block's Start focus does so through its session (`ActionLog.recordFocus`).
     public var primaryAction: ImpactAction? { confirmedActions.first }
 }

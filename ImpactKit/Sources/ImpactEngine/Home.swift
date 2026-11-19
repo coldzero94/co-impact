@@ -4,8 +4,7 @@ import Foundation
 public struct HomeSnapshot: Sendable, Hashable {
     /// The user's own timed events today that have not ended (`isUsersTimedEvent`): the summary's "of N".
     public let eventsLeftToday: Int
-    /// UX.md → Home: the earliest card not done in its Soon or Now phase; otherwise the card not done
-    /// that started most recently and is still running (the user may be late); otherwise the next one.
+    /// UX.md → Home, as `ImpactEngine.nextUp(among:now:)` picks it.
     public let nextUp: ImpactCard?
     /// Today's other cards by start time, those still to do first (including running cards that Next up has
     /// moved past, so a row can start before Next up), then done cards until they expire.
@@ -27,7 +26,8 @@ public struct HomeSnapshot: Sendable, Hashable {
     /// still to do whose Now phase has not ended, among events starting before tomorrow noon, listed or not, so
     /// tomorrow morning's first cards get their alert though Impact may not run again tonight. At most two, so
     /// back-to-back events both get one, while few are pending: a pending start alerts even if its event moved
-    /// since, until Impact runs again (research/system-surfaces.md).
+    /// since, until Impact runs again (research/system-surfaces.md). Focus blocks, in their Now phase until they
+    /// end, take neither place: the first of them comes on top, so a block never keeps a meeting from its alert.
     /// shortcut: a third card, or one after tomorrow noon, waits for Impact to run again; from the background
     /// (background refresh) it gets the fallback alert, and its Live Activity waits for Impact in front.
     public let liveActivityCards: [ImpactCard]
@@ -72,10 +72,13 @@ extension ImpactEngine {
             : inOrder(events.filter { $0.start >= tomorrow && $0.start < end }).lazy.compactMap(select)
                 .first(where: notDone)
 
-        let liveActivityCards = cards(events.filter { $0.start < tomorrowNoon })
+        let pending = cards(events.filter { $0.start < tomorrowNoon })
             .filter { notDone($0) && Self.nowPhase(of: $0).upperBound > now }
             .sorted { (Self.nowPhase(of: $0).lowerBound, $0.id) < (Self.nowPhase(of: $1).lowerBound, $1.id) }
-            .prefix(2)
+        // Kept in Now phase order: the widgets show the first one when no card runs now.
+        let meetings = pending.filter { $0.kind != .focusBlock }.prefix(2)
+        let block = pending.first { $0.kind == .focusBlock }
+        let liveActivityCards = pending.filter { $0 == block || meetings.contains($0) }
 
         return HomeSnapshot(
             eventsLeftToday: todaysEvents.count {
@@ -106,30 +109,36 @@ extension ImpactEngine {
         return (tomorrow, noon, end)
     }
 
-    /// When a card's Soon phase starts (PRODUCT.md → Card timeline): 15 minutes before an online or hybrid
-    /// start, 30 minutes before an in-person one.
+    /// When a card's Soon phase starts (PRODUCT.md → Card timeline and Focus blocks): 15 minutes before an online,
+    /// hybrid, or focus block start, 30 minutes before an in-person one.
     /// shortcut: in-person Soon and Now are measured from the event start instead of leave-by until routing/ETA
     /// exists.
     static func soonStart(of card: ImpactCard) -> Date {
         card.start.addingTimeInterval(card.kind == .inPerson ? -30 * 60 : -15 * 60)
     }
 
-    /// The Now phase (PRODUCT.md → Card timeline): online and hybrid from 10 minutes before the start until 10
-    /// minutes after it, in person from 10 minutes before leave-by until the start. A card's Live Activity starts
-    /// with it and goes stale at its end.
+    /// The Now phase (PRODUCT.md → Card timeline and Focus blocks): online and hybrid from 10 minutes before the
+    /// start until 10 minutes after it, in person from 10 minutes before leave-by until the start, a focus block from
+    /// 5 minutes before the start until its end. A card's Live Activity starts with it and goes stale at its end.
     /// shortcut: in person, leave-by is the start until routing exists (as in `soonStart`), so the alert comes 10
     /// minutes before the appointment rather than before leaving.
     public static func nowPhase(of card: ImpactCard) -> Range<Date> {
-        card.start.addingTimeInterval(-10 * 60) ..< card.start.addingTimeInterval(card.kind == .inPerson ? 0 : 10 * 60)
+        switch card.kind {
+        case .onlineMeeting, .hybrid: card.start.addingTimeInterval(-10 * 60) ..< card.start.addingTimeInterval(10 * 60)
+        case .inPerson: card.start.addingTimeInterval(-10 * 60) ..< card.start
+        case .focusBlock: card.start.addingTimeInterval(-5 * 60) ..< card.end
+        }
     }
 
     /// Next up among cards still to do, which must come in start order: the first in its Soon or Now phase, else
-    /// the last one already started (a late joiner keeps it), else the first ahead.
+    /// the last one already started (a late joiner keeps it), else the first ahead. A focus block, in its Soon or Now
+    /// phase until it ends, gives way to another card in its Soon or Now phase, e.g. a meeting booked over the block.
     public static func nextUp(among toDo: [ImpactCard], now: Date) -> ImpactCard? {
-        toDo.first { isSoonOrNow($0, now: now) } ?? toDo.last { $0.start <= now } ?? toDo.first
+        let active = toDo.filter { isSoonOrNow($0, now: now) }
+        return active.first { $0.kind != .focusBlock } ?? active.first ?? toDo.last { $0.start <= now } ?? toDo.first
     }
 
-    /// Soon or Now: in person until the start, online and hybrid until 10 minutes after it.
+    /// Soon or Now: in person until the start, online and hybrid until 10 minutes after it, a focus block until its end.
     public static func isSoonOrNow(_ card: ImpactCard, now: Date) -> Bool {
         now >= soonStart(of: card) && now < nowPhase(of: card).upperBound
     }

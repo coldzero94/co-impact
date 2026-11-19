@@ -30,6 +30,9 @@ public struct CalendarEvent: Sendable, Hashable, Identifiable {
     public var structuredPlace: Place?
     /// A successful address/POI lookup for this event's location, supplied by the caller.
     public var geocodedPlace: Place?
+    /// The goal's title when Impact created this event with Block time, supplied by the caller: the event is then a
+    /// focus block (PRODUCT.md → Focus blocks).
+    public var focusGoal: String?
 
     public init(
         id: String, calendarID: String, title: String, start: Date, end: Date,
@@ -38,7 +41,7 @@ public struct CalendarEvent: Sendable, Hashable, Identifiable {
         isUserOrganizer: Bool = false, isUserAttendee: Bool = false, seriesID: String? = nil,
         location: String? = nil, url: URL? = nil, notes: String? = nil,
         organizer: String? = nil, attendees: [String] = [],
-        structuredPlace: Place? = nil, geocodedPlace: Place? = nil
+        structuredPlace: Place? = nil, geocodedPlace: Place? = nil, focusGoal: String? = nil
     ) {
         self.id = id
         self.calendarID = calendarID
@@ -61,6 +64,7 @@ public struct CalendarEvent: Sendable, Hashable, Identifiable {
         self.attendees = attendees
         self.structuredPlace = structuredPlace
         self.geocodedPlace = geocodedPlace
+        self.focusGoal = focusGoal
     }
 }
 

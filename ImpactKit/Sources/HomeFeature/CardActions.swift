@@ -19,6 +19,10 @@ extension ActionKind {
                                  address: place.address.flatMap { MKAddress(fullAddress: $0, shortAddress: nil) })
             item.name = place.title
             completion(item.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDefault]))
+        case .startFocus:
+            // Nothing opens: Home starts the session itself.
+            assertionFailure("Start focus runs in Home")
+            completion(false)
         }
     }
 }

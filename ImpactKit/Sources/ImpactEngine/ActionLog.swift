@@ -23,12 +23,12 @@ public struct ActionLog: Sendable {
     /// Marks `action` done on `card`. The card's `primaryAction` also records the card's Impact, once.
     /// Returns true when this call recorded the Impact. A primary action before the card's Soon phase is
     /// preparation, not doing it (PRODUCT.md → Completion semantics): it records nothing, so the card keeps Next
-    /// up and its Now alert. An action passed with the wrong card records nothing in release builds instead of
-    /// crashing (debug builds assert).
+    /// up and its Now alert. An action passed with the wrong card, or Start focus (`recordFocus`), records nothing in
+    /// release builds instead of crashing (debug builds assert).
     @discardableResult
     public mutating func record(_ action: ImpactAction, on card: ImpactCard, at date: Date) -> Bool {
-        guard card.actions.contains(action) else {
-            assertionFailure("\(action.kind) is not an action of card \(card.id)")
+        guard card.actions.contains(action), action.kind != .startFocus else {
+            assertionFailure("\(action.kind) is not an action of card \(card.id), or is Start focus")
             return false
         }
         let primary = action == card.primaryAction
@@ -36,6 +36,19 @@ public struct ActionLog: Sendable {
         done[card.id, default: []].insert(action.kind)
         guard primary, impacts[card.id] == nil else { return false }
         impacts[card.id] = date
+        return true
+    }
+
+    /// Ends a focus session at `date`, or at its block's end if that comes first (PRODUCT.md → Focus blocks): one of
+    /// at least 10 minutes marks Start focus done and records the block's Impact, once, stamped when the session
+    /// ended. A shorter one records nothing. Returns true when this call recorded the Impact. It needs only the
+    /// session, so it also records one whose block left Home meanwhile (deleted or moved in Calendar).
+    @discardableResult
+    public mutating func recordFocus(_ session: FocusSession, endedAt date: Date) -> Bool {
+        let end = min(date, session.end)
+        guard end.timeIntervalSince(session.start) >= 10 * 60, impacts[session.cardID] == nil else { return false }
+        done[session.cardID, default: []].insert(.startFocus)
+        impacts[session.cardID] = end
         return true
     }
 
