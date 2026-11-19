@@ -54,11 +54,19 @@ public enum HomeFixtures {
         // visit is dismissed as not needed, so the empty state names the next card.
         let engine = try ImpactEngine()
         var log = ActionLog()
+        // Yesterday's page of the daily log, and today's entries as the Impacts are recorded.
+        var dailyLog = DailyLog(entries: [
+            DailyLog.Entry(cardID: "y1", kind: .joined, title: "Weekly planning", date: at(9.5, day: -1), calendar: calendar),
+            DailyLog.Entry(cardID: "y2", kind: .focused(minutes: 55), title: "Write a book", date: at(19, day: -1),
+                           calendar: calendar),
+        ])
+        dailyLog.setLine("Long walk after the planning.", on: at(21, day: -1), calendar: calendar)
         for event in events.prefix(hour >= 9.5 ? 2 : 1) {
             guard let card = engine.card(for: event, now: event.start), let primary = card.primaryAction else {
                 throw FixtureError.noCard(event.title)
             }
             log.record(primary, on: card, at: event.start)
+            if let entry = DailyLog.Entry(impactOf: card, at: event.start, calendar: calendar) { dailyLog.add(entry) }
         }
         var dismissals = Dismissals()
         if hour >= 20 { dismissals.dismiss(events[7], at: at(20)) }
@@ -74,7 +82,7 @@ public enum HomeFixtures {
         block.focusGoal = "Write a book"
         let focus = (15.75..<16.5).contains(hour) ? engine.card(for: block, now: at(15.5)).flatMap { FocusSession(card: $0, now: at(15.5)) } : nil
         return try HomeModel(events: events, now: at(hour), calendar: calendar, log: log, dismissals: dismissals,
-                             goals: goals, goalRecords: records, blocks: blocks, focus: focus)
+                             goals: goals, goalRecords: records, blocks: blocks, focus: focus, dailyLog: dailyLog)
     }
 }
 #endif

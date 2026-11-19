@@ -13,7 +13,7 @@ public final class HomeModel {
     public private(set) var now: Date
     private(set) var log: ActionLog
     private var events: [CalendarEvent]
-    private let calendar: Calendar
+    let calendar: Calendar
     private let engine: ImpactEngine
     private var dismissals: Dismissals
     /// Goals and working hours (PRODUCT.md → Goals), edited in goal setup.
@@ -185,6 +185,25 @@ public final class HomeModel {
         saveFocus(session)
         rebuild()
         return true
+    }
+
+    /// The daily review's days (`DailyLog.days`), newest first.
+    var reviewDays: [DailyLog.Day] { dailyLog.days(calendar: calendar) }
+
+    /// The day's one line, as stored.
+    func line(on day: Date) -> String { dailyLog.lines[DailyLog.key(for: day, calendar: calendar)] ?? "" }
+
+    /// The daily review's one line for `day` (PRODUCT.md → Daily log), stored when it changed.
+    func setLine(_ text: String, on day: Date) {
+        let before = dailyLog
+        dailyLog.setLine(text, on: day, calendar: calendar)
+        if dailyLog != before { saveDailyLog(dailyLog) }
+    }
+
+    /// UX.md → Home: the "Today" row that opens the daily review, from 18:00, or once today's last card is done.
+    var showsTodayRow: Bool {
+        calendar.component(.hour, from: now) >= 18
+            || (snapshot.nextUp == nil && snapshot.impactsToday > 0)
     }
 
     /// Home queued the moment for `focusImpact`.

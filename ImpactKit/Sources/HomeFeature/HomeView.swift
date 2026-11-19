@@ -24,6 +24,7 @@ public struct HomeView: View {
     /// Home refreshes).
     @State private var swapped: TimeInterval?
     @State private var settingUpGoals = false
+    @State private var reviewing = false
     /// Block time's session, while its card shows "Blocked" with Undo (UX.md → Home: 5 seconds, 15 with VoiceOver).
     @State private var justBlocked: JustBlocked?
     @State private var blockings = 0
@@ -85,6 +86,16 @@ public struct HomeView: View {
                 }
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
+                if model.showsTodayRow {
+                    Section {
+                        // It can appear where End focus was a moment ago: a double tap's second half does not open it.
+                        Button { if !justSwapped { reviewing = true } } label: { TodayRow(impacts: snapshot.impactsToday) }
+                        .buttonStyle(RowButtonStyle())
+                        .accessibilityHint("Opens the daily review")
+                    }
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.card)
+                }
                 section("Later today", snapshot.laterToday, done: snapshot.doneCardIDs)
                 goalSection
                 section("Tomorrow morning", snapshot.tomorrowMorning, done: snapshot.doneCardIDs)
@@ -129,6 +140,7 @@ public struct HomeView: View {
             }
         }
         .sheet(isPresented: $settingUpGoals, onDismiss: playPending) { GoalSetupView(model: model) }
+        .sheet(isPresented: $reviewing, onDismiss: playPending) { DailyReviewView(model: model) }
         .sheet(item: $selected, onDismiss: playPending) { card in
             CardDetailView(card: card, model: model, run: { action, failed in
                 // Card detail swaps Start focus and End focus in place too. Only taps: a run request never waits.
@@ -245,10 +257,15 @@ public struct HomeView: View {
             if !typeSize.isAccessibilitySize { Spacer() }
             // The ring fills the moment's segment only when its token lands.
             let unshown = (pending == nil ? 0 : 1) + (flying == nil ? 0 : 1)
-            ImpactRing(filled: max(0, snapshot.impactsToday - unshown), segments: snapshot.ringSegments)
-                .frame(width: ringSize, height: ringSize)
-                .shadow(color: Color.accentColor.opacity(glowing ? 0.9 : 0), radius: glowing ? 14 : 0)
-                .recordingFrame { momentFrames.ring = $0 }
+            // Tapping the ring opens the daily review (UX.md → Home).
+            Button { if !justSwapped { reviewing = true } } label: {
+                ImpactRing(filled: max(0, snapshot.impactsToday - unshown), segments: snapshot.ringSegments)
+                    .frame(width: ringSize, height: ringSize)
+                    .shadow(color: Color.accentColor.opacity(glowing ? 0.9 : 0), radius: glowing ? 14 : 0)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Opens the daily review")
+            .recordingFrame { momentFrames.ring = $0 }
         }
     }
 
@@ -304,7 +321,8 @@ public struct HomeView: View {
     /// sheet open (UX.md → The Impact moment). If an action never left, the next Next up tap or sheet close
     /// plays it.
     private func playPending() {
-        guard scenePhase == .active, selected == nil, !settingUpGoals, flying == nil, let moment = pending else { return }
+        guard scenePhase == .active, selected == nil, !settingUpGoals, !reviewing, flying == nil, let moment = pending
+        else { return }
         if reduceMotion || moment.from == nil || momentFrames.ring == nil {
             land()
         } else {
@@ -364,6 +382,31 @@ private final class MomentFrames {
 private struct JustBlocked: Equatable {
     let card: GoalTimeCard
     let session: GoalSession
+}
+
+/// The "Today" row that opens the daily review (UX.md → Home): its Impacts beside it, or below at accessibility sizes.
+private struct TodayRow: View {
+    let impacts: Int
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout())
+        HStack {
+            layout {
+                Text("Today").fontWeight(.medium)
+                if !typeSize.isAccessibilitySize { Spacer() }
+                if impacts > 0 {
+                    Text("\(impacts) \(impacts == 1 ? "Impact" : "Impacts")").foregroundStyle(.secondary)
+                }
+            }
+            if typeSize.isAccessibilitySize { Spacer() }
+            Image(systemName: "chevron.forward").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 15)
+        .contentShape(.rect)
+    }
 }
 
 private struct RowButtonStyle: ButtonStyle {

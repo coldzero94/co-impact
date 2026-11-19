@@ -29,7 +29,7 @@ public struct DailyLog: Sendable, Hashable, Codable {
             self.kind = kind
             self.title = title
             self.date = date
-            // Fixed by its identifier: an autoupdating zone (`Calendar.autoupdatingCurrent`'s) would decode as the
+            // Fixed by its identifier: an autoupdating zone (`TimeZone.autoupdatingCurrent`) would decode as the
             // reader's current one and move the entry after travel.
             timeZone = TimeZone(identifier: calendar.timeZone.identifier) ?? calendar.timeZone
         }
