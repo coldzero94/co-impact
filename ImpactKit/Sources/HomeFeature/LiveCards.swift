@@ -11,7 +11,7 @@ extension LiveCard {
         guard let primary = card.primaryAction else { return nil }
         self.init(cardID: card.id, title: String(card.title.prefix(120)), answer: String(card.answer.prefix(120)),
                   symbol: primary.kind.symbol, actionLabel: primary.kind.label, start: card.start,
-                  nowPhase: ImpactEngine.nowPhase(of: card), runToken: runToken)
+                  nowPhase: ImpactEngine.nowPhase(of: card), runToken: runToken, timeSensitive: card.kind != .focusBlock)
     }
 }
 

@@ -39,19 +39,16 @@ public struct ActionLog: Sendable {
         return true
     }
 
-    /// A focus session on a focus block, from `start` to `end` (PRODUCT.md → Focus blocks): one of at least 10
-    /// minutes marks Start focus done and records the card's Impact, once, stamped at its end. A shorter one records
-    /// nothing. Returns true when this call recorded the Impact; another kind of card records nothing in release
-    /// builds (debug builds assert).
+    /// Ends a focus session at `date`, or at its block's end if that comes first (PRODUCT.md → Focus blocks): one of
+    /// at least 10 minutes marks Start focus done and records the block's Impact, once, stamped when the session
+    /// ended. A shorter one records nothing. Returns true when this call recorded the Impact. It needs only the
+    /// session, so it also records one whose block left Home meanwhile (deleted or moved in Calendar).
     @discardableResult
-    public mutating func recordFocus(on card: ImpactCard, from start: Date, to end: Date) -> Bool {
-        guard card.kind == .focusBlock else {
-            assertionFailure("Card \(card.id) is not a focus block")
-            return false
-        }
-        guard end.timeIntervalSince(start) >= 10 * 60, impacts[card.id] == nil else { return false }
-        done[card.id, default: []].insert(.startFocus)
-        impacts[card.id] = end
+    public mutating func recordFocus(_ session: FocusSession, endedAt date: Date) -> Bool {
+        let end = min(date, session.end)
+        guard end.timeIntervalSince(session.start) >= 10 * 60, impacts[session.cardID] == nil else { return false }
+        done[session.cardID, default: []].insert(.startFocus)
+        impacts[session.cardID] = end
         return true
     }
 

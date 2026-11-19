@@ -309,4 +309,12 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         #expect(ids(home(events, at: at(19, 30)).liveActivityCards) == ["Block"])
         #expect(home(events, at: at(20)).cards.isEmpty)
     }
+
+    @Test("A focus block gives Next up to a card in its Soon or Now phase, e.g. a meeting booked over it", arguments: [
+        (at(14, 14), "Block"), (at(14, 15), "Meeting"), (at(14, 39), "Meeting"), (at(14, 40), "Block"),
+    ])
+    func focusBlockGivesWay(_ now: Date, _ next: String) {
+        let events = [event("Block", 14) { $0.focusGoal = "Write a book" }, event("Meeting", 14, 30)]
+        #expect(home(events, at: now).nextUp?.id == next)
+    }
 }

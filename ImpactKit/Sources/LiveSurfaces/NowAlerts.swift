@@ -64,14 +64,15 @@ public enum NowAlerts {
             .map(\.request.identifier).filter(isStale))
     }
 
-    /// The alert for `card`: its title and answer, as the Live Activity's start alert shows them, Time Sensitive
-    /// (meeting start or leave-by, PRODUCT.md → Interruptions), at the start of its Now phase.
+    /// The alert for `card`: its title and answer, as the Live Activity's start alert shows them, at the start of its
+    /// Now phase; Time Sensitive for a meeting's start or leave-by, the default level for a focus block (PRODUCT.md →
+    /// Interruptions).
     nonisolated static func request(for card: LiveCard, now: Date) -> UNNotificationRequest {
         let content = UNMutableNotificationContent()
         content.title = card.title
         content.body = card.answer
         content.sound = .default
-        content.interruptionLevel = .timeSensitive
+        content.interruptionLevel = card.timeSensitive ? .timeSensitive : .active
         content.userInfo = ["card": card.cardID]
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, card.nowPhase.lowerBound.timeIntervalSince(now)),
                                                         repeats: false)

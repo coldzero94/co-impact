@@ -104,12 +104,19 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         let moved = LiveCard(cardID: live.cardID, title: live.title, answer: live.answer, symbol: live.symbol,
                              actionLabel: live.actionLabel, start: later,
                              nowPhase: later.addingTimeInterval(-600) ..< later.addingTimeInterval(600),
-                             runToken: "secret")
+                             runToken: "secret", timeSensitive: true)
         #expect(NowAlerts.identifier(for: moved) != request.identifier)
         #expect(request.content.title == zoom.title && request.content.body == "Zoom link ready")
         #expect(request.content.interruptionLevel == .timeSensitive)
         #expect(request.content.userInfo["card"] as? String == zoom.id)
         #expect((request.trigger as? UNTimeIntervalNotificationTrigger)?.timeInterval == 3_600)
+        // A focus block's alert comes at the default level (PRODUCT.md → Interruptions).
+        var block = CalendarEvent(id: "block", calendarID: "personal", title: "Write a book", start: start,
+                                  end: start.addingTimeInterval(3_600))
+        block.focusGoal = "Write a book"
+        let blockCard = try #require(try ImpactEngine().card(for: block, now: now))
+        let focus = try #require(LiveCard(blockCard, runToken: "secret"))
+        #expect(NowAlerts.request(for: focus, now: now).content.interruptionLevel == .active)
     }
 
     @Test("A Live Activity carries the card's title, answer, primary action, and Now phase")

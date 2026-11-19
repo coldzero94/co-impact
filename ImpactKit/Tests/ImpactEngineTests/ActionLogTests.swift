@@ -135,20 +135,38 @@ private func hybridCard() throws -> ImpactCard {
         #expect(after.impactsToday == 1 && after.ringSegments == 1)
     }
 
-    @Test("A focus session of 10 minutes or more records the block's Impact once, stamped at its end; a shorter one nothing")
+    @Test("Start focus works from a focus block's Soon until its end, and only on a focus block")
+    func focusStart() throws {
+        var event = CalendarEvent(id: "block", calendarID: "personal", title: "Write a book", start: start,
+                                  end: start.addingTimeInterval(3_600))
+        event.focusGoal = "Write a book"
+        let card = try #require(try ImpactEngine().card(for: event, now: start.addingTimeInterval(-3_600)))
+        #expect(FocusSession(card: card, now: start.addingTimeInterval(-15 * 60 - 1)) == nil)
+        let early = try #require(FocusSession(card: card, now: start.addingTimeInterval(-15 * 60)))
+        #expect(early.cardID == "block" && early.start == start.addingTimeInterval(-15 * 60) && early.end == card.end)
+        #expect(FocusSession(card: card, now: card.end.addingTimeInterval(-1)) != nil)
+        #expect(FocusSession(card: try hybridCard(), now: start) == nil)
+    }
+
+    @Test("A focus session of 10 minutes or more records the block's Impact once, when it ended; a shorter one nothing")
     func focusSession() throws {
         var event = CalendarEvent(id: "block", calendarID: "personal", title: "Write a book", start: start,
                                   end: start.addingTimeInterval(3_600))
         event.focusGoal = "Write a book"
         let card = try #require(try ImpactEngine().card(for: event, now: start))
         let startFocus = try #require(card.primaryAction)
+        let session = try #require(FocusSession(card: card, now: start))
         var log = ActionLog()
-        let short = log.recordFocus(on: card, from: start, to: start.addingTimeInterval(10 * 60 - 1))
+        let short = log.recordFocus(session, endedAt: start.addingTimeInterval(10 * 60 - 1))
         #expect(!short && !log.isDone(startFocus, on: card) && log.impacts.isEmpty)
-        let tenMinutes = start.addingTimeInterval(30 * 60)
-        let first = log.recordFocus(on: card, from: start.addingTimeInterval(20 * 60), to: tenMinutes)
+        let tenMinutes = start.addingTimeInterval(10 * 60)
+        let first = log.recordFocus(session, endedAt: tenMinutes)
         #expect(first && log.impacts == ["block": tenMinutes] && log.isDone(startFocus, on: card))
-        let again = log.recordFocus(on: card, from: start, to: start.addingTimeInterval(3_600))
+        let again = log.recordFocus(session, endedAt: start.addingTimeInterval(3_600))
         #expect(!again && log.impacts == ["block": tenMinutes])
+        // A session ended after its block (Impact was not running then) ends at the block's end.
+        var late = ActionLog()
+        late.recordFocus(session, endedAt: card.end.addingTimeInterval(7_200))
+        #expect(late.impacts == ["block": card.end])
     }
 }

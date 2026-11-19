@@ -24,9 +24,12 @@ public struct LiveCard: Codable, Hashable, Sendable {
     public let nowPhase: Range<Date>
     /// The secret its run link carries, so only Impact's own activities can run a card's action.
     public let runToken: String
+    /// Whether its fallback alert (`NowAlerts`) is Time Sensitive: a meeting's start and leave-by are, a focus
+    /// block's start is not (PRODUCT.md → Interruptions).
+    public let timeSensitive: Bool
 
     public init(cardID: String, title: String, answer: String, symbol: String, actionLabel: String, start: Date,
-                nowPhase: Range<Date>, runToken: String) {
+                nowPhase: Range<Date>, runToken: String, timeSensitive: Bool) {
         assert(nowPhase.lowerBound <= start && start <= nowPhase.upperBound, "Now phase \(nowPhase) misses \(start)")
         self.cardID = cardID
         self.title = title
@@ -36,6 +39,7 @@ public struct LiveCard: Codable, Hashable, Sendable {
         self.start = start
         self.nowPhase = nowPhase
         self.runToken = runToken
+        self.timeSensitive = timeSensitive
     }
 
     /// The link the activity's action button opens: Impact, which runs the card's primary action. Apple documents

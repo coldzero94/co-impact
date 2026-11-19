@@ -128,9 +128,11 @@ extension ImpactEngine {
     }
 
     /// Next up among cards still to do, which must come in start order: the first in its Soon or Now phase, else
-    /// the last one already started (a late joiner keeps it), else the first ahead.
+    /// the last one already started (a late joiner keeps it), else the first ahead. A focus block, in its Now phase
+    /// until it ends, gives way to another card in its Soon or Now phase, e.g. a meeting booked over the block.
     public static func nextUp(among toDo: [ImpactCard], now: Date) -> ImpactCard? {
-        toDo.first { isSoonOrNow($0, now: now) } ?? toDo.last { $0.start <= now } ?? toDo.first
+        let active = toDo.filter { isSoonOrNow($0, now: now) }
+        return active.first { $0.kind != .focusBlock } ?? active.first ?? toDo.last { $0.start <= now } ?? toDo.first
     }
 
     /// Soon or Now: in person until the start, online and hybrid until 10 minutes after it, a focus block until its end.
