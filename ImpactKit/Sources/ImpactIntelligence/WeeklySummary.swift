@@ -13,8 +13,9 @@ public enum WeeklySummary {
     static func grounded(_ text: String, in log: String) -> String? {
         let summary = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !summary.isEmpty, summary.count <= 280 else { return nil }
-        let numbers = summary.split { !$0.isNumber }
-        guard numbers.allSatisfy({ log.contains($0) }) else { return nil }
+        // Whole numbers against whole numbers: "5" is not in a log that holds only "50".
+        let held = Set(log.split { !$0.isNumber })
+        guard summary.split(whereSeparator: { !$0.isNumber }).allSatisfy(held.contains) else { return nil }
         return summary
     }
 

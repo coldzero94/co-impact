@@ -46,9 +46,10 @@ import Testing
         let log = "Monday\n- Joined Design review\n- 50 min on Write a book\n\nTuesday\n- Left for Dentist"
         #expect(WeeklySummary.grounded("  You joined Design review and spent 50 min on Write a book.\n", in: log)
                 == "You joined Design review and spent 50 min on Write a book.")
-        // A count the log does not hold is invented: no summary.
         #expect(WeeklySummary.grounded("A meeting, a focus session, and a trip to the dentist.", in: log) != nil)
+        // A count the log does not hold is invented: no summary, even when its digits are part of one it holds.
         #expect(WeeklySummary.grounded("You focused for 90 minutes.", in: log) == nil)
+        #expect(WeeklySummary.grounded("You focused for 5 hours.", in: log) == nil)
         #expect(WeeklySummary.grounded(" ", in: log) == nil)
         #expect(WeeklySummary.grounded(String(repeating: "A calm week. ", count: 30), in: log) == nil)
     }
