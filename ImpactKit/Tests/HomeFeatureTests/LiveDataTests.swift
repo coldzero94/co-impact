@@ -327,7 +327,8 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
         #expect(throws: (any Error).self) { try refusing.blockTime(offered) }
         #expect(refusing.goalCard == offered && refusedSaves == 0)
 
-        // An Undo the calendar refuses keeps the block recorded, as the event stays.
+        // An Undo the calendar refuses changes nothing: the block stays recorded and Home keeps its card, as the
+        // event stays.
         struct Refused: Error {}
         var kept: [GoalRecords] = []
         let stuck = try HomeModel(events: [], now: morning, calendar: losAngeles,
@@ -338,10 +339,9 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
                                   }, remove: { _ in throw Refused() }),
                                   saveGoalRecords: { kept.append($0) })
         let stuckSession = try stuck.blockTime(try #require(stuck.goalCard))
+        let afterBlock = stuck.goalCard
         #expect(throws: Refused.self) { try stuck.undoBlock(stuckSession) }
-        #expect(kept.last?.sessions == [stuckSession])
-        // Its event stays busy, so the next card is not on the same slot.
-        #expect(try #require(stuck.goalCard).slot.start != stuckSession.start)
+        #expect(kept.last?.sessions == [stuckSession] && stuck.goalCard == afterBlock)
     }
 
     @Test("Home offers goal setup once, after the first Impact; Done keeps up to three goals with a title")
