@@ -103,6 +103,7 @@ private let records = GoalRecords(sessions: [
         #expect(model.startFocus(on: try #require(model.snapshot.cards.first { $0.id == "other" })))
         #expect(model.focus?.cardID == "other" && model.focus?.start == at(10, 20))
         #expect(saved.impacts.last == ["block": at(10, 20)] && model.focusImpact == "block")
+        #expect(saved.logs.last?.entries.map(\.cardID) == ["block"])
     }
 
     @Test("A session ends with its block, or once its block leaves its Soon or Now phase on Home, with its Impact",
@@ -147,6 +148,7 @@ private let records = GoalRecords(sessions: [
         let saved = Saved()
         let relaunched = try model(at: at(12), focus: session, saved: saved)
         #expect(relaunched.focus == nil && saved.focus == [nil] && saved.impacts == [["block": at(11)]])
+        #expect(saved.logs.last?.entries.map(\.kind) == [.focused(minutes: 60)])
     }
 
     @Test("The running session survives the store in its format; an ended one is stored as none")
@@ -156,6 +158,9 @@ private let records = GoalRecords(sessions: [
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = DefaultsStore<FocusSession?>(defaults)
         #expect(store.load() == nil)
+        // A session stored before step 13 has no goal's title: it does not decode and is set aside.
+        defaults.set(Data(#"{"cardID":"block","start":0,"end":3600}"#.utf8), forKey: "focusSession")
+        #expect(store.load() == nil && defaults.data(forKey: "focusSession.unreadable") != nil)
         defaults.set(Data(#"{"cardID":"block","title":"Write a novel","start":0,"end":3600}"#.utf8), forKey: "focusSession")
         let session = try #require(store.load() ?? nil)
         #expect(session.cardID == "block" && session.title == "Write a novel"

@@ -4,8 +4,8 @@ import os
 
 /// What the widgets need from Impact that the calendar does not hold (ARCHITECTURE.md → Storage): which cards are
 /// done and when (for the ring's Impacts), which are dismissed or muted, the run links' secret, which events are focus
-/// blocks, and the running focus session. Of the calendar, card IDs, times, and muted titles only, like Impact's own
-/// storage, plus the goals' titles; the widgets read events themselves.
+/// blocks, and the running focus session. Of the calendar, card IDs, times, and muted titles only, plus the goals'
+/// titles; the widgets read events themselves.
 public struct SurfaceState: Codable, Hashable, Sendable {
     /// When each card's Impact was recorded, by card ID.
     public var completed: [String: Date]

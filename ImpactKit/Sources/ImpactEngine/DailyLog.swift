@@ -20,16 +20,23 @@ public struct DailyLog: Sendable, Hashable, Codable {
         /// The event's title, or a focus block's goal, as its card showed it.
         public let title: String
         public let date: Date
-        /// The day it belongs to (`DailyLog.key`), fixed where it was recorded, so travel moves it to no other day.
-        public let day: String
+        /// The time zone it was recorded in, so it keeps its day (`day`) and its clock time after travel.
+        public let timeZone: TimeZone
 
-        /// An entry recorded at `date`, on its day in `calendar`.
+        /// An entry recorded at `date` in `calendar`'s time zone.
         public init(cardID: String, kind: Kind, title: String, date: Date, calendar: Calendar) {
             self.cardID = cardID
             self.kind = kind
             self.title = title
             self.date = date
-            day = DailyLog.key(for: date, calendar: calendar)
+            timeZone = calendar.timeZone
+        }
+
+        /// The day it belongs to (`DailyLog.key`), where it was recorded.
+        public var day: String {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = timeZone
+            return DailyLog.key(for: date, calendar: calendar)
         }
 
         /// The entry for the Impact `card`'s primary action recorded at `date` (`ActionLog.record`); nil for a focus
@@ -39,13 +46,16 @@ public struct DailyLog: Sendable, Hashable, Codable {
             switch card.primaryAction?.kind {
             case .joinMeeting: kind = .joined
             case .directions: kind = .left
-            default: return nil
+            // Only those two record an Impact through `ActionLog.record`; a new primary action must say what it logs.
+            case .openLink, .call, .startFocus, nil: return nil
             }
             self.init(cardID: card.id, kind: kind, title: card.title, date: date, calendar: calendar)
         }
 
         /// The entry for a focus session that recorded its block's Impact (`ActionLog.recordFocus`): stamped, as the
         /// Impact is, when it ended, at its end at the latest.
+        /// shortcut: it takes `calendar`'s time zone, where Home saw the session end; a session that ended while Impact
+        /// was closed and the user traveled lands on that zone's day; keep the session's zone if that shows up.
         public init(session: FocusSession, endedAt date: Date, calendar: Calendar) {
             let end = min(date, session.end)
             self.init(cardID: session.cardID, kind: .focused(minutes: Int((end.timeIntervalSince(session.start) / 60).rounded())),
@@ -71,8 +81,10 @@ public struct DailyLog: Sendable, Hashable, Codable {
         self.lines = lines
     }
 
-    /// An Impact just recorded.
+    /// An Impact just recorded. A card has one Impact (`ActionLog`), so a second entry for it is ignored: one recorded
+    /// again while the stored Impacts could not be read.
     public mutating func add(_ entry: Entry) {
+        guard !entries.contains(where: { $0.cardID == entry.cardID }) else { return }
         entries.append(entry)
     }
 

@@ -72,6 +72,8 @@ private func card(_ id: String, _ edit: (inout CalendarEvent) -> Void) throws ->
         #expect(days.count == 1 && days[0].key == "2027-01-15")
         #expect(days[0].entries.map(\.cardID) == ["call"] && days[0].line == "Long day")
         #expect(seoul.dateComponents([.day, .hour], from: days[0].date) == DateComponents(day: 15, hour: 0))
+        // It keeps the zone it was recorded in, so it still reads 20:00, the time the user saw that evening.
+        #expect(days[0].entries[0].timeZone == calendar.timeZone)
     }
 
     @Test("Day keys are Gregorian whatever calendar the user chose, so a line keeps its day after a change")
@@ -84,6 +86,14 @@ private func card(_ id: String, _ edit: (inout CalendarEvent) -> Void) throws ->
         #expect(log.lines.keys.sorted() == ["2027-01-15"] && log.entries[0].day == "2027-01-15")
         let days = log.days(calendar: calendar)
         #expect(days.count == 1 && days[0].date == at(0) && days[0].line == "Songkran plans")
+    }
+
+    @Test("A card has one entry, as it has one Impact: a second is ignored")
+    func oneEntryPerCard() {
+        var log = DailyLog()
+        log.add(entry("review", at: at(10, 1)))
+        log.add(entry("review", at: at(10, 20)))
+        #expect(log.entries == [entry("review", at: at(10, 1))])
     }
 
     @Test("One line: trimmed, its line breaks turned into spaces; empty removes it")
