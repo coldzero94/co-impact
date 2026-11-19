@@ -24,6 +24,8 @@ public final class HomeModel {
     private let blocks: BlockWriter
     /// The running focus session (PRODUCT.md → Focus blocks), if any.
     private(set) var focus: FocusSession?
+    /// The daily log (PRODUCT.md → Daily log): an entry for each Impact recorded, and the user's lines.
+    private(set) var dailyLog: DailyLog
     /// The focus block whose session ended with an Impact, until Home has queued the larger Impact moment for it
     /// (UX.md → The Impact moment) and calls `focusImpactShown`.
     private(set) var focusImpact: String?
@@ -37,16 +39,19 @@ public final class HomeModel {
     private let saveGoalRecords: (GoalRecords) -> Void
     /// Receives the focus session when one starts or ends (nil), to store it.
     private let saveFocus: (FocusSession?) -> Void
+    /// Receives the daily log after each change, to store it.
+    private let saveDailyLog: (DailyLog) -> Void
 
     public init(events: [CalendarEvent], now: Date, calendar: Calendar, log: ActionLog = ActionLog(),
                 dismissals: Dismissals = Dismissals(), goals: GoalSettings = GoalSettings(),
                 goalRecords: GoalRecords = GoalRecords(), blocks: BlockWriter = .unavailable,
-                focus: FocusSession? = nil,
+                focus: FocusSession? = nil, dailyLog: DailyLog = DailyLog(),
                 saveImpacts: @escaping ([String: Date]) -> Void = { _ in },
                 saveDismissals: @escaping (Dismissals) -> Void = { _ in },
                 saveGoals: @escaping (GoalSettings) -> Void = { _ in },
                 saveGoalRecords: @escaping (GoalRecords) -> Void = { _ in },
-                saveFocus: @escaping (FocusSession?) -> Void = { _ in }) throws {
+                saveFocus: @escaping (FocusSession?) -> Void = { _ in },
+                saveDailyLog: @escaping (DailyLog) -> Void = { _ in }) throws {
         let engine = try ImpactEngine()
         // Without focus blocks yet: `rebuild` below marks them once the goal records are matched.
         snapshot = Self.home(engine, events, focusBlocks: [:], now, calendar, log, dismissals.pruned(now: now))
@@ -65,6 +70,8 @@ public final class HomeModel {
         self.saveGoalRecords = saveGoalRecords
         self.focus = focus
         self.saveFocus = saveFocus
+        self.dailyLog = dailyLog
+        self.saveDailyLog = saveDailyLog
         rebuild()
     }
 
@@ -106,7 +113,10 @@ public final class HomeModel {
     func record(_ action: ImpactAction, on card: ImpactCard) -> Bool {
         let recorded = log.record(action, on: card, at: now)
         rebuild()
-        if recorded { saveImpacts(log.impacts) }
+        if recorded {
+            saveImpacts(log.impacts)
+            if let entry = DailyLog.Entry(impactOf: card, at: now, calendar: calendar) { addToDailyLog(entry) }
+        }
         return recorded
     }
 
@@ -242,8 +252,14 @@ public final class HomeModel {
         saveFocus(nil)
         guard log.recordFocus(session, endedAt: now) else { return false }
         saveImpacts(log.impacts)
+        addToDailyLog(DailyLog.Entry(session: session, endedAt: now, calendar: calendar))
         focusImpact = session.cardID
         return true
+    }
+
+    private func addToDailyLog(_ entry: DailyLog.Entry) {
+        dailyLog.add(entry)
+        saveDailyLog(dailyLog)
     }
 
     /// Focus blocks by event ID (`CalendarEvent.focusGoal`): the sessions Impact blocked for goals the user still

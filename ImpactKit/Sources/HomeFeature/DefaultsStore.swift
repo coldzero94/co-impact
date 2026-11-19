@@ -3,7 +3,7 @@ import ImpactEngine
 import os
 
 /// A value stored whole as JSON in `UserDefaults` (ARCHITECTURE.md → Storage): the dismissals, the goals, the goal
-/// records, and the running focus session.
+/// records, the running focus session, and the daily log.
 /// shortcut: standard defaults, loaded once in the foreground (widgets get the dismissals' rules through
 /// `SurfaceState`); move a value to the App Group once background refresh or a widget needs it, and then never save
 /// over data that could not be read.
@@ -56,6 +56,14 @@ extension DefaultsStore<GoalRecords> {
 /// Nil (stored as JSON `null`) once the session ended.
 extension DefaultsStore<FocusSession?> {
     init(_ defaults: UserDefaults) { self.init(defaults: defaults, key: "focusSession") }
+}
+
+/// shortcut: the whole log is rewritten on each change and grows by a few entries a day (about 200 KB a year); move it
+/// to a file or database if years of it slow launch. Like every value here, a log that does not decode is set aside
+/// (only the latest such copy is kept) and the next save starts a new one; guard it as `ImpactFile` does before
+/// release if a decode failure is ever seen.
+extension DefaultsStore<DailyLog> {
+    init(_ defaults: UserDefaults) { self.init(defaults: defaults, key: "dailyLog") }
 }
 
 /// The user's goals and working hours (PRODUCT.md → Goals), and whether Home has offered goal setup (UX.md →

@@ -27,6 +27,7 @@ private let records = GoalRecords(sessions: [
 @MainActor private final class Saved {
     var focus: [FocusSession?] = []
     var impacts: [[String: Date]] = []
+    var logs: [DailyLog] = []
 }
 
 @MainActor private func model(at now: Date, events: [CalendarEvent] = [block, meeting], goals: [Goal] = [novel],
@@ -34,7 +35,8 @@ private let records = GoalRecords(sessions: [
                               saved: Saved = Saved()) throws -> HomeModel {
     try HomeModel(events: events, now: now, calendar: losAngeles,
                   goals: GoalSettings(goals: goals, offered: true), goalRecords: records, focus: focus,
-                  saveImpacts: { saved.impacts.append($0) }, saveFocus: { saved.focus.append($0) })
+                  saveImpacts: { saved.impacts.append($0) }, saveFocus: { saved.focus.append($0) },
+                  saveDailyLog: { saved.logs.append($0) })
 }
 
 @MainActor private func blockCard(_ model: HomeModel) throws -> ImpactCard {
@@ -74,6 +76,11 @@ private let records = GoalRecords(sessions: [
         #expect(model.endFocus())
         #expect(saved.impacts.last == ["block": at(10)] && model.focusImpact == "block")
         #expect(model.snapshot.doneCardIDs == ["block"] && model.snapshot.impactsToday == 1)
+        // The short session left no entry; this one does, with the goal's title.
+        #expect(saved.logs == [DailyLog(entries: [
+            DailyLog.Entry(cardID: "block", kind: .focused(minutes: 10), title: "Write a novel", date: at(10),
+                           calendar: losAngeles),
+        ])])
         // A block records one Impact: done, it does not start again.
         #expect(!model.startFocus(on: try blockCard(model)) && model.focus == nil)
     }
@@ -96,6 +103,7 @@ private let records = GoalRecords(sessions: [
         #expect(model.startFocus(on: try #require(model.snapshot.cards.first { $0.id == "other" })))
         #expect(model.focus?.cardID == "other" && model.focus?.start == at(10, 20))
         #expect(saved.impacts.last == ["block": at(10, 20)] && model.focusImpact == "block")
+        #expect(saved.logs.last?.entries.map(\.cardID) == ["block"])
     }
 
     @Test("A session ends with its block, or once its block leaves its Soon or Now phase on Home, with its Impact",
@@ -127,6 +135,8 @@ private let records = GoalRecords(sessions: [
         // A session stops at its block's end, however late Impact sees it.
         #expect(saved.impacts.last == ["block": ["ended", "extended"].contains(way) ? at(11) : at(10, 30)])
         #expect(model.focusImpact == "block" && model.snapshot.impactsToday == 1)
+        // Its daily log entry keeps the goal's title, even with the block gone.
+        #expect(saved.logs.last?.entries.map(\.title) == ["Write a novel"])
         // Still listed, the block shows done.
         if ["extended", "moved"].contains(way) { #expect(model.snapshot.doneCardIDs == ["block"]) }
     }
@@ -138,6 +148,7 @@ private let records = GoalRecords(sessions: [
         let saved = Saved()
         let relaunched = try model(at: at(12), focus: session, saved: saved)
         #expect(relaunched.focus == nil && saved.focus == [nil] && saved.impacts == [["block": at(11)]])
+        #expect(saved.logs.last?.entries.map(\.kind) == [.focused(minutes: 60)])
     }
 
     @Test("The running session survives the store in its format; an ended one is stored as none")
@@ -147,9 +158,13 @@ private let records = GoalRecords(sessions: [
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = DefaultsStore<FocusSession?>(defaults)
         #expect(store.load() == nil)
+        // A session stored before step 13 has no goal's title: it does not decode and is set aside.
         defaults.set(Data(#"{"cardID":"block","start":0,"end":3600}"#.utf8), forKey: "focusSession")
+        #expect(store.load() == nil && defaults.data(forKey: "focusSession.unreadable") != nil)
+        defaults.set(Data(#"{"cardID":"block","title":"Write a novel","start":0,"end":3600}"#.utf8), forKey: "focusSession")
         let session = try #require(store.load() ?? nil)
-        #expect(session.cardID == "block" && session.start == Date(timeIntervalSinceReferenceDate: 0)
+        #expect(session.cardID == "block" && session.title == "Write a novel"
+                && session.start == Date(timeIntervalSinceReferenceDate: 0)
                 && session.end == Date(timeIntervalSinceReferenceDate: 3_600))
         store.save(nil)
         #expect(store.load() == .some(nil))
