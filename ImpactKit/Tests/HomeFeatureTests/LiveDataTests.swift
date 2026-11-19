@@ -290,18 +290,20 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
     @Test("The daily log loads from the key and format users will have stored")
     func dailyLogStore() throws {
         try withDefaults { defaults in
-            let json = #"{"entries":[{"cardID":"r","kind":{"joined":{}},"title":"Design review","date":0},"#
-                + #"{"cardID":"d","kind":{"left":{}},"title":"Dentist","date":60},"#
-                + #"{"cardID":"b","kind":{"focused":{"minutes":50}},"title":"Write a book","date":3600}],"#
-                + #""lines":{"2001-01-01":"Good day"}}"#
+            let json = #"{"entries":[{"cardID":"r","kind":{"joined":{}},"title":"Design review","date":0,"day":"2000-12-31"},"#
+                + #"{"cardID":"d","kind":{"left":{}},"title":"Dentist","date":60,"day":"2000-12-31"},"#
+                + #"{"cardID":"b","kind":{"focused":{"minutes":50}},"title":"Write a book","date":3600,"day":"2000-12-31"}],"#
+                + #""lines":{"2000-12-31":"Good day"}}"#
             defaults.set(Data(json.utf8), forKey: "dailyLog")
+            // Midnight UTC on 2001-01-01 is still December 31 in Los Angeles.
             let start = Date(timeIntervalSinceReferenceDate: 0)
             #expect(DefaultsStore<DailyLog>(defaults).load() == DailyLog(entries: [
-                DailyLog.Entry(cardID: "r", kind: .joined, title: "Design review", date: start),
-                DailyLog.Entry(cardID: "d", kind: .left, title: "Dentist", date: start.addingTimeInterval(60)),
+                DailyLog.Entry(cardID: "r", kind: .joined, title: "Design review", date: start, calendar: losAngeles),
+                DailyLog.Entry(cardID: "d", kind: .left, title: "Dentist", date: start.addingTimeInterval(60),
+                               calendar: losAngeles),
                 DailyLog.Entry(cardID: "b", kind: .focused(minutes: 50), title: "Write a book",
-                               date: start.addingTimeInterval(3_600)),
-            ], lines: ["2001-01-01": "Good day"]))
+                               date: start.addingTimeInterval(3_600), calendar: losAngeles),
+            ], lines: ["2000-12-31": "Good day"]))
         }
     }
 
@@ -318,7 +320,7 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
         #expect(!model.record(try #require(visit.primaryAction), on: visit) && saved.isEmpty)
         let review = try #require(model.snapshot.nextUp)
         #expect(model.record(try #require(review.primaryAction), on: review))
-        let joined = DailyLog.Entry(cardID: "review", kind: .joined, title: "review", date: morning)
+        let joined = DailyLog.Entry(cardID: "review", kind: .joined, title: "review", date: morning, calendar: losAngeles)
         #expect(saved == [DailyLog(entries: [joined])] && model.dailyLog == saved.last)
     }
 

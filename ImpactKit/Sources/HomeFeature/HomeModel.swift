@@ -115,7 +115,7 @@ public final class HomeModel {
         rebuild()
         if recorded {
             saveImpacts(log.impacts)
-            if let entry = DailyLog.Entry(impactOf: card, at: now) { addToDailyLog(entry) }
+            if let entry = DailyLog.Entry(impactOf: card, at: now, calendar: calendar) { addToDailyLog(entry) }
         }
         return recorded
     }
@@ -252,7 +252,7 @@ public final class HomeModel {
         saveFocus(nil)
         guard log.recordFocus(session, endedAt: now) else { return false }
         saveImpacts(log.impacts)
-        addToDailyLog(DailyLog.Entry(session: session, endedAt: now))
+        addToDailyLog(DailyLog.Entry(session: session, endedAt: now, calendar: calendar))
         focusImpact = session.cardID
         return true
     }

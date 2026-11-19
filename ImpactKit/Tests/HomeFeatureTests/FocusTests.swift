@@ -78,7 +78,8 @@ private let records = GoalRecords(sessions: [
         #expect(model.snapshot.doneCardIDs == ["block"] && model.snapshot.impactsToday == 1)
         // The short session left no entry; this one does, with the goal's title.
         #expect(saved.logs == [DailyLog(entries: [
-            DailyLog.Entry(cardID: "block", kind: .focused(minutes: 10), title: "Write a novel", date: at(10)),
+            DailyLog.Entry(cardID: "block", kind: .focused(minutes: 10), title: "Write a novel", date: at(10),
+                           calendar: losAngeles),
         ])])
         // A block records one Impact: done, it does not start again.
         #expect(!model.startFocus(on: try blockCard(model)) && model.focus == nil)
