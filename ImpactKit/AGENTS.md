@@ -23,6 +23,10 @@ The local Swift package with all app logic and UI features. Why this layout: [do
 - Live Activities need live Home (no `-fixtureHour`) and test events a few minutes ahead; they show only after the Lock Screen's "Allow Live Activities from Impact?" is answered. `xcrun simctl openurl booted 'impact://run?card=<id>&token=<token>'` runs a card's primary action (token: `runToken` in `Library/Preferences/io.github.coldzero94.impact.plist` under `xcrun simctl get_app_container booted io.github.coldzero94.impact data`); a one-off event's ID is its `UUID` (a recurring or moved occurrence adds `@<original start, epoch seconds>`) in the simulator's `data/Library/Calendar/Calendar.sqlitedb` (`sqlite3 -readonly`).
 - Calendar access: `xcrun simctl privacy booted grant|revoke|reset calendar io.github.coldzero94.impact` (a change can terminate the running app). Test events: write a synthetic `.ics` outside the repo, serve its folder with `python3 -m http.server --bind 127.0.0.1 --directory <folder>`, open a page linking it in Safari, and tap the link, then Add All. Never real calendar data. The import drops coordinates, so these events give online cards only. `simctl openurl` on the `.ics` itself offers a subscription, which the engine skips.
 
+## Gotchas
+
+- SwiftUI's `Text(_:format:)` puts the environment's time zone in place of the format's: format a `Date` to a `String` to show it in another zone.
+
 ## Tests
 
 - Swift Testing (`@Test`, `#expect`). Tests use synthetic fixtures, never real calendar data.

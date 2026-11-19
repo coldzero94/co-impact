@@ -154,12 +154,15 @@ private struct GatheringRing: View {
                     try? await Task.sleep(for: .seconds(0.18))
                 }
                 withAnimation(.spring(duration: 0.4)) { landed = symbols.count }
+                // The last token lands before the haptic and before its row folds away.
+                try? await Task.sleep(for: .seconds(0.45))
             }
             // Closed before it finished: it plays the next time the review opens this evening.
             guard !Task.isCancelled else { return }
             success += 1
             gathered()
-            gathering = false
+            // The empty token row folds away, so the list below moves up smoothly rather than jumping.
+            withAnimation(.spring(duration: 0.4)) { gathering = false }
         }
     }
 
