@@ -8,6 +8,8 @@ struct Moment {
     let recorded = ProcessInfo.processInfo.systemUptime
     let symbol: String
     let from: CGRect?
+    /// A focus session's Impact: the ring also glows briefly when the token lands (UX.md → The Impact moment).
+    var large = false
 }
 
 /// The Impact moment's motion (UX.md → The Impact moment): the card folds into a token, and the token

@@ -18,7 +18,9 @@ extension LiveCard {
 extension HomeModel {
     /// The Live Activities that should be scheduled or running now (`HomeSnapshot.liveActivityCards`), their run
     /// links carrying `runToken`.
+    /// shortcut: focus blocks get none until background refresh and the widgets see them too (step 12's next PR):
+    /// background refresh would end their activities.
     func liveCards(runToken: String) -> [LiveCard] {
-        snapshot.liveActivityCards.compactMap { LiveCard($0, runToken: runToken) }
+        snapshot.liveActivityCards.filter { $0.kind != .focusBlock }.compactMap { LiveCard($0, runToken: runToken) }
     }
 }

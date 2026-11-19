@@ -64,7 +64,8 @@ Follows Apple Human Interface Guidelines and the design principles P1–P8 in [P
 - Events that need nothing are counted but not listed; Home is not a calendar.
 - Tapping Next up opens the card's detail; its button runs the primary action in one tap.
 - Built in step 11: the goal-time card, between Later today and Tomorrow morning: the goal's title, "Today 18:10 is free" (Today, Tomorrow, else the weekday), and Block time as a bordered button, so Next up's action stays the one filled button on Home. Block time plays the success haptic, VoiceOver announces it, and the card shows a checkmark, "Blocked", and Undo for 5 seconds (15 with VoiceOver, to reach Undo after the announcement), then the next card; a full swipe is Not now. If Undo fails, an alert asks the user to delete the event in Calendar.
-- Not built yet: focus cards (step 12); the ring tap and the "Today" row from 18:00, with the daily review (step 13). Leave-by times are not drawn: rows and answers show the place, which stays the fallback when no route exists (PRODUCT.md → Card timeline). Locations without coordinates are not geocoded yet (after a device check of Apple's geocoding, step 10), so only events with a structured location with coordinates get in-person cards. Calendars shared into the user's account are not marked in EventKit, so their events without attendees can get cards; calendars of delegated accounts count as the user's own (PRODUCT.md D12).
+- Built in step 12: focus blocks on Home. Next up shows one like any card ("Focus", the countdown, the goal's title, "60 min focus block") with **Start focus** from 15 minutes before its start (before then, no button). During a session, Next up shows the minutes left, "until 4:30 PM", "Focusing since 3:24 PM", and **End focus** (card detail too); VoiceOver hears "Focus started on …" and, for a session under 10 minutes, "Focus ended". A session of 10 minutes or more ends with the larger Impact moment, and the block's row shows done, "Focus kept" in card detail. Not built yet: the session's Live Activity and focus blocks on the other surfaces (step 12's next PR).
+- Not built yet: the ring tap and the "Today" row from 18:00, with the daily review (step 13). Leave-by times are not drawn: rows and answers show the place, which stays the fallback when no route exists (PRODUCT.md → Card timeline). Locations without coordinates are not geocoded yet (after a device check of Apple's geocoding, step 10), so only events with a structured location with coordinates get in-person cards. Calendars shared into the user's account are not marked in EventKit, so their events without attendees can get cards; calendars of delegated accounts count as the user's own (PRODUCT.md D12).
 
 ### 3. Empty state
 
@@ -110,7 +111,7 @@ Built in step 7: below any place, Details shows the organizer unless it is the u
 - **Title:** event title, unchanged; for goal-time and focus cards, the goal's title.
 - **Answer line:** the answer to the card's question, from confirmed or computed data only.
 - **Primary action button.**
-- Done state: checkmark, secondary text color, primary button replaced by "Joined" / "Directions opened" / "Blocked".
+- Done state: checkmark, secondary text color, primary button replaced by "Joined" / "Directions opened" / "Blocked" / "Focus kept".
 
 ## Confirmed vs. inferred
 
@@ -122,7 +123,7 @@ Built in step 7: below any place, Details shows the organizer unless it is the u
 
 - Swipe a card or row → **Not needed**. It disappears with no confirmation.
 - Same menu: **Don't suggest for events like this** (mutes the recurring series, or the same title on the same calendar).
-- Goal-time cards offer **Not now** instead (no goal-time card until tomorrow).
+- Goal-time cards offer **Not now** instead (no goal-time card until tomorrow). Focus blocks offer only Not needed (step 12): muting a block's title would hide every block of its goal; dismissing a block ends its running session.
 - Built in step 7: the swipe shows two icon buttons, Not needed (red, a full swipe runs it) and Don't suggest (gray); VoiceOver reads both as actions with their full names. A dismissed card still to do takes its ring segment with it; a done card's Impact still counts. Don't suggest on an untitled one-off only dismisses it, since nothing marks events like it (owner, 2026-11-15). A moved occurrence of a muted series can still show, and a full sync can bring a muted series or a dismissed occurrence back (ARCHITECTURE.md → Platform facts). Built in step 11: Not now, a gray swipe button (a full swipe runs it). Not built yet: a way to unmute in Settings.
 
 ## Motion (Proposed)
@@ -142,7 +143,7 @@ The signature animation, used for every Impact:
 2. The token travels to the Impact ring, and its segment fills.
 3. A success haptic plays as it lands.
 
-If the action left the app (Join opens Zoom, Directions opens Maps), the moment plays when the user comes back, so it is seen rather than missed. An action run from card detail plays it when the sheet closes, from the card's place on Home. A focus session that ends gets the larger version: the ring briefly glows. In the daily review, the day's tokens gather into the ring once, the first time the review opens that evening. Built so far: the event-card moment; the focus and review versions come with steps 12–13.
+If the action left the app (Join opens Zoom, Directions opens Maps), the moment plays when the user comes back, so it is seen rather than missed. An action run from card detail plays it when the sheet closes, from the card's place on Home. A focus session that ends gets the larger version: the ring briefly glows. In the daily review, the day's tokens gather into the ring once, the first time the review opens that evening. Built so far: the event-card moment, and the focus version (step 12): after the token lands, the ring glows for about a second. The review version comes with step 13.
 
 During a focus session, the Live Activity and Dynamic Island show the same ring shape filling with time, so the session and the day read as one thing.
 

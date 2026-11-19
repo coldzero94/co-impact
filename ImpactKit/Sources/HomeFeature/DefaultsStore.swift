@@ -2,8 +2,8 @@ import Foundation
 import ImpactEngine
 import os
 
-/// A value stored whole as JSON in `UserDefaults` (ARCHITECTURE.md → Storage): the dismissals, the goals, and the goal
-/// records.
+/// A value stored whole as JSON in `UserDefaults` (ARCHITECTURE.md → Storage): the dismissals, the goals, the goal
+/// records, and the running focus session.
 /// shortcut: standard defaults, loaded once in the foreground (widgets get the dismissals' rules through
 /// `SurfaceState`); move a value to the App Group once background refresh or a widget needs it, and then never save
 /// over data that could not be read.
@@ -51,6 +51,11 @@ extension DefaultsStore<GoalSettings> {
 
 extension DefaultsStore<GoalRecords> {
     init(_ defaults: UserDefaults) { self.init(defaults: defaults, key: "goalRecords") }
+}
+
+/// Nil (stored as JSON `null`) once the session ended.
+extension DefaultsStore<FocusSession?> {
+    init(_ defaults: UserDefaults) { self.init(defaults: defaults, key: "focusSession") }
 }
 
 /// The user's goals and working hours (PRODUCT.md → Goals), and whether Home has offered goal setup (UX.md →
