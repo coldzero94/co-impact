@@ -104,7 +104,7 @@ Built in step 7: below any place, Details shows the organizer unless it is the u
 - Opens from the Impact ring, or from the "Today" row Home shows from 18:00.
 - The day's Impacts as a short list ("Joined Design review · 10:01", "50 min on Write a book") and one optional line ("One line about today").
 - Earlier days below, newest first. No charts, no comparisons, no empty-day markers.
-- Built in step 13: a sheet titled Today with the Impact ring and "2 Impacts today", then today's entries, each as its time and "Joined Design review", "Left for Dentist", or "50 min on Write a book" (a focus session's time is when it ended), then the field "One line about today" (one line, kept when the sheet closes, removed when emptied), then each earlier day with an entry or a line under its date, its line in italics. Earlier lines are read-only.
+- Built in step 13: a sheet titled Today with the Impact ring and "2 Impacts today", then today's entries, each as its time and "Joined Design review", "Left for Dentist", or "50 min on Write a book" (a focus session's time is when it ended), then the field "One line about today" (one line, kept when the sheet closes, removed when emptied), then each earlier day with an entry or a line under its date, its line in italics. Earlier lines are read-only. Built in step 14: after today, a "This week" section with `sparkles` holds the weekly summary (PRODUCT.md → Daily log), with the footer "Suggested from your log, on this iPhone."; VoiceOver reads "Suggested summary of this week: …". It shows only once the model has written one; nothing shows while it writes or without it.
 
 ## Card anatomy
 
@@ -118,6 +118,7 @@ Built in step 7: below any place, Details shows the organizer unless it is the u
 
 - Calendar facts and computed values: plain text.
 - AI next steps: `sparkles` symbol and the label "Suggested", in their own section, never mixed into facts. Each shows the quoted line from the notes it came from, so the user can see why.
+- The weekly summary (step 14): its own "This week" section with `sparkles` and "Suggested from your log", never mixed into the day's entries.
 - Color is never the only signal; the symbol and label carry the meaning for VoiceOver and Differentiate Without Color.
 
 ## Dismissing

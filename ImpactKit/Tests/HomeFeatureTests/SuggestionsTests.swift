@@ -40,4 +40,23 @@ import Testing
         #expect(!Suggestions.worthAsking("See you there"))
         #expect(Suggestions.worthAsking("회의 전에 3분기 계획서를 읽어 주세요"))
     }
+
+    @Test("A weekly summary shows trimmed, at most 280 characters, and with no number the log does not hold")
+    func weeklySummary() {
+        let log = "Monday\n- Joined Design review\n- 50 min on Write a book\n\nTuesday\n- Left for Dentist"
+        #expect(WeeklySummary.grounded("  You joined Design review and spent 50 min on Write a book.\n", in: log)
+                == "You joined Design review and spent 50 min on Write a book.")
+        #expect(WeeklySummary.grounded("A meeting, a focus session, and a trip to the dentist.", in: log) != nil)
+        // A count the log does not hold is invented: no summary, even when its digits are part of one it holds.
+        #expect(WeeklySummary.grounded("You focused for 90 minutes.", in: log) == nil)
+        #expect(WeeklySummary.grounded("You focused for 5 hours.", in: log) == nil)
+        #expect(WeeklySummary.grounded(" ", in: log) == nil)
+        #expect(WeeklySummary.grounded(String(repeating: "A calm week. ", count: 30), in: log) == nil)
+        // A long week keeps its last lines whole, never a part of one such as "20 min" of "120 min".
+        let week = (1...200).map { "- \($0)20 min on Write a book" }.joined(separator: "\n")
+        let recent = WeeklySummary.recent(week)
+        #expect(recent.count <= WeeklySummary.logLimit && recent.hasPrefix("- ") && recent.hasSuffix("20020 min on Write a book"))
+        #expect(WeeklySummary.recent(log) == log)
+        #expect(WeeklySummary.recent(String(repeating: "a", count: WeeklySummary.logLimit + 1)).isEmpty)
+    }
 }

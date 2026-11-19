@@ -353,6 +353,46 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
         #expect(!empty.showsTodayRow)
     }
 
+    @Test("The weekly summary reads the week's days in order, from three entries on; other weeks stay out")
+    @MainActor func weekLog() throws {
+        // Friday 2027-01-15; the week starts on Sunday in this calendar (Gregorian, `firstWeekday` 1).
+        let entry = { (id: String, kind: DailyLog.Entry.Kind, days: Double) in
+            DailyLog.Entry(cardID: id, kind: kind, title: id, date: morning.addingTimeInterval(days * 86_400),
+                           calendar: losAngeles)
+        }
+        // Saturday the 9th belongs to the week before; a day with only a line shows but does not count.
+        var log = DailyLog(entries: [entry("Standup", .joined, -3), entry("Dentist", .left, -1),
+                                     entry("Last week", .joined, -6)])
+        log.setLine("Long walk", on: morning.addingTimeInterval(-86_400), calendar: losAngeles)
+        log.setLine("Rest day", on: morning.addingTimeInterval(-2 * 86_400), calendar: losAngeles)
+        let two = try HomeModel(events: [], now: morning, calendar: losAngeles, dailyLog: log)
+        #expect(two.weekLog(on: morning) == nil)
+        log.add(entry("Write a book", .focused(minutes: 50), 0))
+        let three = try HomeModel(events: [], now: morning, calendar: losAngeles, dailyLog: log)
+        #expect(three.weekLog(on: morning) == """
+            Tuesday
+            - Joined Standup
+
+            Wednesday
+            Line: Rest day
+
+            Thursday
+            - Left for Dentist
+            Line: Long walk
+
+            Friday
+            - 50 min on Write a book
+            """)
+        // Where weeks start on Monday, Saturday the 9th and Sunday the 10th are last week's.
+        var monday = losAngeles
+        monday.firstWeekday = 2
+        log.add(entry("Sunday call", .joined, -5))
+        let europe = try HomeModel(events: [], now: morning, calendar: monday, dailyLog: log)
+        #expect(europe.weekLog(on: morning)?.hasPrefix("Tuesday") == true)
+        let sundayStart = try HomeModel(events: [], now: morning, calendar: losAngeles, dailyLog: log)
+        #expect(sundayStart.weekLog(on: morning)?.hasPrefix("Sunday") == true)
+    }
+
     @Test("Block time saves the slot, records it, and moves the card on; Undo and Not now; a refused save records nothing")
     @MainActor func blockTime() throws {
         var written: [CalendarEvent] = []

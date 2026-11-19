@@ -67,7 +67,7 @@ Derived from Apple Design Award and App Store Award winners. Evidence and source
 | P3 | There at the right moment | Flighty, Crouton | Cards move through timed phases; the right surface (Home, widget, Live Activity) shows the right thing at each phase. |
 | P4 | Shine when things change | Flighty | A changed time or place is the only reason for an extra alert. |
 | P5 | Complexity disappears | Moonlitt | Rules, scoring, and AI are never shown. A card shows results only. Onboarding is one screen. |
-| P6 | AI produces next steps, not conversation | Tiimo | AI extracts at most two next steps from event notes, each grounded in the notes. No chat. |
+| P6 | AI produces next steps, not conversation | Tiimo | AI extracts at most two next steps from event notes, each grounded in the notes, and (step 14) sums up the week from the daily log. No chat. |
 | P7 | Support, not pressure | Gentler Streak | No streaks, badges, or "you missed it". Expired cards vanish silently. |
 | P8 | Accessibility from day one | Structured | Dynamic Type, VoiceOver, Reduce Motion, and Differentiate Without Color are MVP requirements. |
 
@@ -224,6 +224,7 @@ The diary, without writing a diary.
 - Stored on device only. Past entries are browsable (UX.md → Daily review).
 - Built in step 13: each Impact adds an entry when it is recorded: what the user did (joined, left, or focused, with the session's length rounded to the minute), the event's title or the goal as its card showed it, and when; a focus session's entry keeps its goal even if the block is deleted. Only a session of 10 minutes or more, which records an Impact, is logged with its minutes; shorter ones are not stored, so their minutes count nowhere yet. Each day's one line is stored beside them. The daily review shows them (UX.md → Daily review). Impacts recorded before step 13 have no entry.
 - Later, behind availability checks and with no new onboarding step: a weekly summary that Foundation Models writes from the log alone, and Journaling Suggestions to attach a moment to the line (verify first; ARCHITECTURE.md → Platform facts).
+- Built in step 14: the weekly summary. Once the week (the locale's) has three entries, the daily review asks the on-device model for one or two sentences in English from the week's log alone: each day's weekday, its entries as the review shows them, and its line. It is asked not to judge, compare, or advise; a summary with a whole number absent from the log, or over 280 characters, is dropped. Without Apple Intelligence, or on any error, there is none. Journaling Suggestions are not built yet.
 
 ## Card timeline
 
@@ -257,6 +258,7 @@ AI is optional enrichment (P5, P6). Without Apple Intelligence the product is co
 - **Never:** decide whether a card exists, invent actions outside the catalog, generate the card's answer line, or chat.
 - **Language:** generate in the notes' language if it is in `supportedLanguages`; otherwise skip.
 - **Presentation:** a separate "Suggested" section with the `sparkles` symbol (see UX.md).
+- **The one exception:** the weekly summary (step 14, Daily log) reads the week's log, its event titles and the user's lines, and writes one or two sentences in English (the app's language, D23); it decides nothing and offers no action.
 
 ## Interruptions
 

@@ -190,6 +190,22 @@ public final class HomeModel {
     /// The daily review's days (`DailyLog.days`), newest first.
     var reviewDays: [DailyLog.Day] { dailyLog.days(calendar: calendar) }
 
+    /// The week of `day` as the weekly summary reads it (`WeeklySummary`): its days in order, each with its weekday,
+    /// its entries as the review shows them, and its line; nil before the week has three entries, too few to sum up.
+    func weekLog(on day: Date) -> String? {
+        guard let week = calendar.dateInterval(of: .weekOfYear, for: day) else { return nil }
+        let days = reviewDays.filter { week.start <= $0.date && $0.date < week.end }.reversed()
+        guard days.reduce(0, { $0 + $1.entries.count }) >= 3 else { return nil }
+        // English weekdays, as the app's words are (PRODUCT.md D23), whatever the device's language.
+        let weekday = Date.FormatStyle(locale: Locale(identifier: "en_US_POSIX"), timeZone: calendar.timeZone)
+            .weekday(.wide)
+        return days.map { day in
+            ([day.date.formatted(weekday)] + day.entries.map { "- \($0.text)" } + (day.line.map { ["Line: \($0)"] } ?? []))
+                .joined(separator: "\n")
+        }
+        .joined(separator: "\n\n")
+    }
+
     /// The day's one line, as stored.
     func line(on day: Date) -> String { dailyLog.lines[DailyLog.key(for: day, calendar: calendar)] ?? "" }
 

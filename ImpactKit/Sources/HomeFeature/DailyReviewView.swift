@@ -1,4 +1,5 @@
 import ImpactEngine
+import ImpactIntelligence
 import LiveSurfaces
 import SwiftUI
 
@@ -11,6 +12,8 @@ struct DailyReviewView: View {
     /// Home's refresh, which makes this view again each minute, does not move it.
     @State private var day: Date
     @State private var line: String
+    /// The weekly summary, once the on-device model wrote one (`WeeklySummary`).
+    @State private var summary: String?
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     /// The day (`DailyLog.key`) whose evening already saw the tokens gather.
@@ -41,6 +44,17 @@ struct DailyReviewView: View {
                         .submitLabel(.done)
                         .onSubmit { model.setLine(line, on: day) }
                 }
+                if let summary {
+                    // Inferred: its own section, with `sparkles` and "Suggested" (UX.md → Confirmed vs. inferred).
+                    Section {
+                        Text(summary)
+                            .accessibilityLabel("Suggested summary of this week: \(summary)")
+                    } header: {
+                        Label("This week", systemImage: "sparkles")
+                    } footer: {
+                        Text("Suggested from your log, on this iPhone.")
+                    }
+                }
                 ForEach(days.filter { $0.key != todayKey }, id: \.key) { day in
                     Section {
                         ForEach(day.entries, id: \.self) { EntryRow(entry: $0) }
@@ -59,6 +73,13 @@ struct DailyReviewView: View {
                     Button("Done") { dismiss() }
                 }
             }
+        }
+        .task(id: model.weekLog(on: day)) {
+            // A new entry changes the log: the summary that no longer fits it goes until the new one is written.
+            summary = nil
+            guard let log = model.weekLog(on: day) else { return }
+            let written = await WeeklySummary.generate(log: log)
+            if !Task.isCancelled { summary = written }
         }
         // The line is kept however the sheet closes, and when Impact leaves the front, where iOS may end it unseen.
         .onDisappear { model.setLine(line, on: day) }
