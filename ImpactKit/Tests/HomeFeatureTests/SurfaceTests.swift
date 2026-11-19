@@ -12,6 +12,13 @@ private let losAngeles: Calendar = {
 private let midnight = losAngeles.date(from: DateComponents(year: 2027, month: 1, day: 15))!
 private func at(_ hour: Double, day: Int = 0) -> Date { midnight.addingTimeInterval(Double(day) * 86_400 + hour * 3_600) }
 
+/// The event Block time created for the goal "book", 10:00–11:00, marked as Home marks it.
+private let focusBlock: CalendarEvent = {
+    var event = CalendarEvent(id: "block", calendarID: "personal", title: "Write a book", start: at(10), end: at(11))
+    event.focusGoal = "Write a novel"
+    return event
+}()
+
 private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEvent {
     CalendarEvent(id: id, calendarID: "work", title: id, start: at(hour, day: day), end: at(hour + 1, day: day),
                   url: URL(string: "https://zoom.us/j/1"))
@@ -194,7 +201,10 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = SurfaceStore(defaults: defaults)
         #expect(store.load() == nil)
-        let state = SurfaceState(completed: ["a": at(9)], suppressionRules: [.title(calendarID: "work", title: "Standup")], runToken: "secret")
+        let block = try #require(engine.card(for: focusBlock, now: at(10)))
+        let state = SurfaceState(completed: ["a": at(9)], suppressionRules: [.title(calendarID: "work", title: "Standup")],
+                                 runToken: "secret", focusBlocks: ["block": "Write a novel"],
+                                 focus: FocusSession(card: block, now: at(10)))
         store.save(state)
         #expect(store.load() == state)
         defaults.set(Data("not json".utf8), forKey: SurfaceStore.key)
@@ -255,5 +265,34 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         let late = try HomeModel(events: [meeting("Call", 10)], now: at(10.3), calendar: losAngeles, log: ActionLog())
         #expect(late.snapshot.nextUp?.id == "Call" && late.snapshot.liveActivityCards.isEmpty)
         #expect(late.runnableCard(id: "Call")?.id == "Call" && late.runnableCard(id: "Unknown") == nil)
+    }
+
+    @Test("Focus blocks reach every surface as Home marks them; background refresh keeps the session's Live Activity")
+    @MainActor func focusSurfaces() throws {
+        var block = focusBlock
+        block.focusGoal = nil // as the calendar gives it
+        let events = [block, meeting("Sync", 13)]
+        let goals = GoalSettings(goals: [Goal(id: "book", title: "Write a novel", timesPerWeek: 1)], offered: true)
+        let records = GoalRecords(sessions: [
+            GoalSession(goalID: "book", eventID: "block", title: "Write a book", start: at(10), end: at(11)),
+        ])
+        let model = try HomeModel(events: events, now: at(9.75), calendar: losAngeles, goals: goals, goalRecords: records)
+        let state = model.surfaceState(runToken: "secret")
+        #expect(state.focusBlocks == ["block": "Write a novel"] && state.focus == nil)
+        // The widgets show the block as Home does, with its button.
+        let first = try #require(NextCards.moments(events: events, state: state, now: at(9.75), calendar: losAngeles,
+                                                   engine: engine).first)
+        #expect(first.card?.kind == .focusBlock && first.card?.title == "Write a novel" && first.runnable)
+        // Before a session its Live Activity alerts at the default level; once one runs, it shows the session, at once.
+        let before = try #require(model.liveCards(runToken: "secret").first { $0.cardID == "block" })
+        #expect(!before.timeSensitive && before.focusSince == nil)
+        #expect(model.startFocus(on: try #require(model.snapshot.nextUp)))
+        let focusing = model.surfaceState(runToken: "secret")
+        let background = NextCards.home(events: events, state: focusing, now: at(9.75), calendar: losAngeles, engine: engine)
+        let wanted = LiveCard.wanted(in: background, runToken: "secret", focus: focusing.focus)
+        #expect(wanted == model.liveCards(runToken: "secret") && wanted.map(\.cardID) == ["block", "Sync"])
+        #expect(wanted[0].focusSince == at(9.75) && wanted[1].focusSince == nil)
+        let requests = LiveCard.toRequest(wanted: wanted, existing: [before], now: at(9.75))
+        #expect(requests.startNow == [wanted[0]] && requests.schedule == [wanted[1]])
     }
 }

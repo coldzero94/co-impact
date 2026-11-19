@@ -192,12 +192,12 @@ public final class HomeModel {
 
     /// What the widgets and background refresh need to see cards as Home does (`SurfaceState`): the Impacts of the
     /// last two days or of events still fetched (e.g. a multi-day event joined on its first day, or a meeting joined
-    /// and then moved), the dismissals' rules, and the run links' secret.
+    /// and then moved), the dismissals' rules, the run links' secret, the focus blocks, and the running session.
     func surfaceState(runToken: String) -> SurfaceState {
         let since = now.addingTimeInterval(-2 * 86_400)
         let fetched = Set(events.map(\.id))
         return SurfaceState(completed: log.impacts.filter { $0.value > since || fetched.contains($0.key) },
-                            suppressionRules: dismissals.rules, runToken: runToken)
+                            suppressionRules: dismissals.rules, runToken: runToken, focusBlocks: focusBlocks, focus: focus)
     }
 
     /// The card a run request names: one Home lists. The widgets, the control, and the App Shortcuts offer only

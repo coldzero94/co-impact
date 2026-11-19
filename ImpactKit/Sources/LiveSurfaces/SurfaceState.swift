@@ -3,8 +3,9 @@ import ImpactEngine
 import os
 
 /// What the widgets need from Impact that the calendar does not hold (ARCHITECTURE.md → Storage): which cards are
-/// done and when (for the ring's Impacts), which are dismissed or muted, and the run links' secret. Of the calendar,
-/// card IDs, times, and muted titles only, like Impact's own storage; the widgets read events themselves.
+/// done and when (for the ring's Impacts), which are dismissed or muted, the run links' secret, which events are focus
+/// blocks, and the running focus session. Of the calendar, card IDs, times, and muted titles only, like Impact's own
+/// storage, plus the goals' titles; the widgets read events themselves.
 public struct SurfaceState: Codable, Hashable, Sendable {
     /// When each card's Impact was recorded, by card ID.
     public var completed: [String: Date]
@@ -12,11 +13,18 @@ public struct SurfaceState: Codable, Hashable, Sendable {
     /// The secret Impact's run links carry (`RunToken`): widgets are Impact's own surfaces, and the App Group is
     /// Impact's alone. Nil only in the widgets' fallback when nothing decodes; they then show no action button.
     public var runToken: String?
+    /// The focus blocks by event ID, with their goal's title (`CalendarEvent.focusGoal`), as Home marks them.
+    public var focusBlocks: [String: String]
+    /// The running focus session, so background refresh keeps its Live Activity.
+    public var focus: FocusSession?
 
-    public init(completed: [String: Date], suppressionRules: [SuppressionRule], runToken: String? = nil) {
+    public init(completed: [String: Date], suppressionRules: [SuppressionRule], runToken: String? = nil,
+                focusBlocks: [String: String] = [:], focus: FocusSession? = nil) {
         self.completed = completed
         self.suppressionRules = suppressionRules
         self.runToken = runToken
+        self.focusBlocks = focusBlocks
+        self.focus = focus
     }
 
     public var completedCardIDs: Set<String> { Set(completed.keys) }

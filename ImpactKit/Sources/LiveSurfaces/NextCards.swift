@@ -17,10 +17,11 @@ public enum NextCards {
         return (events, SurfaceStore()?.load() ?? SurfaceState(completed: [:], suppressionRules: []), engine)
     }
 
-    /// Home at `now` as Impact shows it, from the calendar and Impact's state; the ring counts that day's Impacts.
+    /// Home at `now` as Impact shows it, from the calendar and Impact's state (its focus blocks marked as Home marks
+    /// them); the ring counts that day's Impacts.
     public static func home(events: [CalendarEvent], state: SurfaceState, now: Date, calendar: Calendar,
                             engine: ImpactEngine) -> HomeSnapshot {
-        engine.home(events: events, now: now, calendar: calendar, completedCardIDs: state.completedCardIDs,
+        engine.home(events: marked(events, state), now: now, calendar: calendar, completedCardIDs: state.completedCardIDs,
                     impactsToday: state.completed.values.count { calendar.isDate($0, inSameDayAs: now) },
                     suppressionRules: state.suppressionRules)
     }
@@ -73,7 +74,7 @@ public enum NextCards {
     public static func moments(events: [CalendarEvent], state: SurfaceState, now: Date, calendar: Calendar,
                                engine: ImpactEngine) -> [Moment] {
         // A card only ever leaves with time (it expires), so events without one now never get one: select once.
-        let events = events.filter {
+        let events = marked(events, state).filter {
             engine.card(for: $0, now: now, suppressionRules: state.suppressionRules) != nil
         }
         let home = { (date: Date) in Self.home(events: events, state: state, now: date, calendar: calendar, engine: engine) }
@@ -104,6 +105,15 @@ public enum NextCards {
                           runnable: runnable != nil,
                           later: later,
                           impactsToday: snapshot.impactsToday, ringSegments: snapshot.ringSegments)
+        }
+    }
+
+    /// The events with their focus blocks marked (`CalendarEvent.focusGoal`), as Home last saw them.
+    static func marked(_ events: [CalendarEvent], _ state: SurfaceState) -> [CalendarEvent] {
+        state.focusBlocks.isEmpty ? events : events.map { event in
+            var event = event
+            event.focusGoal = state.focusBlocks[event.id]
+            return event
         }
     }
 
