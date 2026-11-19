@@ -118,6 +118,7 @@ Built in step 7: below any place, Details shows the organizer unless it is the u
 
 - Calendar facts and computed values: plain text.
 - AI next steps: `sparkles` symbol and the label "Suggested", in their own section, never mixed into facts. Each shows the quoted line from the notes it came from, so the user can see why.
+- The weekly summary (step 14): its own "This week" section with `sparkles` and "Suggested from your log", never mixed into the day's entries.
 - Color is never the only signal; the symbol and label carry the meaning for VoiceOver and Differentiate Without Color.
 
 ## Dismissing

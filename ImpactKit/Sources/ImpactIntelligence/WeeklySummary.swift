@@ -6,8 +6,11 @@ import os
 /// alone. Inferred, so shown apart and marked (UX.md → Confirmed vs. inferred). Optional enrichment (P5): without the
 /// model, or on any error, there is none and the daily review is complete without it.
 public enum WeeklySummary {
-    /// The summary to show, or nil: trimmed, short enough to read at a glance, and with no number the log does not
-    /// hold, so it cannot invent a count.
+    /// The longest log the model reads, its most recent days kept, so one request stays well within its context.
+    static let logLimit = 4_000
+
+    /// The summary to show, or nil: trimmed, short enough to read at a glance, and with no whole number absent from
+    /// the log, so it shows no count the log does not hold in digits.
     /// shortcut: only digits are checked; a count spelled out ("three meetings") passes. Check words too if a device
     /// shows the model writing them (ARCHITECTURE.md → To verify).
     static func grounded(_ text: String, in log: String) -> String? {
@@ -19,18 +22,22 @@ public enum WeeklySummary {
         return summary
     }
 
-    /// The summary of `log`, the week's entries and lines as the daily review shows them. The model's answer is kept
-    /// for the session per log; no answer (the model not ready, an error) is asked again next time.
+    /// The summary of `log`, the week's entries and lines as the daily review shows them, oldest first. The model's
+    /// answer is kept for the session per log, also one `grounded` dropped, so it is not asked again; no answer (the
+    /// model not ready, an error) is asked again next time.
     @MainActor public static func generate(log: String) async -> String? {
+        let log = String(log.suffix(logLimit))
         if let known = cache[log] { return known }
-        guard let summary = await ask(log: log) else { return nil }
-        cache[log] = summary
-        return summary
+        guard let answer = await ask(log: log) else { return nil }
+        // `.some`: assigning a dropped (nil) summary directly would remove the key instead of keeping it.
+        cache[log] = .some(answer)
+        return answer
     }
 
-    @MainActor private static var cache: [String: String] = [:]
+    @MainActor private static var cache: [String: String?] = [:]
 
-    @MainActor private static func ask(log: String) async -> String? {
+    /// The grounded summary (nil when `grounded` dropped it), or nil when the model gave no answer.
+    @MainActor private static func ask(log: String) async -> String?? {
         let model = SystemLanguageModel.default
         guard case .available = model.availability else {
             intelligenceLog.notice("No weekly summary: the model is \(String(describing: model.availability), privacy: .public)")
