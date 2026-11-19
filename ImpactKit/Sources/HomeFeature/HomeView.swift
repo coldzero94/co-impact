@@ -88,20 +88,7 @@ public struct HomeView: View {
                 .listRowBackground(Color.clear)
                 if model.showsTodayRow {
                     Section {
-                        Button { reviewing = true } label: {
-                            HStack {
-                                Text("Today").fontWeight(.medium)
-                                Spacer()
-                                if snapshot.impactsToday > 0 {
-                                    Text("\(snapshot.impactsToday) \(snapshot.impactsToday == 1 ? "Impact" : "Impacts")")
-                                        .foregroundStyle(.secondary)
-                                }
-                                Image(systemName: "chevron.forward").font(.footnote.weight(.semibold))
-                                    .foregroundStyle(.tertiary)
-                            }
-                            .padding(.horizontal, 16).padding(.vertical, 15)
-                            .contentShape(.rect)
-                        }
+                        Button { reviewing = true } label: { TodayRow(impacts: snapshot.impactsToday) }
                         .buttonStyle(RowButtonStyle())
                         .accessibilityHint("Opens the daily review")
                     }
@@ -394,6 +381,30 @@ private final class MomentFrames {
 private struct JustBlocked: Equatable {
     let card: GoalTimeCard
     let session: GoalSession
+}
+
+/// The "Today" row that opens the daily review (UX.md → Home): its Impacts beside it, or below at accessibility sizes.
+private struct TodayRow: View {
+    let impacts: Int
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout())
+        HStack {
+            layout {
+                Text("Today").fontWeight(.medium)
+                if !typeSize.isAccessibilitySize { Spacer() }
+                if impacts > 0 {
+                    Text("\(impacts) \(impacts == 1 ? "Impact" : "Impacts")").foregroundStyle(.secondary)
+                }
+            }
+            if typeSize.isAccessibilitySize { Spacer() }
+            Image(systemName: "chevron.forward").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 15)
+        .contentShape(.rect)
+    }
 }
 
 private struct RowButtonStyle: ButtonStyle {
