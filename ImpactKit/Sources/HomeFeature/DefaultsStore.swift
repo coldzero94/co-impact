@@ -40,7 +40,7 @@ struct DefaultsStore<Value: Codable> {
     }
 }
 
-// The keys users' data is stored under: changing one loses it (`LiveDataTests` pins them).
+// The keys users' data is stored under: changing one loses it (`LiveDataTests` and `FocusTests.store` pin them).
 extension DefaultsStore<Dismissals> {
     init(_ defaults: UserDefaults) { self.init(defaults: defaults, key: "dismissals") }
 }

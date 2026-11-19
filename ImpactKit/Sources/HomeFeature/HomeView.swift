@@ -19,6 +19,8 @@ public struct HomeView: View {
     @State private var landings = 0
     /// The ring's brief glow after a focus session's Impact lands.
     @State private var glowing = false
+    /// When Start focus last started a session (uptime), for End focus's double-tap window.
+    @State private var focusStarted: TimeInterval?
     @State private var settingUpGoals = false
     /// Block time's session, while its card shows "Blocked" with Undo (UX.md → Home: 5 seconds, 15 with VoiceOver).
     @State private var justBlocked: JustBlocked?
@@ -54,7 +56,7 @@ public struct HomeView: View {
                             // Within a second of an Impact, Next up already shows the next card, so a tap is
                             // treated as the second half of a double tap and ignored. A later one first plays a
                             // moment still queued because the app never left (see playPending).
-                            if let pending, ProcessInfo.processInfo.systemUptime - pending.recorded < 1 { return }
+                            if let moment = pending ?? flying, ProcessInfo.processInfo.systemUptime - moment.recorded < 1 { return }
                             playPending()
                             run(action, on: next) { failed = $0 }
                         }, endFocus: endFocus)
@@ -163,8 +165,10 @@ public struct HomeView: View {
         }
         .onChange(of: scenePhase) { playPending() }
         // A focus session ended with an Impact: by End focus, or with its block, possibly while Impact was away.
-        .onChange(of: model.focusImpact) {
+        // Initial too: a session whose block ended while Impact was not running ends at launch.
+        .onChange(of: model.focusImpact, initial: true) {
             guard let cardID = model.focusImpact else { return }
+            model.focusImpactShown()
             pending = Moment(symbol: ActionKind.startFocus.symbol, from: momentFrames.cards[cardID], large: true)
             playPending()
         }
@@ -269,11 +273,12 @@ public struct HomeView: View {
     private func run(_ action: ImpactAction, on card: ImpactCard, failed: @escaping (ActionKind) -> Void) {
         if action.kind == .startFocus {
             if model.startFocus(on: card) {
+                focusStarted = ProcessInfo.processInfo.systemUptime
                 // The button VoiceOver was on now ends the session: say what happened (UX.md → Motion).
                 AccessibilityNotification.Announcement("Focus started on \(card.title)").post()
             } else {
                 // Home offers Start focus only from the block's Soon phase on (`ImpactCard.offers`).
-                homeLog.notice("Start focus on card \(card.id, privacy: .private) before its Soon phase; nothing started")
+                homeLog.notice("Start focus on card \(card.id, privacy: .private) outside its Soon or Now phase, or done; nothing started")
             }
             return
         }
@@ -299,7 +304,9 @@ public struct HomeView: View {
 
     /// End focus, from Next up or card detail. A session of 10 minutes or more plays its Impact moment
     /// (`focusImpact`), which VoiceOver hears; a shorter one just ends, never scolded (PRODUCT.md → Focus blocks).
+    /// End focus takes Start focus's place: within a second of it, a tap is the second half of a double tap.
     private func endFocus() {
+        if let focusStarted, ProcessInfo.processInfo.systemUptime - focusStarted < 1 { return }
         if !model.endFocus() { AccessibilityNotification.Announcement("Focus ended").post() }
     }
 

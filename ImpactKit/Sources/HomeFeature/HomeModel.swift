@@ -24,8 +24,8 @@ public final class HomeModel {
     private let blocks: BlockWriter
     /// The running focus session (PRODUCT.md → Focus blocks), if any.
     private(set) var focus: FocusSession?
-    /// The focus block whose session last ended with an Impact, so Home plays the larger Impact moment (UX.md → The
-    /// Impact moment). A block records one Impact, so each new one is another ID.
+    /// The focus block whose session ended with an Impact, until Home has queued the larger Impact moment for it
+    /// (UX.md → The Impact moment) and calls `focusImpactShown`.
     private(set) var focusImpact: String?
     /// Receives every Impact after one is recorded or restored, to store them.
     private let saveImpacts: ([String: Date]) -> Void
@@ -165,16 +165,21 @@ public final class HomeModel {
     }
 
     /// Start focus (PRODUCT.md → Focus blocks): starts a session on the focus block, from its Soon phase until it ends,
-    /// first ending one that runs on another block. False when the card cannot start one now; true when its session
-    /// already runs.
+    /// first ending one that runs on another block. False when the card cannot start one now, or is done: a block
+    /// records one Impact, and Home does not show a done card's session. True when its session already runs.
     func startFocus(on card: ImpactCard) -> Bool {
         guard focus?.cardID != card.id else { return true }
-        guard let session = FocusSession(card: card, now: now) else { return false }
+        guard !log.completedCardIDs.contains(card.id), let session = FocusSession(card: card, now: now) else { return false }
         finishFocus()
         focus = session
         saveFocus(session)
         rebuild()
         return true
+    }
+
+    /// Home queued the moment for `focusImpact`.
+    func focusImpactShown() {
+        focusImpact = nil
     }
 
     /// End focus: the session ends now, and records the block's Impact if it lasted 10 minutes or more (returns true
@@ -211,8 +216,9 @@ public final class HomeModel {
     }
 
     /// Matches the blocked sessions to the calendar and stores them if that (or the caller, with `savingGoalRecords`)
-    /// changed them; builds the snapshot with their focus blocks; ends a focus session whose block is no longer in its
-    /// Soon or Now phase on Home (it ended, was moved, deleted, or dismissed); and picks the goal-time card.
+    /// changed them; builds the snapshot with their focus blocks; ends a focus session at its end (the block's end when
+    /// focus started), or once its block is no longer in its Soon or Now phase on Home (moved, deleted, or
+    /// dismissed); and picks the goal-time card.
     private func rebuild(savingGoalRecords: Bool = false) {
         let matched = goalRecords.matched(events: events, now: now, calendar: calendar)
         if savingGoalRecords || matched != goalRecords {
@@ -220,7 +226,8 @@ public final class HomeModel {
             saveGoalRecords(matched)
         }
         snapshot = Self.home(engine, events, focusBlocks: focusBlocks, now, calendar, log, dismissals)
-        if let focus, !snapshot.cards.contains(where: { $0.id == focus.cardID && ImpactEngine.isSoonOrNow($0, now: now) }) {
+        if let focus, now >= focus.end
+            || !snapshot.cards.contains(where: { $0.id == focus.cardID && ImpactEngine.isSoonOrNow($0, now: now) }) {
             if finishFocus() { snapshot = Self.home(engine, events, focusBlocks: focusBlocks, now, calendar, log, dismissals) }
         }
         goalCard = ImpactEngine.goalTimeCard(

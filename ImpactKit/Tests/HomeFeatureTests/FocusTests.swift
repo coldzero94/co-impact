@@ -29,10 +29,11 @@ private let records = GoalRecords(sessions: [
     var impacts: [[String: Date]] = []
 }
 
-@MainActor private func model(at now: Date, events: [CalendarEvent] = [block, meeting], focus: FocusSession? = nil,
+@MainActor private func model(at now: Date, events: [CalendarEvent] = [block, meeting], goals: [Goal] = [novel],
+                              records: GoalRecords = records, focus: FocusSession? = nil,
                               saved: Saved = Saved()) throws -> HomeModel {
     try HomeModel(events: events, now: now, calendar: losAngeles,
-                  goals: GoalSettings(goals: [novel], offered: true), goalRecords: records, focus: focus,
+                  goals: GoalSettings(goals: goals, offered: true), goalRecords: records, focus: focus,
                   saveImpacts: { saved.impacts.append($0) }, saveFocus: { saved.focus.append($0) })
 }
 
@@ -64,8 +65,9 @@ private let records = GoalRecords(sessions: [
         let session = try #require(model.focus)
         #expect(session.cardID == "block" && session.start == at(9, 45) && session.end == at(11))
         #expect(saved.focus == [session])
-        // Started again, it keeps running as it was.
-        #expect(model.startFocus(on: try blockCard(model)) && model.focus == session)
+        // Started again later, it keeps running as it was.
+        model.update(events: [block, meeting], now: at(9, 47))
+        #expect(model.startFocus(on: try blockCard(model)) && model.focus == session && saved.focus == [session])
         model.update(events: [block, meeting], now: at(9, 50))
         #expect(!model.endFocus() && model.focus == nil && saved.focus.last == .some(nil))
         #expect(saved.impacts.isEmpty && model.focusImpact == nil && model.snapshot.doneCardIDs.isEmpty)
@@ -74,16 +76,43 @@ private let records = GoalRecords(sessions: [
         #expect(model.endFocus())
         #expect(saved.impacts.last == ["block": at(10)] && model.focusImpact == "block")
         #expect(model.snapshot.doneCardIDs == ["block"] && model.snapshot.impactsToday == 1)
+        // A block records one Impact: done, it does not start again.
+        #expect(!model.startFocus(on: try blockCard(model)) && model.focus == nil)
+    }
+
+    @Test("One session runs at a time: Start focus on another block ends the first, with its Impact")
+    func oneAtATime() throws {
+        var other = block
+        other.id = "other"
+        other.title = "Ship the launch"
+        other.start = at(10, 30)
+        other.end = at(11, 30)
+        let launch = Goal(id: "launch", title: "Ship the launch", timesPerWeek: 1)
+        let both = GoalRecords(sessions: records.sessions + [
+            GoalSession(goalID: "launch", eventID: "other", title: "Ship the launch", start: at(10, 30), end: at(11, 30)),
+        ])
+        let saved = Saved()
+        let model = try model(at: at(10), events: [block, other, meeting], goals: [novel, launch], records: both, saved: saved)
+        #expect(model.startFocus(on: try blockCard(model)))
+        model.update(events: [block, other, meeting], now: at(10, 20))
+        #expect(model.startFocus(on: try #require(model.snapshot.cards.first { $0.id == "other" })))
+        #expect(model.focus?.cardID == "other" && model.focus?.start == at(10, 20))
+        #expect(saved.impacts.last == ["block": at(10, 20)] && model.focusImpact == "block")
     }
 
     @Test("A session ends with its block, or once its block leaves its Soon or Now phase on Home, with its Impact",
-          arguments: ["ended", "moved", "deleted", "dismissed"])
+          arguments: ["ended", "extended", "moved", "deleted", "dismissed"])
     func sessionEnds(_ way: String) throws {
         let saved = Saved()
         let model = try model(at: at(10), saved: saved)
         #expect(model.startFocus(on: try blockCard(model)))
         switch way {
         case "ended": model.update(events: [block, meeting], now: at(11, 5))
+        case "extended":
+            // Extended in Calendar: the session still ends where the block ended when focus started.
+            var longer = block
+            longer.end = at(11, 30)
+            model.update(events: [longer, meeting], now: at(11, 5))
         case "moved":
             // Moved to the afternoon in Calendar: still listed, but no longer the block the session ran in.
             var later = block
@@ -98,8 +127,10 @@ private let records = GoalRecords(sessions: [
         }
         #expect(model.focus == nil && saved.focus.last == .some(nil))
         // A session stops at its block's end, however late Impact sees it.
-        #expect(saved.impacts.last == ["block": way == "ended" ? at(11) : at(10, 30)])
-        #expect(model.focusImpact == "block")
+        #expect(saved.impacts.last == ["block": ["ended", "extended"].contains(way) ? at(11) : at(10, 30)])
+        #expect(model.focusImpact == "block" && model.snapshot.impactsToday == 1)
+        // Still listed, the block shows done.
+        if ["extended", "moved"].contains(way) { #expect(model.snapshot.doneCardIDs == ["block"]) }
     }
 
     @Test("A stored session runs on after a relaunch; one whose block ended meanwhile ends at launch with its Impact")

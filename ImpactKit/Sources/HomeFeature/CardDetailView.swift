@@ -152,11 +152,13 @@ struct CardDetailView: View {
         .buttonBorderShape(.capsule)
         .controlSize(.large)
         .accessibilityLabel("\(done ? action.kind.doneLabel : action.kind.label), \(card.title)")
-        // Done actions stay tappable (e.g. to rejoin) but drop to the subdued style.
+        // Done actions stay tappable (e.g. to rejoin) but drop to the subdued style; a done Start focus has nothing
+        // to redo, since a block records one Impact.
         if primary && !done {
             button.buttonStyle(.borderedProminent).tint(.accentFill(colorScheme))
         } else {
             button.buttonStyle(.bordered).foregroundStyle(done ? .secondary : .primary)
+                .disabled(done && action.kind == .startFocus)
         }
     }
 }
