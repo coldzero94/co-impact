@@ -88,6 +88,16 @@ private func card(_ id: String, _ edit: (inout CalendarEvent) -> Void) throws ->
         #expect(days.count == 1 && days[0].date == at(0) && days[0].line == "Songkran plans")
     }
 
+    @Test("An entry recorded with the device's autoupdating zone stores it fixed, by its identifier")
+    func fixedZone() throws {
+        var device = Calendar(identifier: .gregorian)
+        device.timeZone = .autoupdatingCurrent
+        let stored = try JSONEncoder().encode(entry("call", at: at(20), in: device))
+        let json = try #require(try JSONSerialization.jsonObject(with: stored) as? [String: Any])
+        let zone = try #require(json["timeZone"] as? [String: Any])
+        #expect(Array(zone.keys) == ["identifier"] && zone["identifier"] as? String == TimeZone.current.identifier)
+    }
+
     @Test("A card has one entry, as it has one Impact: a second is ignored")
     func oneEntryPerCard() {
         var log = DailyLog()
