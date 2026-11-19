@@ -27,6 +27,7 @@ private let records = GoalRecords(sessions: [
 @MainActor private final class Saved {
     var focus: [FocusSession?] = []
     var impacts: [[String: Date]] = []
+    var logs: [DailyLog] = []
 }
 
 @MainActor private func model(at now: Date, events: [CalendarEvent] = [block, meeting], goals: [Goal] = [novel],
@@ -34,7 +35,8 @@ private let records = GoalRecords(sessions: [
                               saved: Saved = Saved()) throws -> HomeModel {
     try HomeModel(events: events, now: now, calendar: losAngeles,
                   goals: GoalSettings(goals: goals, offered: true), goalRecords: records, focus: focus,
-                  saveImpacts: { saved.impacts.append($0) }, saveFocus: { saved.focus.append($0) })
+                  saveImpacts: { saved.impacts.append($0) }, saveFocus: { saved.focus.append($0) },
+                  saveDailyLog: { saved.logs.append($0) })
 }
 
 @MainActor private func blockCard(_ model: HomeModel) throws -> ImpactCard {
@@ -74,6 +76,10 @@ private let records = GoalRecords(sessions: [
         #expect(model.endFocus())
         #expect(saved.impacts.last == ["block": at(10)] && model.focusImpact == "block")
         #expect(model.snapshot.doneCardIDs == ["block"] && model.snapshot.impactsToday == 1)
+        // The short session left no entry; this one does, with the goal's title.
+        #expect(saved.logs == [DailyLog(entries: [
+            DailyLog.Entry(cardID: "block", kind: .focused(minutes: 10), title: "Write a novel", date: at(10)),
+        ])])
         // A block records one Impact: done, it does not start again.
         #expect(!model.startFocus(on: try blockCard(model)) && model.focus == nil)
     }
@@ -127,6 +133,8 @@ private let records = GoalRecords(sessions: [
         // A session stops at its block's end, however late Impact sees it.
         #expect(saved.impacts.last == ["block": ["ended", "extended"].contains(way) ? at(11) : at(10, 30)])
         #expect(model.focusImpact == "block" && model.snapshot.impactsToday == 1)
+        // Its daily log entry keeps the goal's title, even with the block gone.
+        #expect(saved.logs.last?.entries.map(\.title) == ["Write a novel"])
         // Still listed, the block shows done.
         if ["extended", "moved"].contains(way) { #expect(model.snapshot.doneCardIDs == ["block"]) }
     }
@@ -147,9 +155,10 @@ private let records = GoalRecords(sessions: [
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = DefaultsStore<FocusSession?>(defaults)
         #expect(store.load() == nil)
-        defaults.set(Data(#"{"cardID":"block","start":0,"end":3600}"#.utf8), forKey: "focusSession")
+        defaults.set(Data(#"{"cardID":"block","title":"Write a novel","start":0,"end":3600}"#.utf8), forKey: "focusSession")
         let session = try #require(store.load() ?? nil)
-        #expect(session.cardID == "block" && session.start == Date(timeIntervalSinceReferenceDate: 0)
+        #expect(session.cardID == "block" && session.title == "Write a novel"
+                && session.start == Date(timeIntervalSinceReferenceDate: 0)
                 && session.end == Date(timeIntervalSinceReferenceDate: 3_600))
         store.save(nil)
         #expect(store.load() == .some(nil))

@@ -214,6 +214,7 @@ The diary, without writing a diary.
 - From 18:00, or after the day's last card, the day's Impacts become a log entry: "Joined Design review · 10:01", "50 min on Write a book".
 - The user may add **one line**. No prompt, no notification, nothing shown for a day without one.
 - Stored on device only. Past entries are browsable (UX.md → Daily review).
+- Built in step 13: each Impact adds an entry when it is recorded: what the user did (joined, left, or focused, with the session's length rounded to the minute), the event's title or the goal as its card showed it, and when; a focus session's entry keeps its goal even if the block is deleted. Each day's one line is stored beside them. The daily review that shows them comes next (UX.md → Daily review). Impacts recorded before step 13 have no entry.
 - Later, behind availability checks and with no new onboarding step: a weekly summary that Foundation Models writes from the log alone, and Journaling Suggestions to attach a moment to the line (verify first; ARCHITECTURE.md → Platform facts).
 
 ## Card timeline

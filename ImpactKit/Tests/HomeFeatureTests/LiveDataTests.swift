@@ -287,6 +287,41 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
         }
     }
 
+    @Test("The daily log loads from the key and format users will have stored")
+    func dailyLogStore() throws {
+        try withDefaults { defaults in
+            let json = #"{"entries":[{"cardID":"r","kind":{"joined":{}},"title":"Design review","date":0},"#
+                + #"{"cardID":"d","kind":{"left":{}},"title":"Dentist","date":60},"#
+                + #"{"cardID":"b","kind":{"focused":{"minutes":50}},"title":"Write a book","date":3600}],"#
+                + #""lines":{"2001-01-01":"Good day"}}"#
+            defaults.set(Data(json.utf8), forKey: "dailyLog")
+            let start = Date(timeIntervalSinceReferenceDate: 0)
+            #expect(DefaultsStore<DailyLog>(defaults).load() == DailyLog(entries: [
+                DailyLog.Entry(cardID: "r", kind: .joined, title: "Design review", date: start),
+                DailyLog.Entry(cardID: "d", kind: .left, title: "Dentist", date: start.addingTimeInterval(60)),
+                DailyLog.Entry(cardID: "b", kind: .focused(minutes: 50), title: "Write a book",
+                               date: start.addingTimeInterval(3_600)),
+            ], lines: ["2001-01-01": "Good day"]))
+        }
+    }
+
+    @Test("Each Impact adds its daily log entry and stores the log; preparation adds none")
+    @MainActor func dailyLog() throws {
+        var saved: [DailyLog] = []
+        var dentist = CalendarEvent(id: "dentist", calendarID: "personal", title: "Dentist",
+                                    start: morning.addingTimeInterval(5 * 3_600), end: morning.addingTimeInterval(6 * 3_600))
+        dentist.structuredPlace = Place(title: "Synthetic clinic", latitude: 37.5, longitude: 127)
+        let model = try HomeModel(events: [meeting("review", at: morning.addingTimeInterval(600)), dentist], now: morning,
+                                  calendar: losAngeles, saveDailyLog: { saved.append($0) })
+        // Directions five hours ahead is preparation: no Impact, so no entry.
+        let visit = try #require(model.snapshot.cards.first { $0.id == "dentist" })
+        #expect(!model.record(try #require(visit.primaryAction), on: visit) && saved.isEmpty)
+        let review = try #require(model.snapshot.nextUp)
+        #expect(model.record(try #require(review.primaryAction), on: review))
+        let joined = DailyLog.Entry(cardID: "review", kind: .joined, title: "review", date: morning)
+        #expect(saved == [DailyLog(entries: [joined])] && model.dailyLog == saved.last)
+    }
+
     @Test("Block time saves the slot, records it, and moves the card on; Undo and Not now; a refused save records nothing")
     @MainActor func blockTime() throws {
         var written: [CalendarEvent] = []

@@ -1,9 +1,11 @@
 import Foundation
 
-/// A focus session (PRODUCT.md → Focus blocks): the focus block's card ID, when Start focus ran, and the block's end,
-/// where the session ends at the latest (`ActionLog.recordFocus`).
+/// A focus session (PRODUCT.md → Focus blocks): the focus block's card ID and goal, when Start focus ran, and the
+/// block's end, where the session ends at the latest (`ActionLog.recordFocus`).
 public struct FocusSession: Sendable, Hashable, Codable {
     public let cardID: String
+    /// The goal, as the block's card showed it, for the daily log once the block may be gone.
+    public let title: String
     public let start: Date
     public let end: Date
 
@@ -13,6 +15,7 @@ public struct FocusSession: Sendable, Hashable, Codable {
     public init?(card: ImpactCard, now: Date) {
         guard card.kind == .focusBlock, ImpactEngine.isSoonOrNow(card, now: now) else { return nil }
         cardID = card.id
+        title = card.title
         start = Date(timeIntervalSinceReferenceDate: now.timeIntervalSinceReferenceDate.rounded(.down))
         end = card.end
     }
