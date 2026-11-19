@@ -19,7 +19,8 @@ extension LiveCard {
 
     /// The Live Activities `home` at `now` wants (`HomeSnapshot.liveActivityCards`), their run links carrying
     /// `runToken`, the block of `focus` showing the session while it runs there (`FocusSession.runs`; a stored one
-    /// can be stale). Live Home and background refresh build them alike, or each sync ends the other's activities.
+    /// can be stale, and `NextCards.home` has then ended it as Home does). Live Home and background refresh build them
+    /// alike, or each sync ends the other's activities.
     /// shortcut: a session on a block while an earlier focus block is still in its Now phase gets no activity, since
     /// only the first focus block gets one (`liveActivityCards`); Home still shows the session.
     static func wanted(in home: HomeSnapshot, now: Date, runToken: String, focus: FocusSession?) -> [LiveCard] {

@@ -4,10 +4,10 @@ import ImpactEngine
 import SwiftUI
 import WidgetKit
 
-/// A card's Live Activity (UX.md → System surfaces): the Now phase only. Its one button opens Impact, which runs
-/// the primary action. StandBy shows the Lock Screen layout; the Watch Smart Stack and CarPlay show the small one,
-/// without the button (it does nothing in CarPlay, and the car is glance-only). During a focus session, the goal, a
-/// ring filling with time, and the time left, without a button: End focus is in Impact.
+/// A card's Live Activity (UX.md → System surfaces): the Now phase only, or a focus session from its start. Its one
+/// button opens Impact, which runs the primary action. StandBy shows the Lock Screen layout; the Watch Smart Stack and
+/// CarPlay show the small one, without the button (it does nothing in CarPlay, and the car is glance-only). During a
+/// focus session, the goal, a ring filling with time, and the time left, without a button: End focus is in Impact.
 public struct LiveCardActivity: Widget {
     public init() {}
 

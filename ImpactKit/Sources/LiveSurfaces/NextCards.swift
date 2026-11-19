@@ -18,12 +18,20 @@ public enum NextCards {
     }
 
     /// Home at `now` as Impact shows it, from the calendar and Impact's state (its focus blocks marked as Home marks
-    /// them); the ring counts that day's Impacts.
+    /// them); the ring counts that day's Impacts. A stored focus session that no longer runs at `now` ends as Home ends
+    /// it when it next runs (`HomeModel` with `FocusSession.runs`): its block's Impact, if it lasted 10 minutes.
     public static func home(events: [CalendarEvent], state: SurfaceState, now: Date, calendar: Calendar,
                             engine: ImpactEngine) -> HomeSnapshot {
-        engine.home(events: marked(events, focusBlocks: state.focusBlocks), now: now, calendar: calendar, completedCardIDs: state.completedCardIDs,
-                    impactsToday: state.completed.values.count { calendar.isDate($0, inSameDayAs: now) },
-                    suppressionRules: state.suppressionRules)
+        let events = marked(events, focusBlocks: state.focusBlocks)
+        let home = { (completed: [String: Date]) in
+            engine.home(events: events, now: now, calendar: calendar, completedCardIDs: Set(completed.keys),
+                        impactsToday: completed.values.count { calendar.isDate($0, inSameDayAs: now) },
+                        suppressionRules: state.suppressionRules)
+        }
+        let shown = home(state.completed)
+        guard let focus = state.focus, !focus.runs(in: shown, now: now) else { return shown }
+        var log = ActionLog(impacts: state.completed)
+        return log.recordFocus(focus, endedAt: now) ? home(log.impacts) : shown
     }
 
     /// Whether a surface may run `card` now: one of today's, or one of tomorrow's already in its Now phase, when its
@@ -101,9 +109,10 @@ public enum NextCards {
             let later = (snapshot.cards + snapshot.liveActivityCards)
                 .filter { !state.completed.keys.contains($0.id) && $0.id != card?.id && $0.start >= (card?.start ?? date) }
                 .min { ($0.start, $0.id) < ($1.start, $1.id) }
-            // A focus block's button waits for its Soon phase, as on Home, and none shows during its session.
+            // A focus block's button waits for its Soon phase, as on Home, and none shows while its session runs.
             let offered = runnable.map { card in
-                card.primaryAction.map { card.offers($0, now: date) } ?? false && state.focus?.cardID != card.id
+                card.primaryAction.map { card.offers($0, now: date) } ?? false
+                    && !(state.focus.map { $0.cardID == card.id && $0.runs(in: snapshot, now: date) } ?? false)
             } ?? false
             return Moment(date: date, card: card,
                           soonOrNow: card.map { ImpactEngine.isSoonOrNow($0, now: date) } ?? false,
