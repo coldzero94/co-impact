@@ -19,7 +19,7 @@ public enum NextCards {
 
     /// Home at `now` as Impact shows it, from the calendar and Impact's state (its focus blocks marked as Home marks
     /// them); the ring counts that day's Impacts. A stored focus session that no longer runs at `now` ends as Home ends
-    /// it when it next runs (`HomeModel` with `FocusSession.runs`): its block's Impact, if it lasted 10 minutes.
+    /// it when it next runs (`HomeModel` with `FocusSession.runs`): its block's Impact, if it lasted 10 minutes or more.
     public static func home(events: [CalendarEvent], state: SurfaceState, now: Date, calendar: Calendar,
                             engine: ImpactEngine) -> HomeSnapshot {
         let events = marked(events, focusBlocks: state.focusBlocks)
@@ -107,7 +107,7 @@ public enum NextCards {
             let runnable = Self.runnable(in: snapshot, now: date, calendar: calendar)
             let card = runnable ?? snapshot.liveActivityCards.first
             let later = (snapshot.cards + snapshot.liveActivityCards)
-                .filter { !state.completed.keys.contains($0.id) && $0.id != card?.id && $0.start >= (card?.start ?? date) }
+                .filter { !snapshot.doneCardIDs.contains($0.id) && $0.id != card?.id && $0.start >= (card?.start ?? date) }
                 .min { ($0.start, $0.id) < ($1.start, $1.id) }
             // A focus block's button waits for its Soon phase, as on Home, and none shows while its session runs.
             let offered = runnable.map { card in

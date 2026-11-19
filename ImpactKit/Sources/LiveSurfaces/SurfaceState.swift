@@ -27,7 +27,6 @@ public struct SurfaceState: Codable, Hashable, Sendable {
         self.focus = focus
     }
 
-    public var completedCardIDs: Set<String> { Set(completed.keys) }
 }
 
 /// `SurfaceState` in the App Group's defaults: Impact writes it, its widgets read it.

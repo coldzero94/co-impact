@@ -319,6 +319,30 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         model.update(events: movedEvents, now: at(10.5))
         #expect(afterMove == model.liveCards(runToken: "secret") && afterMove.map(\.cardID) == ["Sync"])
         #expect(later.doneCardIDs == ["block"] && model.snapshot.doneCardIDs == ["block"])
+        // The medium widget's Later column does not offer the done block either.
+        let widget = NextCards.moments(events: movedEvents, state: focusing, now: at(10.5), calendar: losAngeles,
+                                       engine: engine)
+        #expect(widget.first?.card?.id == "Sync" && widget.first?.later == nil)
+    }
+
+    @Test("A session too short for an Impact, on a block extended in Calendar, ends at its end; the widget offers Start focus again")
+    @MainActor func focusShortExtended() throws {
+        var block = focusBlock
+        block.focusGoal = nil
+        let goals = GoalSettings(goals: [Goal(id: "book", title: "Write a novel", timesPerWeek: 1)], offered: true)
+        let records = GoalRecords(sessions: [
+            GoalSession(goalID: "book", eventID: "block", title: "Write a book", start: at(10), end: at(11)),
+        ])
+        let model = try HomeModel(events: [block], now: at(10.9), calendar: losAngeles, goals: goals, goalRecords: records)
+        #expect(model.startFocus(on: try #require(model.snapshot.nextUp)))
+        let state = model.surfaceState(runToken: "secret")
+        var longer = block
+        longer.end = at(11.5)
+        // The session ended at 11:00 after 6 minutes: the block, still in its Now phase, offers Start focus again.
+        let moments = NextCards.moments(events: [longer], state: state, now: at(11.1), calendar: losAngeles, engine: engine)
+        #expect(moments.first?.card?.id == "block" && moments.first?.runnable == true)
+        model.update(events: [longer], now: at(11.1))
+        #expect(model.focus == nil && model.snapshot.nextUp?.id == "block" && model.snapshot.doneCardIDs.isEmpty)
     }
 
     @Test("A short session on a block moved while Impact was away ends with no Impact, everywhere as on Home")
@@ -335,7 +359,7 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         var moved = block
         moved.start = at(14)
         moved.end = at(15)
-        // Five minutes after Start focus: too short for an Impact, so the block is still to do, with its own activity.
+        // Six minutes after Start focus: too short for an Impact, so the block is still to do, with its own activity.
         let later = NextCards.home(events: [moved], state: state, now: at(10.05), calendar: losAngeles, engine: engine)
         let wanted = LiveCard.wanted(in: later, now: at(10.05), runToken: "secret", focus: state.focus)
         model.update(events: [moved], now: at(10.05))
