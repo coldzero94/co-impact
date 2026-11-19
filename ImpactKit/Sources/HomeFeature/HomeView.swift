@@ -202,7 +202,7 @@ public struct HomeView: View {
                     }
                 }, undo: {})
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button("Not now", systemImage: "moon.zzz") { model.notNow(card.goal) }
+                    Button("Not now", systemImage: "moon.zzz") { model.notNow() }
                         .tint(.gray)
                 }
             }

@@ -131,12 +131,12 @@ public final class HomeModel {
                                   end: event.end)
         // Busy at once, before the calendar's change notice brings the next fetch.
         events.append(event)
-        goalRecords.block(session, at: now)
+        goalRecords.block(session)
         rebuild(savingGoalRecords: true)
         return session
     }
 
-    /// Undo while Home offers it after Block time: removes the event Impact created, and its answer. Throws when the
+    /// Undo while Home offers it after Block time: removes the event Impact created. Throws when the
     /// calendar refuses; the block stays recorded then, as the event stays.
     func undoBlock(_ session: GoalSession) throws {
         try blocks.remove(session.eventID)
@@ -145,9 +145,9 @@ public final class HomeModel {
         rebuild(savingGoalRecords: true)
     }
 
-    /// Not now: hides this goal's card until tomorrow.
-    func notNow(_ goal: Goal) {
-        goalRecords.notNow(goal, at: now)
+    /// Not now: no goal-time card until tomorrow.
+    func notNow() {
+        goalRecords.notNow(at: now)
         rebuild(savingGoalRecords: true)
     }
 
@@ -191,7 +191,7 @@ public final class HomeModel {
             saveGoalRecords(matched)
         }
         goalCard = ImpactEngine.goalTimeCard(
-            goals: goals.goals, sessions: goalRecords.sessionsByGoal, answers: goalRecords.answers, events: events,
+            goals: goals.goals, sessions: goalRecords.sessionsByGoal, lastNotNow: goalRecords.lastNotNow, events: events,
             now: now, calendar: calendar, workingHours: goals.workingHours)
     }
 
