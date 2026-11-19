@@ -10,6 +10,8 @@ struct CardDetailView: View {
     let model: HomeModel
     /// Runs the action; the closure gets the kind when the system could not open it.
     let run: (ImpactAction, @escaping (ActionKind) -> Void) -> Void
+    /// Ends the focus session running on this card.
+    let endFocus: () -> Void
     @State private var failed: ActionKind?
     @State private var suggestions: [NextStep] = []
     @Environment(\.dismiss) private var dismiss
@@ -25,8 +27,17 @@ struct CardDetailView: View {
                         Text(card.answer).font(.title3.weight(.semibold)).padding(.top, 6)
                     }
                     VStack(spacing: 10) {
-                        ForEach(card.confirmedActions) { action in
-                            actionButton(action, primary: action == card.primaryAction)
+                        ForEach(card.confirmedActions.filter { card.offers($0, now: model.now) }) { action in
+                            if action.kind == .startFocus, model.focus?.cardID == card.id {
+                                Button(action: endFocus) {
+                                    Label("End focus", systemImage: "stop.fill").font(.headline)
+                                        .frame(maxWidth: .infinity, minHeight: 34)
+                                }
+                                .buttonStyle(.bordered).buttonBorderShape(.capsule).controlSize(.large)
+                                .accessibilityLabel("End focus, \(card.title)")
+                            } else {
+                                actionButton(action, primary: action == card.primaryAction)
+                            }
                         }
                     }
                     details
@@ -141,11 +152,13 @@ struct CardDetailView: View {
         .buttonBorderShape(.capsule)
         .controlSize(.large)
         .accessibilityLabel("\(done ? action.kind.doneLabel : action.kind.label), \(card.title)")
-        // Done actions stay tappable (e.g. to rejoin) but drop to the subdued style.
+        // Done actions stay tappable (e.g. to rejoin) but drop to the subdued style; a done Start focus has nothing
+        // to redo, since a block records one Impact.
         if primary && !done {
             button.buttonStyle(.borderedProminent).tint(.accentFill(colorScheme))
         } else {
             button.buttonStyle(.bordered).foregroundStyle(done ? .secondary : .primary)
+                .disabled(done && action.kind == .startFocus)
         }
     }
 }

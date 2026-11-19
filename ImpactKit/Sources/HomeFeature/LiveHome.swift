@@ -179,6 +179,7 @@ public struct LiveHome: View {
         let dismissals = DefaultsStore<Dismissals>(.standard)
         let goals = DefaultsStore<GoalSettings>(.standard)
         let goalRecords = DefaultsStore<GoalRecords>(.standard)
+        let focus = DefaultsStore<FocusSession?>(.standard)
         let source = calendarSource
         do {
             model = try HomeModel(events: events, now: now, calendar: calendar, log: ActionLog(impacts: stored ?? [:]),
@@ -186,11 +187,12 @@ public struct LiveHome: View {
                                   goalRecords: goalRecords.load() ?? GoalRecords(),
                                   blocks: BlockWriter(add: { try source.addBlock(title: $0, during: $1) },
                                                       remove: { try source.removeBlock(eventID: $0) }),
+                                  focus: focus.load() ?? nil,
                                   saveImpacts: file?.saver(stored: stored) ?? { impacts in
                                       homeLog.fault("\(impacts.count, privacy: .public) Impacts not saved: no place to store them")
                                   },
                                   saveDismissals: dismissals.save, saveGoals: goals.save,
-                                  saveGoalRecords: goalRecords.save)
+                                  saveGoalRecords: goalRecords.save, saveFocus: focus.save)
         } catch {
             homeLog.fault("Impact could not start: \(error.logged, privacy: .public)")
             startFailure = "Impact could not start: \(error.localizedDescription)"

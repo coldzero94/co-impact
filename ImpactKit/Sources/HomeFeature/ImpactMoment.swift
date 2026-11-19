@@ -3,11 +3,10 @@ import SwiftUI
 /// An Impact waiting to be shown: the acted-on card's symbol and its frame on Home when its action ran.
 struct Moment {
     let id = UUID()
-    /// When it was queued, for Next up's double-tap window: uptime, which clock changes do not move
-    /// (not `HomeModel.now`, which moves only when Home refreshes).
-    let recorded = ProcessInfo.processInfo.systemUptime
     let symbol: String
     let from: CGRect?
+    /// A focus session's Impact: the ring also glows briefly when the token lands (UX.md → The Impact moment).
+    var large = false
 }
 
 /// The Impact moment's motion (UX.md → The Impact moment): the card folds into a token, and the token

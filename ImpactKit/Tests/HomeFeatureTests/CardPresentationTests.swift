@@ -181,7 +181,7 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
     }
 
     /// The states ImpactKit/AGENTS.md → UI documents for `-fixtureHour`, pinned so screenshots keep showing them.
-    @Test("Sample day states", arguments: [9.8, 8, 19, 21])
+    @Test("Sample day states", arguments: [9.8, 8, 15.4, 15.8, 19, 21])
     @MainActor func sampleDay(_ hour: Double) throws {
         let model = try HomeFixtures.sample(at: hour, calendar: losAngeles, today: sampleDate)
         let home = model.snapshot
@@ -190,6 +190,11 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         case 8:
             #expect(home.nextUp?.id == "1:1 with Mina" && countdown == .clock)
             #expect(home.doneCardIDs == ["Standup"])
+        case 15.4:
+            #expect(home.nextUp?.id == "Write a book" && home.nextUp?.kind == .focusBlock && countdown == .minutes(6))
+            #expect(model.focus == nil)
+        case 15.8:
+            #expect(home.nextUp?.id == "Write a book" && model.focus?.start == model.now.addingTimeInterval(-18 * 60))
         case 19:
             #expect(home.nextUp == nil && home.laterToday.isEmpty)
             #expect(home.tomorrowMorning.map(\.id) == ["Client visit"] && home.next == nil)
@@ -198,7 +203,7 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
             #expect(home.next?.id == "Quarterly planning" && home.impactsToday == 2 && home.ringSegments == 2)
         default:
             #expect(home.nextUp?.id == "Design review" && countdown == .minutes(12))
-            #expect(home.impactsToday == 2 && home.ringSegments == 5)
+            #expect(home.impactsToday == 2 && home.ringSegments == 6)
         }
     }
 
@@ -222,7 +227,7 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         let again = model.record(primary, on: review)
         #expect(recorded && !again)
         #expect(model.snapshot.nextUp?.id == "Dentist" && model.snapshot.doneCardIDs.contains("Design review"))
-        #expect(model.snapshot.impactsToday == 3 && model.snapshot.ringSegments == 5)
+        #expect(model.snapshot.impactsToday == 3 && model.snapshot.ringSegments == 6)
     }
 
     @Test("A secondary action is marked done without an Impact")

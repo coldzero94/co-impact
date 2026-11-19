@@ -6,8 +6,8 @@ import os
 import SwiftUI
 
 /// Home (UX.md → Home): summary and Impact ring, Next up, Later today, Tomorrow morning. Tapping a card
-/// opens its detail; running a primary action once it counts (`ActionLog.countsFrom`) records an Impact and
-/// plays the Impact moment; swiping a card dismisses it (UX.md → Dismissing).
+/// opens its detail; running a primary action once it counts (`ActionLog.countsFrom`), or a focus session of 10
+/// minutes or more, records an Impact and plays the Impact moment; swiping a card dismisses it (UX.md → Dismissing).
 public struct HomeView: View {
     let model: HomeModel
     @State private var selected: ImpactCard?
@@ -17,6 +17,12 @@ public struct HomeView: View {
     @State private var pending: Moment?
     @State private var flying: Moment?
     @State private var landings = 0
+    /// The ring's brief glow after a focus session's Impact lands.
+    @State private var glowing = false
+    /// When a tap or Home last changed the button under the finger: an Impact moves Next up on, and Start focus and End
+    /// focus take each other's place. Uptime, which clock changes do not move (not `HomeModel.now`, which moves only when
+    /// Home refreshes).
+    @State private var swapped: TimeInterval?
     @State private var settingUpGoals = false
     /// Block time's session, while its card shows "Blocked" with Undo (UX.md → Home: 5 seconds, 15 with VoiceOver).
     @State private var justBlocked: JustBlocked?
@@ -47,18 +53,19 @@ public struct HomeView: View {
             List {
                 Section {
                     if let next = snapshot.nextUp {
-                        NextUpCard(card: next, now: model.now, details: { selected = next }, primary: { action in
-                            // Within a second of an Impact, Next up already shows the next card, so a tap is
-                            // treated as the second half of a double tap and ignored. A later one first plays a
-                            // moment still queued because the app never left (see playPending).
-                            if let pending, ProcessInfo.processInfo.systemUptime - pending.recorded < 1 { return }
+                        NextUpCard(card: next, now: model.now, session: model.focus.flatMap { $0.cardID == next.id ? $0 : nil },
+                                   details: { selected = next }, primary: { action in
+                            // Within a second of an Impact, Next up already shows the next card (and after End focus,
+                            // Start focus again), so a tap is treated as the second half of a double tap and ignored. A
+                            // later one first plays a moment still queued because the app never left (see playPending).
+                            if justSwapped { return }
                             playPending()
                             run(action, on: next) { failed = $0 }
-                        })
+                        }, endFocus: endFocus)
                             .recordingFrame { momentFrames.cards[next.id] = $0 }
                             // A new view per card, so the promoted card records its own frame.
                             .id(next.id)
-                            .dismissible { model.dismiss(next, similar: $0) }
+                            .dismissible(similar: next.kind != .focusBlock) { model.dismiss(next, similar: $0) }
                     } else {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Nothing needs you today.")
@@ -123,7 +130,11 @@ public struct HomeView: View {
         }
         .sheet(isPresented: $settingUpGoals, onDismiss: playPending) { GoalSetupView(model: model) }
         .sheet(item: $selected, onDismiss: playPending) { card in
-            CardDetailView(card: card, model: model) { action, failed in run(action, on: card, failed: failed) }
+            CardDetailView(card: card, model: model, run: { action, failed in
+                // Card detail swaps Start focus and End focus in place too. Only taps: a run request never waits.
+                if action.kind == .startFocus, justSwapped { return }
+                run(action, on: card, failed: failed)
+            }, endFocus: endFocus)
                 .presentationDetents(typeSize.isAccessibilitySize ? [.large] : [.medium, .large])
         }
         .actionFailureAlert($failed)
@@ -158,6 +169,15 @@ public struct HomeView: View {
             Text("Delete it in Calendar.")
         }
         .onChange(of: scenePhase) { playPending() }
+        // A focus session ended with an Impact: by End focus, or with its block, possibly while Impact was away.
+        // Initial too: a session whose block ended while Impact was not running ends at launch.
+        .onChange(of: model.focusImpact, initial: true) {
+            guard let cardID = model.focusImpact else { return }
+            model.focusImpactShown()
+            pending = Moment(symbol: ActionKind.startFocus.symbol, from: momentFrames.cards[cardID], large: true)
+            swapped = ProcessInfo.processInfo.systemUptime
+            playPending()
+        }
         .onChange(of: model.snapshot) { _, snapshot in
             // An open detail follows its card as Home refreshes, and closes once the card is gone (e.g. the event
             // was canceled, deleted, or moved out of what Home lists, no longer needs prep, got a new ID, or the
@@ -227,6 +247,7 @@ public struct HomeView: View {
             let unshown = (pending == nil ? 0 : 1) + (flying == nil ? 0 : 1)
             ImpactRing(filled: max(0, snapshot.impactsToday - unshown), segments: snapshot.ringSegments)
                 .frame(width: ringSize, height: ringSize)
+                .shadow(color: Color.accentColor.opacity(glowing ? 0.9 : 0), radius: glowing ? 14 : 0)
                 .recordingFrame { momentFrames.ring = $0 }
         }
     }
@@ -239,7 +260,7 @@ public struct HomeView: View {
                     Button { selected = card } label: { CardRow(card: card, done: done.contains(card.id)) }
                         .buttonStyle(RowButtonStyle())
                         .recordingFrame { momentFrames.cards[card.id] = $0 }
-                        .dismissible { model.dismiss(card, similar: $0) }
+                        .dismissible(similar: card.kind != .focusBlock) { model.dismiss(card, similar: $0) }
                 }
             } header: {
                 // The list's secondary header color is about 3.3:1 on the light grouped background; 60% of the
@@ -253,12 +274,27 @@ public struct HomeView: View {
         }
     }
 
-    /// Runs the action and, when it records an Impact, queues the moment from the card's current frame.
+    /// Runs the action and, when it records an Impact, queues the moment from the card's current frame. Start focus
+    /// starts a session in Home instead; its Impact comes when the session ends (`focusImpact`).
     private func run(_ action: ImpactAction, on card: ImpactCard, failed: @escaping (ActionKind) -> Void) {
+        if action.kind == .startFocus {
+            if model.startFocus(on: card) {
+                swapped = ProcessInfo.processInfo.systemUptime
+                // The button VoiceOver was on now ends the session: say what happened (UX.md → Motion).
+                AccessibilityNotification.Announcement("Focus started on \(card.title)").post()
+            } else {
+                // Home offers Start focus only from the block's Soon phase on (`ImpactCard.offers`).
+                homeLog.notice("Start focus on card \(card.id, privacy: .private) outside its Soon or Now phase, or done; nothing started")
+            }
+            return
+        }
         let from = momentFrames.cards[card.id]
         action.kind.run(with: openURL) { opened in
             guard opened else { return failed(action.kind) }
-            if model.record(action, on: card) { pending = Moment(symbol: card.symbol, from: from) }
+            if model.record(action, on: card) {
+                pending = Moment(symbol: card.symbol, from: from)
+                swapped = ProcessInfo.processInfo.systemUptime
+            }
         }
     }
 
@@ -275,13 +311,37 @@ public struct HomeView: View {
         }
     }
 
-    /// Fills the ring's segment (a cross-fade under Reduce Motion), plays the haptic, and tells VoiceOver.
+    /// End focus, from Next up or card detail. A session of 10 minutes or more plays its Impact moment
+    /// (`focusImpact`), which VoiceOver hears; a shorter one just ends, never scolded (PRODUCT.md → Focus blocks).
+    /// End focus takes Start focus's place, and back: within a second of either, a tap is the second half of a double
+    /// tap.
+    private func endFocus() {
+        if justSwapped { return }
+        swapped = ProcessInfo.processInfo.systemUptime
+        if !model.endFocus() { AccessibilityNotification.Announcement("Focus ended").post() }
+    }
+
+    /// Whether a tap now is the second half of a double tap on a button that just changed (`swapped`).
+    private var justSwapped: Bool {
+        swapped.map { ProcessInfo.processInfo.systemUptime - $0 < 1 } ?? false
+    }
+
+    /// Fills the ring's segment (a cross-fade under Reduce Motion), plays the haptic, and tells VoiceOver. A focus
+    /// session's Impact also makes the ring glow briefly.
     private func land() {
+        let large = (flying ?? pending)?.large ?? false
         withAnimation(reduceMotion ? .easeInOut(duration: 0.3) : .spring(duration: 0.4)) {
             // A token landing keeps an Impact recorded during its flight queued; playPending below plays
             // it now if Home is in front with no sheet open, otherwise at its next trigger.
             if flying == nil { pending = nil }
             flying = nil
+            if large { glowing = true }
+        }
+        if large {
+            Task {
+                try? await Task.sleep(for: .seconds(0.8))
+                withAnimation(.easeOut(duration: 0.6)) { glowing = false }
+            }
         }
         landings += 1
         let shown = model.snapshot.impactsToday - (pending == nil ? 0 : 1)
@@ -325,22 +385,28 @@ extension View {
         #endif
     }
 
-    /// UX.md → Dismissing: a full swipe means Not needed; the second button mutes events like this one.
-    fileprivate func dismissible(_ dismiss: @escaping (_ similar: Bool) -> Void) -> some View {
+    /// UX.md → Dismissing: a full swipe means Not needed; the second button, when `similar`, mutes events like this
+    /// one. A focus block offers only Not needed: muting its title would hide every block of its goal.
+    fileprivate func dismissible(similar: Bool, _ dismiss: @escaping (_ similar: Bool) -> Void) -> some View {
         swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button("Not needed", systemImage: "xmark", role: .destructive) { dismiss(false) }
-            Button("Don't suggest for events like this", systemImage: "bell.slash") { dismiss(true) }
-                .tint(.gray)
+            if similar {
+                Button("Don't suggest for events like this", systemImage: "bell.slash") { dismiss(true) }
+                    .tint(.gray)
+            }
         }
     }
 }
 
-/// Next up: the accent card with a large countdown and the primary action (UX.md → Home).
+/// Next up: the accent card with a large countdown and the primary action (UX.md → Home). During a focus session on
+/// the card, the time left and End focus instead.
 struct NextUpCard: View {
     let card: ImpactCard
     let now: Date
+    var session: FocusSession?
     let details: () -> Void
     let primary: (ImpactAction) -> Void
+    var endFocus: () -> Void = {}
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var typeSize
     @ScaledMetric(relativeTo: .largeTitle) private var countdownSize = 72.0
@@ -355,30 +421,32 @@ struct NextUpCard: View {
                     topRow {
                         Label(card.keyFact, systemImage: card.symbol)
                         if !typeSize.isAccessibilitySize { Spacer() }
-                        if countdown != .clock {
+                        if let session {
+                            Text("until \(session.end, format: .dateTime.hour().minute())").monospacedDigit()
+                        } else if countdown != .clock {
                             Text(card.start, format: .dateTime.hour().minute()).monospacedDigit()
                         }
                     }
                     .font(.subheadline.weight(.semibold))
-                    countdownText(countdown).lineLimit(1).minimumScaleFactor(0.5).padding(.top, 6)
+                    Group {
+                        if let session { timeLeft(session) } else { countdownText(countdown) }
+                    }
+                    .lineLimit(1).minimumScaleFactor(0.5).padding(.top, 6)
                     Text(card.title).font(.title2.weight(.semibold))
-                    Text(card.answer).opacity(0.9)
+                    if let session {
+                        Text("Focusing since \(session.start, format: .dateTime.hour().minute())").opacity(0.9)
+                    } else {
+                        Text(card.answer).opacity(0.9)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
-            if let action = card.primaryAction {
-                Button { primary(action) } label: {
-                    Label(action.kind.label, systemImage: action.kind.symbol)
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, minHeight: 50)
-                        .background(.white, in: .capsule)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(fill)
-                .padding(.top, 16)
-                .accessibilityLabel("\(action.kind.label), \(card.title)")
+            if session != nil {
+                button("End focus", symbol: "stop.fill", run: endFocus)
+            } else if let action = card.primaryAction, card.offers(action, now: now) {
+                button(action.kind.label, symbol: action.kind.symbol) { primary(action) }
             }
         }
         .foregroundStyle(.white)
@@ -388,6 +456,31 @@ struct NextUpCard: View {
     }
 
     private var fill: Color { .accentFill(colorScheme) }
+
+    private func button(_ label: String, symbol: String, run: @escaping () -> Void) -> some View {
+        Button(action: run) {
+            Label(label, systemImage: symbol)
+                .font(.headline)
+                .frame(maxWidth: .infinity, minHeight: 50)
+                .background(.white, in: .capsule)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(fill)
+        .padding(.top, 16)
+        .accessibilityLabel("\(label), \(card.title)")
+    }
+
+    /// Minutes left in the session, rounded up, so the last minute shows 1; Home refreshes each minute.
+    private func timeLeft(_ session: FocusSession) -> some View {
+        let minutes = max(1, Int((session.end.timeIntervalSince(now) / 60).rounded(.up)))
+        return HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(minutes, format: .number).font(.system(size: countdownSize, weight: .bold, design: .rounded))
+                .monospacedDigit()
+            Text("min left").font(.title2.weight(.semibold)).opacity(0.9)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(minutes) \(minutes == 1 ? "minute" : "minutes") left")
+    }
 
     @ViewBuilder
     private func countdownText(_ countdown: Countdown) -> some View {
