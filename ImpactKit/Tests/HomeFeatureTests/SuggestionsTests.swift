@@ -52,5 +52,11 @@ import Testing
         #expect(WeeklySummary.grounded("You focused for 5 hours.", in: log) == nil)
         #expect(WeeklySummary.grounded(" ", in: log) == nil)
         #expect(WeeklySummary.grounded(String(repeating: "A calm week. ", count: 30), in: log) == nil)
+        // A long week keeps its last lines whole, never a part of one such as "20 min" of "120 min".
+        let week = (1...200).map { "- \($0)20 min on Write a book" }.joined(separator: "\n")
+        let recent = WeeklySummary.recent(week)
+        #expect(recent.count <= WeeklySummary.logLimit && recent.hasPrefix("- ") && recent.hasSuffix("20020 min on Write a book"))
+        #expect(WeeklySummary.recent(log) == log)
+        #expect(WeeklySummary.recent(String(repeating: "a", count: WeeklySummary.logLimit + 1)).isEmpty)
     }
 }

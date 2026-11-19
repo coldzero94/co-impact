@@ -6,8 +6,14 @@ import os
 /// alone. Inferred, so shown apart and marked (UX.md → Confirmed vs. inferred). Optional enrichment (P5): without the
 /// model, or on any error, there is none and the daily review is complete without it.
 public enum WeeklySummary {
-    /// The longest log the model reads, its most recent days kept, so one request stays well within its context.
+    /// The longest log the model reads, its most recent lines kept whole, so one request stays within its context.
     static let logLimit = 4_000
+
+    /// `log` cut to `logLimit` from its start at a line break, so no line reaches the model in part ("20 min" from
+    /// "120 min", which `grounded` would then accept).
+    static func recent(_ log: String) -> String {
+        log.count > logLimit ? String(log.suffix(logLimit).drop { $0 != "\n" }.dropFirst()) : log
+    }
 
     /// The summary to show, or nil: trimmed, short enough to read at a glance, and with no whole number absent from
     /// the log, so it shows no count the log does not hold in digits.
@@ -26,10 +32,12 @@ public enum WeeklySummary {
     /// answer is kept for the session per log, also one `grounded` dropped, so it is not asked again; no answer (the
     /// model not ready, an error) is asked again next time.
     @MainActor public static func generate(log: String) async -> String? {
-        let log = String(log.suffix(logLimit))
+        let log = recent(log)
+        // One line longer than the limit leaves nothing whole to read.
+        guard !log.isEmpty else { return nil }
         if let known = cache[log] { return known }
         guard let answer = await ask(log: log) else { return nil }
-        // `.some`: assigning a dropped (nil) summary directly would remove the key instead of keeping it.
+        // Kept even when dropped (nil); `.some` says so, as only a `nil` literal removes a key.
         cache[log] = .some(answer)
         return answer
     }
