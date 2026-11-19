@@ -206,6 +206,14 @@ Deterministic, like event selection; AI never decides.
 - **Start focus** starts an in-app session shown as a Live Activity with the goal and the time left in the block. It does not silence notifications; that needs an iOS Focus, which apps cannot turn on.
 - The user can end a session at any time; ending early is never scolded, and the minutes still count as focus minutes. A session of 10 minutes or more records an Impact.
 - Built in step 12 (Home): Start focus works from the block's Soon phase until it ends, unless the block is done; the session ends at End focus, at the block's end as it was when focus started (extending the block in Calendar does not extend the session), or once the block is no longer in its Soon or Now phase on Home (moved, deleted, or dismissed), and its Impact is stamped when Home saw it end, at the block's end at the latest. A block records one Impact, so a block done is not started again. One session runs at a time: Start focus on another block ends the first. A removed goal's blocks are plain events again. A block's title on its card is its goal's current title. A focus block gives Next up to a meeting in its Soon or Now phase (UX.md → Home). Every surface sees focus blocks as Home marks them (UX.md → System surfaces).
+- Decided by the agent on the owner's delegation (2026-11-19), as built in step 12, until the owner revisits them:
+  1. Start focus from the block's Soon phase (15 minutes before), as event cards count from Soon.
+  2. A focus block gives Next up to another card in its Soon or Now phase, such as a meeting booked over it (UX.md → Home).
+  3. A block records one Impact: after a session of 10 minutes or more it is done and does not start again.
+  4. Extending a block in Calendar does not extend its session; moving it ends the session.
+  5. A session that stops running while Impact is away (its block moved or deleted) counts up to when Impact sees it, at the block's end when focus started at the latest: rare, and it errs toward the user (P7).
+  6. A focus block's swipe offers only Not needed (UX.md → Dismissing).
+  7. The session's Live Activity has no button; End focus is in Impact (UX.md → System surfaces).
 
 ## Daily log (Proposed)
 
