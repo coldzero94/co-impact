@@ -19,8 +19,8 @@ public struct HomeView: View {
     @State private var landings = 0
     /// The ring's brief glow after a focus session's Impact lands.
     @State private var glowing = false
-    /// When a tap last changed the button under the finger: an Impact moves Next up on, and Start focus and End focus
-    /// take each other's place. Uptime, which clock changes do not move (not `HomeModel.now`, which moves only when
+    /// When a tap or Home last changed the button under the finger: an Impact moves Next up on, and Start focus and End
+    /// focus take each other's place. Uptime, which clock changes do not move (not `HomeModel.now`, which moves only when
     /// Home refreshes).
     @State private var swapped: TimeInterval?
     @State private var settingUpGoals = false
@@ -130,8 +130,11 @@ public struct HomeView: View {
         }
         .sheet(isPresented: $settingUpGoals, onDismiss: playPending) { GoalSetupView(model: model) }
         .sheet(item: $selected, onDismiss: playPending) { card in
-            CardDetailView(card: card, model: model, run: { action, failed in run(action, on: card, failed: failed) },
-                           endFocus: endFocus)
+            CardDetailView(card: card, model: model, run: { action, failed in
+                // Card detail swaps Start focus and End focus in place too. Only taps: a run request never waits.
+                if action.kind == .startFocus, justSwapped { return }
+                run(action, on: card, failed: failed)
+            }, endFocus: endFocus)
                 .presentationDetents(typeSize.isAccessibilitySize ? [.large] : [.medium, .large])
         }
         .actionFailureAlert($failed)
@@ -275,8 +278,6 @@ public struct HomeView: View {
     /// starts a session in Home instead; its Impact comes when the session ends (`focusImpact`).
     private func run(_ action: ImpactAction, on card: ImpactCard, failed: @escaping (ActionKind) -> Void) {
         if action.kind == .startFocus {
-            // Card detail swaps Start focus and End focus in place too.
-            if justSwapped { return }
             if model.startFocus(on: card) {
                 swapped = ProcessInfo.processInfo.systemUptime
                 // The button VoiceOver was on now ends the session: say what happened (UX.md → Motion).
