@@ -341,6 +341,8 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
         let stuckSession = try stuck.blockTime(try #require(stuck.goalCard))
         let afterBlock = stuck.goalCard
         #expect(throws: Refused.self) { try stuck.undoBlock(stuckSession) }
+        // A rebuild before the next fetch (here, restoring no Impacts) must still see the block and its event.
+        stuck.restore([:])
         #expect(kept.last?.sessions == [stuckSession] && stuck.goalCard == afterBlock)
     }
 
