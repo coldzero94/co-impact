@@ -190,13 +190,13 @@ public final class HomeModel {
     /// The daily review's days (`DailyLog.days`), newest first.
     var reviewDays: [DailyLog.Day] { dailyLog.days(calendar: calendar) }
 
-    /// Today's one line, as stored.
-    var todaysLine: String { dailyLog.lines[DailyLog.key(for: now, calendar: calendar)] ?? "" }
+    /// The day's one line, as stored.
+    func line(on day: Date) -> String { dailyLog.lines[DailyLog.key(for: day, calendar: calendar)] ?? "" }
 
-    /// The daily review's one line for today (PRODUCT.md → Daily log), stored when it changed.
-    func setTodaysLine(_ text: String) {
+    /// The daily review's one line for `day` (PRODUCT.md → Daily log), stored when it changed.
+    func setLine(_ text: String, on day: Date) {
         let before = dailyLog
-        dailyLog.setLine(text, on: now, calendar: calendar)
+        dailyLog.setLine(text, on: day, calendar: calendar)
         if dailyLog != before { saveDailyLog(dailyLog) }
     }
 

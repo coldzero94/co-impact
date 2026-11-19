@@ -401,6 +401,7 @@ private struct TodayRow: View {
             }
             if typeSize.isAccessibilitySize { Spacer() }
             Image(systemName: "chevron.forward").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
         }
         .padding(.horizontal, 16).padding(.vertical, 15)
         .contentShape(.rect)

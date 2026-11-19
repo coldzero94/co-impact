@@ -337,10 +337,13 @@ private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
                                   calendar: losAngeles, saveDailyLog: { saved.append($0) })
         // A card still to do in the morning: no Today row.
         #expect(!model.showsTodayRow)
-        model.setTodaysLine("  Shipped the beta ")
-        model.setTodaysLine("Shipped the beta")
-        #expect(model.todaysLine == "Shipped the beta" && saved.count == 1)
+        model.setLine("  Shipped the beta ", on: model.now)
+        model.setLine("Shipped the beta", on: model.now)
+        #expect(model.line(on: model.now) == "Shipped the beta" && saved.count == 1)
         #expect(model.reviewDays.first?.line == "Shipped the beta")
+        // A review opened before midnight keeps its line on its own day after it.
+        model.setLine("Late night", on: morning.addingTimeInterval(-10 * 3_600))
+        #expect(model.line(on: morning) == "Shipped the beta" && model.reviewDays.map(\.line) == ["Shipped the beta", "Late night"])
         // Once the day's last card is done, the row shows, as from 18:00 on any day.
         let review = try #require(model.snapshot.nextUp)
         #expect(model.record(try #require(review.primaryAction), on: review) && model.showsTodayRow)

@@ -7,19 +7,23 @@ import SwiftUI
 /// (UX.md → The Impact moment).
 struct DailyReviewView: View {
     let model: HomeModel
+    /// The day the review opened on: its line stays that day's, even if the sheet stays open past midnight.
+    private let day: Date
     @State private var line: String
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     /// The day (`DailyLog.key`) whose evening already saw the tokens gather.
     @AppStorage("reviewGathered") private var gathered = ""
 
     init(model: HomeModel) {
         self.model = model
-        _line = State(initialValue: model.todaysLine)
+        day = model.now
+        _line = State(initialValue: model.line(on: model.now))
     }
 
     var body: some View {
         let days = model.reviewDays
-        let todayKey = DailyLog.key(for: model.now, calendar: model.calendar)
+        let todayKey = DailyLog.key(for: day, calendar: model.calendar)
         let today = days.first { $0.key == todayKey }
         let entries = today?.entries ?? []
         NavigationStack {
@@ -34,7 +38,7 @@ struct DailyReviewView: View {
                     ForEach(entries, id: \.self) { EntryRow(entry: $0) }
                     TextField("One line about today", text: $line)
                         .submitLabel(.done)
-                        .onSubmit { model.setTodaysLine(line) }
+                        .onSubmit { model.setLine(line, on: day) }
                 }
                 ForEach(days.filter { $0.key != todayKey }, id: \.key) { day in
                     Section {
@@ -55,13 +59,14 @@ struct DailyReviewView: View {
                 }
             }
         }
-        // The line is kept however the sheet closes.
-        .onDisappear { model.setTodaysLine(line) }
+        // The line is kept however the sheet closes, and when Impact leaves the front, where iOS may end it unseen.
+        .onDisappear { model.setLine(line, on: day) }
+        .onChange(of: scenePhase) { if scenePhase != .active { model.setLine(line, on: day) } }
     }
 
     /// The tokens gather the first time the review opens from 18:00, on a day with Impacts.
     private func gathers(_ entries: [DailyLog.Entry], today: String) -> Bool {
-        !entries.isEmpty && model.calendar.component(.hour, from: model.now) >= 18 && gathered != today
+        !entries.isEmpty && model.calendar.component(.hour, from: day) >= 18 && gathered != today
     }
 }
 
@@ -75,9 +80,7 @@ private struct EntryRow: View {
         let layout = typeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout(spacing: 12))
         layout {
-            // The time the user saw where it was recorded, also after travel.
-            Text(entry.date, format: .dateTime.hour().minute())
-                .environment(\.timeZone, entry.timeZone)
+            Text(entry.date, format: entry.timeFormat)
                 .monospacedDigit().foregroundStyle(.secondary)
                 .frame(minWidth: typeSize.isAccessibilitySize ? nil : timeWidth, alignment: .leading)
             Label(entry.text, systemImage: entry.kind.symbol).labelStyle(.titleAndIcon)
@@ -95,6 +98,8 @@ private struct GatheringRing: View {
     let gathered: () -> Void
     @State private var landed: Int?
     @State private var success = 0
+    /// The count's height, which the tokens rise past; it grows with Dynamic Type.
+    @State private var labelHeight = 22.0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ScaledMetric(relativeTo: .largeTitle) private var ringSize = 72.0
 
@@ -106,16 +111,18 @@ private struct GatheringRing: View {
     var body: some View {
         let tokens = Array(symbols.prefix(Self.shown))
         VStack(spacing: 14) {
-            ImpactRing(filled: landed ?? symbols.count, segments: segments, lineWidth: 7)
+            // Empty from the first frame when it gathers, so the filling is seen, with Reduce Motion too.
+            ImpactRing(filled: landed ?? (gather ? 0 : symbols.count), segments: segments, lineWidth: 7)
                 .frame(width: ringSize, height: ringSize)
+                .accessibilityHidden(true) // the count below says it
             Text("\(symbols.count) \(symbols.count == 1 ? "Impact" : "Impacts") today")
                 .font(.headline)
-            if landed != nil, !reduceMotion {
+                .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { labelHeight = $0 }
+            if gather || landed != nil, !reduceMotion {
                 HStack(spacing: spacing) {
                     ForEach(tokens.indices, id: \.self) { index in
                         Token(symbol: tokens[index], inRing: index < (landed ?? 0),
-                              offset: CGSize(width: -(Double(index) - Double(tokens.count - 1) / 2) * (token + spacing),
-                                             height: -(ringSize / 2 + 2 * 14 + 22 + token / 2)))
+                              offset: offset(index, of: tokens.count))
                             .frame(width: token, height: token)
                     }
                 }
@@ -126,11 +133,11 @@ private struct GatheringRing: View {
         .sensoryFeedback(.success, trigger: success)
         .task {
             guard gather else { return }
-            landed = 0
+            // After the sheet has risen, so the filling is not lost under it.
+            try? await Task.sleep(for: .seconds(0.4))
             if reduceMotion {
                 withAnimation(.easeInOut(duration: 0.3)) { landed = symbols.count }
             } else {
-                try? await Task.sleep(for: .seconds(0.4))
                 for count in 1...tokens.count {
                     withAnimation(.spring(duration: 0.45)) { landed = count }
                     try? await Task.sleep(for: .seconds(0.18))
@@ -140,6 +147,13 @@ private struct GatheringRing: View {
             success += 1
             gathered()
         }
+    }
+
+    /// How far token `index` of `count` travels: to the ring's center, above the count.
+    private func offset(_ index: Int, of count: Int) -> CGSize {
+        let across: Double = (Double(count - 1) / 2 - Double(index)) * (token + spacing)
+        let up: Double = ringSize / 2 + 2 * 14 + labelHeight + token / 2
+        return CGSize(width: across, height: -up)
     }
 
     private struct Token: View {
@@ -158,6 +172,13 @@ private struct GatheringRing: View {
 }
 
 extension DailyLog.Entry {
+    /// Its clock time where it was recorded, the time the user saw, also after travel.
+    var timeFormat: Date.FormatStyle {
+        var format = Date.FormatStyle.dateTime.hour().minute()
+        format.timeZone = timeZone
+        return format
+    }
+
     /// "Joined Design review", "Left for Dentist", "50 min on Write a book" (UX.md → Daily review).
     var text: String {
         switch kind {
