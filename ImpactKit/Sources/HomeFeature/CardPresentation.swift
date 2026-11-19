@@ -18,6 +18,7 @@ extension ImpactCard {
         case .onlineMeeting: link
         case .hybrid: place.map { "\(link) · \($0.title)" } ?? link
         case .inPerson: place.map { $0.address ?? $0.title } ?? ""
+        case .focusBlock: "\(Int(end.timeIntervalSince(start) / 60)) min focus block"
         }
     }
 }
@@ -30,6 +31,7 @@ extension ActionKind {
         case .directions: "Directions opened"
         case .openLink: "Link opened"
         case .call: "Call opened"
+        case .startFocus: "Focus kept"
         }
     }
 
@@ -40,6 +42,7 @@ extension ActionKind {
         case .directions: "Maps didn't open"
         case .openLink(let url): "\(url.shortHost ?? "The link") didn't open"
         case .call: "The call didn't start"
+        case .startFocus: "Focus didn't start"
         }
     }
 }

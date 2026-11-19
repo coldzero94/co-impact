@@ -106,21 +106,25 @@ extension ImpactEngine {
         return (tomorrow, noon, end)
     }
 
-    /// When a card's Soon phase starts (PRODUCT.md → Card timeline): 15 minutes before an online or hybrid
-    /// start, 30 minutes before an in-person one.
+    /// When a card's Soon phase starts (PRODUCT.md → Card timeline and Focus blocks): 15 minutes before an online,
+    /// hybrid, or focus block start, 30 minutes before an in-person one.
     /// shortcut: in-person Soon and Now are measured from the event start instead of leave-by until routing/ETA
     /// exists.
     static func soonStart(of card: ImpactCard) -> Date {
         card.start.addingTimeInterval(card.kind == .inPerson ? -30 * 60 : -15 * 60)
     }
 
-    /// The Now phase (PRODUCT.md → Card timeline): online and hybrid from 10 minutes before the start until 10
-    /// minutes after it, in person from 10 minutes before leave-by until the start. A card's Live Activity starts
-    /// with it and goes stale at its end.
+    /// The Now phase (PRODUCT.md → Card timeline and Focus blocks): online and hybrid from 10 minutes before the
+    /// start until 10 minutes after it, in person from 10 minutes before leave-by until the start, a focus block from
+    /// 5 minutes before the start until its end. A card's Live Activity starts with it and goes stale at its end.
     /// shortcut: in person, leave-by is the start until routing exists (as in `soonStart`), so the alert comes 10
     /// minutes before the appointment rather than before leaving.
     public static func nowPhase(of card: ImpactCard) -> Range<Date> {
-        card.start.addingTimeInterval(-10 * 60) ..< card.start.addingTimeInterval(card.kind == .inPerson ? 0 : 10 * 60)
+        switch card.kind {
+        case .onlineMeeting, .hybrid: card.start.addingTimeInterval(-10 * 60) ..< card.start.addingTimeInterval(10 * 60)
+        case .inPerson: card.start.addingTimeInterval(-10 * 60) ..< card.start
+        case .focusBlock: card.start.addingTimeInterval(-5 * 60) ..< card.end
+        }
     }
 
     /// Next up among cards still to do, which must come in start order: the first in its Soon or Now phase, else
@@ -129,7 +133,7 @@ extension ImpactEngine {
         toDo.first { isSoonOrNow($0, now: now) } ?? toDo.last { $0.start <= now } ?? toDo.first
     }
 
-    /// Soon or Now: in person until the start, online and hybrid until 10 minutes after it.
+    /// Soon or Now: in person until the start, online and hybrid until 10 minutes after it, a focus block until its end.
     public static func isSoonOrNow(_ card: ImpactCard, now: Date) -> Bool {
         now >= soonStart(of: card) && now < nowPhase(of: card).upperBound
     }

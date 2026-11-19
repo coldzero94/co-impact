@@ -23,12 +23,12 @@ public struct ActionLog: Sendable {
     /// Marks `action` done on `card`. The card's `primaryAction` also records the card's Impact, once.
     /// Returns true when this call recorded the Impact. A primary action before the card's Soon phase is
     /// preparation, not doing it (PRODUCT.md → Completion semantics): it records nothing, so the card keeps Next
-    /// up and its Now alert. An action passed with the wrong card records nothing in release builds instead of
-    /// crashing (debug builds assert).
+    /// up and its Now alert. An action passed with the wrong card, or Start focus (`recordFocus`), records nothing in
+    /// release builds instead of crashing (debug builds assert).
     @discardableResult
     public mutating func record(_ action: ImpactAction, on card: ImpactCard, at date: Date) -> Bool {
-        guard card.actions.contains(action) else {
-            assertionFailure("\(action.kind) is not an action of card \(card.id)")
+        guard card.actions.contains(action), action.kind != .startFocus else {
+            assertionFailure("\(action.kind) is not an action of card \(card.id), or is Start focus")
             return false
         }
         let primary = action == card.primaryAction
@@ -36,6 +36,22 @@ public struct ActionLog: Sendable {
         done[card.id, default: []].insert(action.kind)
         guard primary, impacts[card.id] == nil else { return false }
         impacts[card.id] = date
+        return true
+    }
+
+    /// A focus session on a focus block, from `start` to `end` (PRODUCT.md → Focus blocks): one of at least 10
+    /// minutes marks Start focus done and records the card's Impact, once, stamped at its end. A shorter one records
+    /// nothing. Returns true when this call recorded the Impact; another kind of card records nothing in release
+    /// builds (debug builds assert).
+    @discardableResult
+    public mutating func recordFocus(on card: ImpactCard, from start: Date, to end: Date) -> Bool {
+        guard card.kind == .focusBlock else {
+            assertionFailure("Card \(card.id) is not a focus block")
+            return false
+        }
+        guard end.timeIntervalSince(start) >= 10 * 60, impacts[card.id] == nil else { return false }
+        done[card.id, default: []].insert(.startFocus)
+        impacts[card.id] = end
         return true
     }
 

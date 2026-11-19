@@ -134,4 +134,21 @@ private func hybridCard() throws -> ImpactCard {
         #expect(after.nextUp == nil && after.doneCardIDs == ["town-hall"])
         #expect(after.impactsToday == 1 && after.ringSegments == 1)
     }
+
+    @Test("A focus session of 10 minutes or more records the block's Impact once, stamped at its end; a shorter one nothing")
+    func focusSession() throws {
+        var event = CalendarEvent(id: "block", calendarID: "personal", title: "Write a book", start: start,
+                                  end: start.addingTimeInterval(3_600))
+        event.focusGoal = "Write a book"
+        let card = try #require(try ImpactEngine().card(for: event, now: start))
+        let startFocus = try #require(card.primaryAction)
+        var log = ActionLog()
+        let short = log.recordFocus(on: card, from: start, to: start.addingTimeInterval(10 * 60 - 1))
+        #expect(!short && !log.isDone(startFocus, on: card) && log.impacts.isEmpty)
+        let tenMinutes = start.addingTimeInterval(30 * 60)
+        let first = log.recordFocus(on: card, from: start.addingTimeInterval(20 * 60), to: tenMinutes)
+        #expect(first && log.impacts == ["block": tenMinutes] && log.isDone(startFocus, on: card))
+        let again = log.recordFocus(on: card, from: start, to: start.addingTimeInterval(3_600))
+        #expect(!again && log.impacts == ["block": tenMinutes])
+    }
 }

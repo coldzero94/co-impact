@@ -9,13 +9,25 @@ public struct ImpactEngine: Sendable {
         )
     }
 
-    /// The caller fetches the horizon and supplies any geocoding results; selection does no network I/O.
+    /// The caller fetches the horizon and supplies any geocoding results and focus blocks (`focusGoal`); selection
+    /// does no network I/O.
     public func card(
         for event: CalendarEvent, now: Date,
         suppressionRules: [SuppressionRule] = [], includedCalendarIDs: Set<String> = []
     ) -> ImpactCard? {
         guard Self.isUsersTimedEvent(event, includedCalendarIDs: includedCalendarIDs), event.end > now,
               !suppressionRules.contains(where: { $0.matches(event) }) else { return nil }
+        var facts = [
+            Fact(label: "Title", value: event.title, provenance: .calendar(field: "title")),
+            Fact(label: "Start", value: event.start.ISO8601Format(), provenance: .calendar(field: "start")),
+            Fact(label: "End", value: event.end.ISO8601Format(), provenance: .calendar(field: "end")),
+        ]
+        // A focus block (PRODUCT.md → Focus blocks) shows the goal's title and only Start focus, whatever else the
+        // event holds; it leaves at its end, as the guard above has it.
+        if let goal = event.focusGoal {
+            return ImpactCard(id: event.id, title: goal, start: event.start, end: event.end, kind: .focusBlock,
+                              facts: facts, actions: [ImpactAction(kind: .startFocus, provenance: .computed(by: "Block time"))])
+        }
 
         let locationMatches = matches(in: event.location)
         let notesMatches = matches(in: event.notes)
@@ -39,11 +51,6 @@ public struct ImpactEngine: Sendable {
         // meeting link (online and hybrid) leave at the end, which the first guard enforces.
         if meeting == nil, now >= event.start.addingTimeInterval(15 * 60) { return nil }
 
-        var facts = [
-            Fact(label: "Title", value: event.title, provenance: .calendar(field: "title")),
-            Fact(label: "Start", value: event.start.ISO8601Format(), provenance: .calendar(field: "start")),
-            Fact(label: "End", value: event.end.ISO8601Format(), provenance: .calendar(field: "end")),
-        ]
         var actions: [ImpactAction] = []
         if let (url, field) = meeting {
             let provenance = Provenance.calendar(field: field)

@@ -21,6 +21,7 @@ extension ImpactCard {
         switch kind {
         case .onlineMeeting, .hybrid: provider ?? "Online"
         case .inPerson: place?.title ?? ""
+        case .focusBlock: "Focus"
         }
     }
 
@@ -28,6 +29,7 @@ extension ImpactCard {
         switch kind {
         case .onlineMeeting, .hybrid: "video.fill"
         case .inPerson: "car.fill"
+        case .focusBlock: "timer"
         }
     }
 }
@@ -39,6 +41,7 @@ extension ActionKind {
         case .directions: "Directions"
         case .openLink(let url): url.shortHost.map { "Open \($0)" } ?? "Open link"
         case .call: "Call"
+        case .startFocus: "Start focus"
         }
     }
 
@@ -48,6 +51,7 @@ extension ActionKind {
         case .directions: "car.fill"
         case .openLink: "link"
         case .call: "phone.fill"
+        case .startFocus: "timer"
         }
     }
 }

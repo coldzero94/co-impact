@@ -294,4 +294,19 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
         #expect(home.eventsLeftToday == 5)
         #expect(self.home(events, at: at(9, 48)).eventsLeftToday == 4)
     }
+
+    @Test("A focus block is Soon from 15 minutes before and Now from 5 before until it ends, then leaves")
+    func focusBlock() throws {
+        let events = [event("Call", 18, 30), event("Block", 19) { $0.focusGoal = "Write a book" }]
+        let card = try #require(engine.card(for: events[1], now: at(18)))
+        #expect(ImpactEngine.nowPhase(of: card) == at(18, 55) ..< at(20))
+        #expect(home(events, at: at(18)).ringSegments == 2)
+        // Before its Soon the running call keeps Next up; from Soon on the block leads, until it ends.
+        #expect(home(events, at: at(18, 44)).nextUp?.id == "Call")
+        #expect(home(events, at: at(18, 45)).nextUp?.id == "Block")
+        #expect(home(events, at: at(19, 59)).nextUp?.id == "Block")
+        // Its Live Activity runs through the block.
+        #expect(ids(home(events, at: at(19, 30)).liveActivityCards) == ["Block"])
+        #expect(home(events, at: at(20)).cards.isEmpty)
+    }
 }

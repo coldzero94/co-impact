@@ -69,6 +69,8 @@ private let productExamples: [Example] = [
             guard case .joinMeeting = primary.kind else { Issue.record("Expected Join primary"); return }
         case .inPerson:
             #expect(primary.kind == .directions(to: place))
+        case .focusBlock:
+            Issue.record("No PRODUCT.md example is a focus block")
         }
         if kind == .hybrid { #expect(selected.actions[1].kind == .directions(to: place)) }
         #expect(selected.facts.allSatisfy {
@@ -308,5 +310,19 @@ private let productExamples: [Example] = [
         let rules = [SuppressionRule.series(calendarID: first.calendarID, seriesID: "daily")]
         #expect(engine.card(for: first, now: now, suppressionRules: rules) == nil)
         #expect(engine.card(for: second, now: now, suppressionRules: rules) == nil)
+    }
+
+    @Test("A focus block shows the goal's title and only Start focus, whatever else the event holds, until it ends")
+    func focusBlock() throws {
+        let block = event { $0.title = "Write a book"; $0.focusGoal = "Write a novel"; $0.url = zoom }
+        let card = try #require(engine.card(for: block, now: now))
+        #expect(card.kind == .focusBlock && card.title == "Write a novel")
+        #expect(card.actions.map(\.kind) == [.startFocus] && card.primaryAction?.kind == .startFocus)
+        #expect(card.facts.first { $0.label == "Title" }?.value == "Write a book")
+        // The exclusions every card has still apply.
+        #expect(engine.card(for: block, now: block.end.addingTimeInterval(-1)) != nil)
+        #expect(engine.card(for: block, now: block.end) == nil)
+        #expect(engine.card(for: block, now: now, suppressionRules: [.occurrence(id: block.id)]) == nil)
+        #expect(engine.card(for: event { $0.focusGoal = "Write a novel"; $0.isCanceled = true }, now: now) == nil)
     }
 }
