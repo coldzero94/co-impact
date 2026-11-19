@@ -174,10 +174,10 @@ private func card(_ kind: CardKind, link: String? = nil, place: Place? = nil) th
         #expect(inNow.startNow == [online, visit] && inNow.schedule.isEmpty)
     }
 
-    @Test("Home wants Live Activities for the next two cards whose Now has not ended")
+    @Test("Home wants Live Activities for the next two cards whose Now has not ended, and the first focus block")
     @MainActor func liveCards() throws {
         let model = try HomeFixtures.sample(at: 9.8, calendar: losAngeles, today: sampleDate)
-        #expect(model.liveCards(runToken: "secret").map(\.cardID) == ["Design review", "Dentist"])
+        #expect(model.liveCards(runToken: "secret").map(\.cardID) == ["Design review", "Dentist", "Write a book"])
     }
 
     /// The states ImpactKit/AGENTS.md → UI documents for `-fixtureHour`, pinned so screenshots keep showing them.

@@ -192,12 +192,12 @@ public final class HomeModel {
 
     /// What the widgets and background refresh need to see cards as Home does (`SurfaceState`): the Impacts of the
     /// last two days or of events still fetched (e.g. a multi-day event joined on its first day, or a meeting joined
-    /// and then moved), the dismissals' rules, and the run links' secret.
+    /// and then moved), the dismissals' rules, the run links' secret, the focus blocks, and the running session.
     func surfaceState(runToken: String) -> SurfaceState {
         let since = now.addingTimeInterval(-2 * 86_400)
         let fetched = Set(events.map(\.id))
         return SurfaceState(completed: log.impacts.filter { $0.value > since || fetched.contains($0.key) },
-                            suppressionRules: dismissals.rules, runToken: runToken)
+                            suppressionRules: dismissals.rules, runToken: runToken, focusBlocks: focusBlocks, focus: focus)
     }
 
     /// The card a run request names: one Home lists. The widgets, the control, and the App Shortcuts offer only
@@ -226,8 +226,7 @@ public final class HomeModel {
             saveGoalRecords(matched)
         }
         snapshot = Self.home(engine, events, focusBlocks: focusBlocks, now, calendar, log, dismissals)
-        if let focus, now >= focus.end
-            || !snapshot.cards.contains(where: { $0.id == focus.cardID && ImpactEngine.isSoonOrNow($0, now: now) }) {
+        if let focus, !focus.runs(in: snapshot, now: now) {
             if finishFocus() { snapshot = Self.home(engine, events, focusBlocks: focusBlocks, now, calendar, log, dismissals) }
         }
         goalCard = ImpactEngine.goalTimeCard(
@@ -259,13 +258,10 @@ public final class HomeModel {
         _ engine: ImpactEngine, _ events: [CalendarEvent], focusBlocks: [String: String], _ now: Date,
         _ calendar: Calendar, _ log: ActionLog, _ dismissals: Dismissals
     ) -> HomeSnapshot {
-        let events = focusBlocks.isEmpty ? events : events.map { event in
-            var event = event
-            event.focusGoal = focusBlocks[event.id]
-            return event
-        }
-        return engine.home(events: events, now: now, calendar: calendar, completedCardIDs: log.completedCardIDs,
-                           impactsToday: log.impactCount(on: now, calendar: calendar), suppressionRules: dismissals.rules)
+        // As every surface marks them (`SurfaceState.focusBlocks`), or background refresh ends Home's activities.
+        engine.home(events: NextCards.marked(events, focusBlocks: focusBlocks), now: now, calendar: calendar,
+                    completedCardIDs: log.completedCardIDs, impactsToday: log.impactCount(on: now, calendar: calendar),
+                    suppressionRules: dismissals.rules)
     }
 }
 

@@ -47,10 +47,8 @@ private let records = GoalRecords(sessions: [
         let model = try model(at: at(9))
         let card = try blockCard(model)
         #expect(card.kind == .focusBlock && card.title == "Write a novel" && model.snapshot.nextUp?.id == "block")
-        // Its Live Activity waits for the surfaces to see focus blocks (`liveCards`).
         model.update(events: [block, meeting], now: at(9, 56))
-        #expect(model.snapshot.liveActivityCards.map(\.id).contains("block"))
-        #expect(!model.liveCards(runToken: "secret").map(\.cardID).contains("block"))
+        #expect(model.liveCards(runToken: "secret").map(\.cardID).contains("block"))
         model.setGoals([], workingHours: WorkingHours())
         #expect(model.snapshot.cards.map(\.id) == ["meeting"])
     }

@@ -23,14 +23,6 @@ extension ImpactCard {
     }
 }
 
-extension ImpactCard {
-    /// Whether Home offers `action` now: Start focus from the block's Soon phase on (`FocusSession`), every other
-    /// action always.
-    func offers(_ action: ImpactAction, now: Date) -> Bool {
-        action.kind != .startFocus || ImpactEngine.isSoonOrNow(self, now: now)
-    }
-}
-
 extension ActionKind {
     /// Replaces the label once the action is marked done (UX.md → Card anatomy).
     var doneLabel: String {

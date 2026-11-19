@@ -63,7 +63,7 @@ import WidgetKit
             return
         }
         let home = NextCards.home(events: events, state: state, now: now, calendar: calendar, engine: engine)
-        let cards = home.liveActivityCards.compactMap { LiveCard($0, runToken: token) }
+        let cards = LiveCard.wanted(in: home, now: now, runToken: token, focus: state.focus)
         // How often iOS lets it run on a device (ARCHITECTURE.md → To verify).
         homeLog.notice("Background refresh: \(cards.count, privacy: .public) cards want a Live Activity")
         await LiveActivities.sync(cards, request: false)

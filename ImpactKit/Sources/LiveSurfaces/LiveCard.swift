@@ -1,4 +1,5 @@
 import Foundation
+import ImpactEngine
 
 /// What a card's Live Activity shows (UX.md → System surfaces). It is the activity's `ActivityAttributes`, which
 /// cannot change once requested, and Impact sends no updates (nothing could schedule one while Impact does not
@@ -27,9 +28,12 @@ public struct LiveCard: Codable, Hashable, Sendable {
     /// Whether its fallback alert (`NowAlerts`) is Time Sensitive: a meeting's start and leave-by are, a focus
     /// block's start is not (PRODUCT.md → Interruptions).
     public let timeSensitive: Bool
+    /// The focus session on this focus block, while one runs: the activity then shows the session, its ring filling
+    /// with time until the session's end, the block's end when focus started (UX.md → The Impact moment).
+    public let focus: FocusSession?
 
     public init(cardID: String, title: String, answer: String, symbol: String, actionLabel: String, start: Date,
-                nowPhase: Range<Date>, runToken: String, timeSensitive: Bool) {
+                nowPhase: Range<Date>, runToken: String, timeSensitive: Bool, focus: FocusSession? = nil) {
         assert(nowPhase.lowerBound <= start && start <= nowPhase.upperBound, "Now phase \(nowPhase) misses \(start)")
         self.cardID = cardID
         self.title = title
@@ -40,6 +44,7 @@ public struct LiveCard: Codable, Hashable, Sendable {
         self.nowPhase = nowPhase
         self.runToken = runToken
         self.timeSensitive = timeSensitive
+        self.focus = focus
     }
 
     /// The link the activity's action button opens: Impact, which runs the card's primary action. Apple documents
@@ -67,12 +72,14 @@ public struct LiveCard: Codable, Hashable, Sendable {
         return id
     }
 
-    /// The wanted cards without an activity yet (`LiveActivities.sync`): `startNow`, already in their Now phase,
-    /// which Impact in front starts at once without an alert; `schedule`, the rest, scheduled for their Now phase with
-    /// its alert, or given the fallback alert where that cannot be.
+    /// The wanted cards without an activity yet (`LiveActivities.sync`): `startNow`, already in their Now phase or
+    /// showing a focus session (which can start in the Soon phase), which Impact in front starts at once without an
+    /// alert; `schedule`, the rest, scheduled for their Now phase with its alert, or given the fallback alert where that
+    /// cannot be.
     public static func toRequest(wanted: [LiveCard], existing: Set<LiveCard>, now: Date)
         -> (startNow: [LiveCard], schedule: [LiveCard]) {
         let missing = wanted.filter { !existing.contains($0) }
-        return (missing.filter { now >= $0.nowPhase.lowerBound }, missing.filter { now < $0.nowPhase.lowerBound })
+        let atOnce = { (card: LiveCard) in now >= card.nowPhase.lowerBound || card.focus != nil }
+        return (missing.filter(atOnce), missing.filter { !atOnce($0) })
     }
 }

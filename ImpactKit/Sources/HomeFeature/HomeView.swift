@@ -278,6 +278,8 @@ public struct HomeView: View {
     /// starts a session in Home instead; its Impact comes when the session ends (`focusImpact`).
     private func run(_ action: ImpactAction, on card: ImpactCard, failed: @escaping (ActionKind) -> Void) {
         if action.kind == .startFocus {
+            // Already running (e.g. the Next up control pressed during it): nothing changes, nothing to announce.
+            if model.focus?.cardID == card.id { return }
             if model.startFocus(on: card) {
                 swapped = ProcessInfo.processInfo.systemUptime
                 // The button VoiceOver was on now ends the session: say what happened (UX.md → Motion).
