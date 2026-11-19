@@ -1,5 +1,6 @@
 #if os(iOS)
 import ActivityKit
+import ImpactEngine
 import SwiftUI
 import WidgetKit
 
@@ -18,7 +19,7 @@ public struct LiveCardActivity: Widget {
             let card = context.attributes
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    if card.focusSince != nil {
+                    if card.focus != nil {
                         TimeRing(card: card).frame(width: 36, height: 36)
                     } else {
                         Image(systemName: card.symbol).font(.title2).foregroundStyle(.indigo)
@@ -41,7 +42,7 @@ public struct LiveCardActivity: Widget {
                 // With limited width, Apple's fallback: the leading view in a 28-pt circle (the ring) and an empty
                 // trailing one, which the system hides.
                 LimitedWidth { limited in
-                    if limited || card.focusSince != nil {
+                    if limited || card.focus != nil {
                         TimeRing(card: card)
                     } else {
                         Image(systemName: card.symbol).foregroundStyle(.indigo).accessibilityLabel(card.title)
@@ -91,33 +92,25 @@ private struct ActivityLayout: View {
 /// Time left to the start as a ring around the card's symbol, drawn by the system: small enough for the minimal
 /// view and, with limited width, the 28-pt circle Apple asks for, where timer text would truncate (unverified on
 /// screen: ARCHITECTURE.md → To verify). Empty from the start on. During a focus session, the ring fills with time
-/// until the block's end, the Impact ring's shape (UX.md → The Impact moment).
+/// until the session's end, the Impact ring's shape (UX.md → The Impact moment).
 private struct TimeRing: View {
     let card: LiveCard
 
     var body: some View {
-        Group {
-            if let since = card.focusSince {
-                ProgressView(timerInterval: since...max(since, card.nowPhase.upperBound), countsDown: false) {
-                    EmptyView()
-                } currentValueLabel: {
-                    Image(systemName: card.symbol).font(.caption2.weight(.semibold))
-                }
-            } else {
-                ProgressView(timerInterval: card.nowPhase.lowerBound...card.start, countsDown: true) {
-                    EmptyView()
-                } currentValueLabel: {
-                    Image(systemName: card.symbol).font(.caption2.weight(.semibold))
-                }
-            }
+        let (interval, countsDown) = card.focus.map { ($0.start...max($0.start, $0.end), false) }
+            ?? (card.nowPhase.lowerBound...card.start, true)
+        ProgressView(timerInterval: interval, countsDown: countsDown) {
+            EmptyView()
+        } currentValueLabel: {
+            Image(systemName: card.symbol).font(.caption2.weight(.semibold))
         }
         .progressViewStyle(.circular)
         .tint(.indigo)
         .foregroundStyle(.indigo)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(card.focusSince == nil
-            ? Text("\(card.title), \(card.start, format: .dateTime.hour().minute())")
-            : Text("\(card.title), focusing until \(card.nowPhase.upperBound, format: .dateTime.hour().minute())"))
+        .accessibilityLabel(card.focus.map {
+            Text("\(card.title), focusing until \($0.end, format: .dateTime.hour().minute())")
+        } ?? Text("\(card.title), \(card.start, format: .dateTime.hour().minute())"))
     }
 }
 
@@ -127,8 +120,8 @@ private struct Answer: View {
     let card: LiveCard
 
     var body: some View {
-        if card.focusSince != nil {
-            Text("Until \(card.nowPhase.upperBound, format: .dateTime.hour().minute())")
+        if let focus = card.focus {
+            Text("Until \(focus.end, format: .dateTime.hour().minute())")
         } else {
             Text(card.answer)
         }
@@ -160,7 +153,7 @@ private struct LockScreenView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 12) {
-                if card.focusSince != nil {
+                if card.focus != nil {
                     TimeRing(card: card).frame(width: 28, height: 28)
                 } else {
                     Image(systemName: card.symbol).font(.title3).foregroundStyle(.indigo)
@@ -180,14 +173,14 @@ private struct LockScreenView: View {
 }
 
 /// Time to the start, then time since it (m:ss), drawn by the system so it moves without updates. Once the Now
-/// phase has passed (stale), the start time instead. During a focus session, the time left until the block's end.
+/// phase has passed (stale), the start time instead. During a focus session, the time left until its end.
 private struct Countdown: View {
     let card: LiveCard
     let stale: Bool
 
     var body: some View {
-        if let since = card.focusSince, !stale {
-            Text(timerInterval: since...max(since, card.nowPhase.upperBound), countsDown: true)
+        if let focus = card.focus, !stale {
+            Text(timerInterval: focus.start...max(focus.start, focus.end), countsDown: true)
                 .monospacedDigit().multilineTextAlignment(.trailing)
         } else if stale {
             Text(card.start, format: .dateTime.hour().minute())
@@ -203,7 +196,7 @@ private struct ActionLink: View {
     let card: LiveCard
 
     var body: some View {
-        if card.focusSince == nil {
+        if card.focus == nil {
             link
         }
     }

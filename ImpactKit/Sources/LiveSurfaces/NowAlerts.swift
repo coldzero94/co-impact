@@ -32,9 +32,10 @@ public enum NowAlerts {
     /// Makes the fallback alerts exactly `cards`' (their Live Activities could not be scheduled): adds or updates
     /// theirs and removes the rest, so a card done, dismissed, changed, or scheduled after all keeps none. The alerts
     /// of `inNow`, cards already in their Now phase without an activity, stay: one may be due this instant or shown.
+    /// A focus session's card keeps none: its block's start alert would come during the session.
     static func set(_ cards: [LiveCard], keeping inNow: [LiveCard]) async {
         let center = UNUserNotificationCenter.current()
-        await remove(except: Set((cards + inNow).map(identifier)))
+        await remove(except: Set((cards + inNow.filter { $0.focus == nil }).map(identifier)))
         // Without permission an add fails (seen in the simulator): wait for it instead of failing on every sync.
         let status = await center.notificationSettings().authorizationStatus
         guard status != .notDetermined, status != .denied else {

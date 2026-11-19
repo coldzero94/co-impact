@@ -279,20 +279,35 @@ private func meeting(_ id: String, _ hour: Double, day: Int = 0) -> CalendarEven
         let model = try HomeModel(events: events, now: at(9.75), calendar: losAngeles, goals: goals, goalRecords: records)
         let state = model.surfaceState(runToken: "secret")
         #expect(state.focusBlocks == ["block": "Write a novel"] && state.focus == nil)
-        // The widgets show the block as Home does, with its button.
-        let first = try #require(NextCards.moments(events: events, state: state, now: at(9.75), calendar: losAngeles,
-                                                   engine: engine).first)
-        #expect(first.card?.kind == .focusBlock && first.card?.title == "Write a novel" && first.runnable)
+        // The widgets show the block as Home does, its button from its Soon phase on, as on Home.
+        let moments = NextCards.moments(events: events, state: state, now: at(8), calendar: losAngeles, engine: engine)
+        let early = try #require(moments.first)
+        let soon = try #require(moments.first { $0.date == at(9.75) })
+        #expect(early.card?.kind == .focusBlock && early.card?.title == "Write a novel" && !early.runnable)
+        #expect(soon.card?.id == "block" && soon.runnable)
         // Before a session its Live Activity alerts at the default level; once one runs, it shows the session, at once.
         let before = try #require(model.liveCards(runToken: "secret").first { $0.cardID == "block" })
-        #expect(!before.timeSensitive && before.focusSince == nil)
+        #expect(!before.timeSensitive && before.focus == nil)
         #expect(model.startFocus(on: try #require(model.snapshot.nextUp)))
         let focusing = model.surfaceState(runToken: "secret")
+        let session = try #require(focusing.focus)
         let background = NextCards.home(events: events, state: focusing, now: at(9.75), calendar: losAngeles, engine: engine)
-        let wanted = LiveCard.wanted(in: background, runToken: "secret", focus: focusing.focus)
+        let wanted = LiveCard.wanted(in: background, now: at(9.75), runToken: "secret", focus: focusing.focus)
         #expect(wanted == model.liveCards(runToken: "secret") && wanted.map(\.cardID) == ["block", "Sync"])
-        #expect(wanted[0].focusSince == at(9.75) && wanted[1].focusSince == nil)
+        #expect(wanted[0].focus == session && session.start == at(9.75) && wanted[1].focus == nil)
         let requests = LiveCard.toRequest(wanted: wanted, existing: [before], now: at(9.75))
         #expect(requests.startNow == [wanted[0]] && requests.schedule == [wanted[1]])
+        // During the session the widget shows the block without a button.
+        let during = NextCards.moments(events: events, state: focusing, now: at(9.75), calendar: losAngeles, engine: engine)
+        #expect(during.first?.card?.id == "block" && during.first?.runnable == false)
+        // The block moved to the afternoon while Impact was away: background refresh, from the stored session, wants
+        // the block's own activity again, as Home would once it ends the session.
+        var moved = block
+        moved.start = at(14)
+        moved.end = at(15)
+        let later = NextCards.home(events: [moved, meeting("Sync", 13)], state: focusing, now: at(10.5),
+                                   calendar: losAngeles, engine: engine)
+        let afterMove = LiveCard.wanted(in: later, now: at(10.5), runToken: "secret", focus: focusing.focus)
+        #expect(afterMove.map(\.cardID) == ["Sync", "block"] && afterMove.allSatisfy { $0.focus == nil })
     }
 }

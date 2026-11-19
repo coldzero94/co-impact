@@ -21,7 +21,7 @@ public enum NextCards {
     /// them); the ring counts that day's Impacts.
     public static func home(events: [CalendarEvent], state: SurfaceState, now: Date, calendar: Calendar,
                             engine: ImpactEngine) -> HomeSnapshot {
-        engine.home(events: marked(events, state), now: now, calendar: calendar, completedCardIDs: state.completedCardIDs,
+        engine.home(events: marked(events, focusBlocks: state.focusBlocks), now: now, calendar: calendar, completedCardIDs: state.completedCardIDs,
                     impactsToday: state.completed.values.count { calendar.isDate($0, inSameDayAs: now) },
                     suppressionRules: state.suppressionRules)
     }
@@ -59,8 +59,9 @@ public enum NextCards {
         public let date: Date
         public let card: ImpactCard?
         public let soonOrNow: Bool
-        /// Whether the widgets' button runs `card`, the card that runs now (`NextCards.runnable`); else `card` is
-        /// another day's, which waits for its day.
+        /// Whether the widgets' button runs `card`, the card that runs now (`NextCards.runnable`), when it offers its
+        /// action now (`ImpactCard.offers`) and no focus session runs on it; else `card` is another day's, which waits
+        /// for its day, or shows without a button.
         public let runnable: Bool
         /// The next card still to do after `card`: the medium widget's Later column.
         public let later: ImpactCard?
@@ -74,7 +75,7 @@ public enum NextCards {
     public static func moments(events: [CalendarEvent], state: SurfaceState, now: Date, calendar: Calendar,
                                engine: ImpactEngine) -> [Moment] {
         // A card only ever leaves with time (it expires), so events without one now never get one: select once.
-        let events = marked(events, state).filter {
+        let events = marked(events, focusBlocks: state.focusBlocks).filter {
             engine.card(for: $0, now: now, suppressionRules: state.suppressionRules) != nil
         }
         let home = { (date: Date) in Self.home(events: events, state: state, now: date, calendar: calendar, engine: engine) }
@@ -100,19 +101,24 @@ public enum NextCards {
             let later = (snapshot.cards + snapshot.liveActivityCards)
                 .filter { !state.completed.keys.contains($0.id) && $0.id != card?.id && $0.start >= (card?.start ?? date) }
                 .min { ($0.start, $0.id) < ($1.start, $1.id) }
+            // A focus block's button waits for its Soon phase, as on Home, and none shows during its session.
+            let offered = runnable.map { card in
+                card.primaryAction.map { card.offers($0, now: date) } ?? false && state.focus?.cardID != card.id
+            } ?? false
             return Moment(date: date, card: card,
                           soonOrNow: card.map { ImpactEngine.isSoonOrNow($0, now: date) } ?? false,
-                          runnable: runnable != nil,
+                          runnable: offered,
                           later: later,
                           impactsToday: snapshot.impactsToday, ringSegments: snapshot.ringSegments)
         }
     }
 
-    /// The events with their focus blocks marked (`CalendarEvent.focusGoal`), as Home last saw them.
-    static func marked(_ events: [CalendarEvent], _ state: SurfaceState) -> [CalendarEvent] {
-        state.focusBlocks.isEmpty ? events : events.map { event in
+    /// The events with their focus blocks marked (`CalendarEvent.focusGoal`): `focusBlocks` by event ID, with their
+    /// goals' titles. Home and every surface mark them here, so all see the same cards.
+    public static func marked(_ events: [CalendarEvent], focusBlocks: [String: String]) -> [CalendarEvent] {
+        focusBlocks.isEmpty ? events : events.map { event in
             var event = event
-            event.focusGoal = state.focusBlocks[event.id]
+            event.focusGoal = focusBlocks[event.id]
             return event
         }
     }

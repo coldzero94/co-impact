@@ -226,8 +226,7 @@ public final class HomeModel {
             saveGoalRecords(matched)
         }
         snapshot = Self.home(engine, events, focusBlocks: focusBlocks, now, calendar, log, dismissals)
-        if let focus, now >= focus.end
-            || !snapshot.cards.contains(where: { $0.id == focus.cardID && ImpactEngine.isSoonOrNow($0, now: now) }) {
+        if let focus, !focus.runs(in: snapshot, now: now) {
             if finishFocus() { snapshot = Self.home(engine, events, focusBlocks: focusBlocks, now, calendar, log, dismissals) }
         }
         goalCard = ImpactEngine.goalTimeCard(
@@ -259,13 +258,10 @@ public final class HomeModel {
         _ engine: ImpactEngine, _ events: [CalendarEvent], focusBlocks: [String: String], _ now: Date,
         _ calendar: Calendar, _ log: ActionLog, _ dismissals: Dismissals
     ) -> HomeSnapshot {
-        let events = focusBlocks.isEmpty ? events : events.map { event in
-            var event = event
-            event.focusGoal = focusBlocks[event.id]
-            return event
-        }
-        return engine.home(events: events, now: now, calendar: calendar, completedCardIDs: log.completedCardIDs,
-                           impactsToday: log.impactCount(on: now, calendar: calendar), suppressionRules: dismissals.rules)
+        // As every surface marks them (`SurfaceState.focusBlocks`), or background refresh ends Home's activities.
+        engine.home(events: NextCards.marked(events, focusBlocks: focusBlocks), now: now, calendar: calendar,
+                    completedCardIDs: log.completedCardIDs, impactsToday: log.impactCount(on: now, calendar: calendar),
+                    suppressionRules: dismissals.rules)
     }
 }
 
