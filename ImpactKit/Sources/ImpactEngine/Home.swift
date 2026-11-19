@@ -75,8 +75,10 @@ extension ImpactEngine {
         let pending = cards(events.filter { $0.start < tomorrowNoon })
             .filter { notDone($0) && Self.nowPhase(of: $0).upperBound > now }
             .sorted { (Self.nowPhase(of: $0).lowerBound, $0.id) < (Self.nowPhase(of: $1).lowerBound, $1.id) }
-        let liveActivityCards = pending.filter { $0.kind != .focusBlock }.prefix(2)
-            + pending.filter { $0.kind == .focusBlock }.prefix(1)
+        // Kept in Now phase order: the widgets show the first one when no card runs now.
+        let meetings = pending.filter { $0.kind != .focusBlock }.prefix(2)
+        let block = pending.first { $0.kind == .focusBlock }
+        let liveActivityCards = pending.filter { $0 == block || meetings.contains($0) }
 
         return HomeSnapshot(
             eventsLeftToday: todaysEvents.count {

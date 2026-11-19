@@ -316,9 +316,12 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
     func focusBlockGivesWay(_ now: Date, _ next: String) {
         let events = [event("Block", 14) { $0.focusGoal = "Write a book" }, event("Meeting", 14, 30)]
         #expect(home(events, at: now).nextUp?.id == next)
-        // In its Soon phase too: a meeting 5 minutes after the block's start leads from the meeting's Soon.
-        let close = [event("Block", 14) { $0.focusGoal = "Write a book" }, event("Meeting", 14, 5)]
-        #expect(home(close, at: at(13, 50)).nextUp?.id == "Meeting")
+    }
+
+    @Test("A focus block in its Soon phase gives way too: a meeting just after its start leads from the meeting's Soon")
+    func focusBlockGivesWayInSoon() {
+        let events = [event("Block", 14) { $0.focusGoal = "Write a book" }, event("Meeting", 14, 5)]
+        #expect(home(events, at: at(13, 50)).nextUp?.id == "Meeting")
     }
 
     @Test("A focus block takes neither Live Activity place of the meetings: the first block comes on top")
@@ -327,8 +330,9 @@ private func ids(_ cards: [ImpactCard]) -> [String] { cards.map(\.id) }
             event("Block", 9, minutes: 180) { $0.focusGoal = "Write a book" }, event("M10", 10), event("M11", 11),
             event("Later block", 15) { $0.focusGoal = "Ship the launch" },
         ]
-        #expect(Set(ids(home(events, at: at(8, 30)).liveActivityCards)) == ["Block", "M10", "M11"])
+        // In Now phase order, which the widgets rely on.
+        #expect(ids(home(events, at: at(8, 30)).liveActivityCards) == ["Block", "M10", "M11"])
         // Once the first block ends, the next one takes its place.
-        #expect(Set(ids(home(events, at: at(12)).liveActivityCards)) == ["Later block"])
+        #expect(ids(home(events, at: at(12)).liveActivityCards) == ["Later block"])
     }
 }
