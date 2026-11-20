@@ -14,7 +14,7 @@ Goals fail the same way. New-year goals and "deep work" live in a note while the
 
 iPhone users with several calendar events a day (iCloud, Exchange, or a personal Google account added in iOS Settings), mostly online meetings and in-person appointments, who want to arrive prepared without planning their day by hand, and who have one to three goals for the year that keep losing to the week.
 
-## Impact (Proposed)
+## Impact
 
 An **Impact** is one completed action toward something that matters:
 
@@ -165,7 +165,7 @@ The list lives in one place in code and grows only with a test case.
 | "Focus time", no attendees, no link, no location | No card (no signal) |
 | Zoom meeting that ended 5 minutes ago | No card (ended) |
 
-## Goals (Proposed)
+## Goals
 
 Goals are where work focus and new-year goals meet: "Ship the Q1 launch" and "Run three times a week" work the same way. Goals are optional; without them, Impact is the event-card app above.
 
@@ -178,7 +178,7 @@ Goals are where work focus and new-year goals meet: "Ship the Q1 launch" and "Ru
 
 Deterministic, like event selection; AI never decides.
 
-- **Busy time:** any event Impact can read, except all-day events, canceled events, events the user declined, and events marked free.
+- **Busy time:** any event on the user's own calendars, as cards are (D12; not subscribed calendars or Birthdays: agent on the owner's delegation, 2026-11-20), except all-day events, canceled events, events the user declined, and events marked free.
 - **Free slot:** 60 minutes inside the goal's window, at least 10 minutes from any busy time, starting at least 1 hour from now and ending within the current week (weeks start on the locale's first weekday).
 - **Blocked sessions:** events Impact created for the goal this week that are still on the calendar.
 - A goal gets a card when it has fewer blocked sessions this week than its times per week **and** a free slot exists. The card proposes the earliest free slot; two sessions of one goal are never on the same day.
@@ -215,7 +215,7 @@ Deterministic, like event selection; AI never decides.
   6. A focus block's swipe offers only Not needed (UX.md → Dismissing).
   7. The session's Live Activity has no button; End focus is in Impact (UX.md → System surfaces).
 
-## Daily log (Proposed)
+## Daily log
 
 The diary, without writing a diary.
 
@@ -223,6 +223,7 @@ The diary, without writing a diary.
 - The user may add **one line**. No prompt, no notification, nothing shown for a day without one.
 - Stored on device only. Past entries are browsable (UX.md → Daily review).
 - Built in step 13: each Impact adds an entry when it is recorded: what the user did (joined, left, or focused, with the session's length rounded to the minute), the event's title or the goal as its card showed it, and when; a focus session's entry keeps its goal even if the block is deleted. Only a session of 10 minutes or more, which records an Impact, is logged with its minutes; shorter ones are not stored, so their minutes count nowhere yet. Each day's one line is stored beside them. The daily review shows them (UX.md → Daily review). Impacts recorded before step 13 have no entry.
+- Decided by the agent on the owner's delegation (2026-11-20), as built in step 13, until the owner revisits them: the entries read "Joined …", "Left for …" (Directions), and "N min on …"; the "Today" row shows from 18:00, or once no card is left to do and the day has an Impact; earlier days' lines are read-only; focus sessions under 10 minutes are not logged; event titles with an Impact stay on the device (and its backups) with no way yet to clear them.
 - Later, behind availability checks and with no new onboarding step: a weekly summary that Foundation Models writes from the log alone, and Journaling Suggestions to attach a moment to the line (verify first; ARCHITECTURE.md → Platform facts).
 - Built in step 14: the weekly summary. Once the week (the locale's) has three entries, the daily review asks the on-device model for one or two sentences in English from the week's log alone: each day's weekday, its entries as the review shows them, and its line. It is asked not to judge, compare, or advise; a summary with a whole number absent from the log, or over 280 characters, is dropped. Without Apple Intelligence, or on any error, there is none. Journaling Suggestions are not built: their entitlement needs an Apple Developer Program team (ARCHITECTURE.md → Platform facts), and the owner has none yet (2026-11-19); they come once the owner enrolls, before release.
 
@@ -322,11 +323,11 @@ AI is optional enrichment (P5, P6). Without Apple Intelligence the product is co
 | D13 | Interruptions | One alert per card, plus one "Changed" alert | Proposed |
 | D14 | AI grounding | Max two next steps, each with a verbatim quote from notes | Proposed |
 | D15 | Directions app | Apple Maps. Korean users may prefer Naver Map or Kakao Map; decide after verifying MapKit routing in Korea | Open |
-| D16 | What counts as an Impact; north star | Primary action executed from its Soon phase on, or a focus session of 10+ minutes; Impacts per week | Proposed |
-| D17 | Goals | One to three; title, times per week, Workday or Personal time; 60-minute sessions; default working hours Mon–Fri 09:00–18:00 | Proposed |
-| D18 | Calendar writes | Block time only, to a writable calendar, with Undo; never touch events Impact did not create | Proposed |
-| D19 | Focus session | In-app session with a Live Activity; no iOS Focus (no API) | Proposed |
-| D20 | Daily log | Built from Impacts, optional one line, on device only; Foundation Models summary and Journaling Suggestions later | Proposed |
+| D16 | What counts as an Impact; north star | Primary action executed from its Soon phase on, or a focus session of 10+ minutes; Impacts per week | Decided (agent on the owner's delegation, 2026-11-20) |
+| D17 | Goals | One to three; title, times per week, Workday or Personal time; 60-minute sessions; default working hours Mon–Fri 09:00–18:00 | Decided (agent on the owner's delegation, 2026-11-20) |
+| D18 | Calendar writes | Block time only, to a writable calendar, with Undo; never touch events Impact did not create | Decided (agent on the owner's delegation, 2026-11-20) |
+| D19 | Focus session | In-app session with a Live Activity; no iOS Focus (no API) | Decided (agent on the owner's delegation, 2026-11-20) |
+| D20 | Daily log | Built from Impacts, optional one line, on device only; Foundation Models summary and Journaling Suggestions later | Decided (agent on the owner's delegation, 2026-11-20) |
 | D21 | Positioning and accounts | Work and personal goals in one app; personal Google accounts through iOS Settings, no Google sign-in (D7) | Proposed |
 | D22 | Launch timing | No deadline, quality first; the new year is a marketing moment, not a release date | Decided (2026-11-09) |
 | D23 | Siri language | App Shortcut phrases and spoken answers in English and Korean; the app's words stay English until the app is localized, while dates and times follow the device's language (Korean format on a Korean device) in the app, widgets, and Live Activities alike | Decided (2026-11-17) |
