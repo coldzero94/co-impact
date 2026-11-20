@@ -92,9 +92,11 @@ private func card(
         #expect(card([launch, book], now: at(10))?.goal == launch)
     }
 
-    @Test("All-day, canceled, declined, and free events are not busy time; tentative ones are", arguments: [
-        ("all-day", false), ("canceled", false), ("declined", false), ("free", false), ("tentative", true),
-    ])
+    @Test("All-day, canceled, declined, and free events are not busy time; tentative and subscribed ones are",
+          arguments: [
+              ("all-day", false), ("canceled", false), ("declined", false), ("free", false), ("tentative", true),
+              ("subscribed", true),
+          ])
     func busyTime(_ kind: String, _ isBusy: Bool) {
         let event = busy(12) {
             switch kind {
@@ -102,6 +104,7 @@ private func card(
             case "canceled": $0.isCanceled = true
             case "declined": $0.participation = .declined
             case "free": $0.isFree = true
+            case "subscribed": $0.calendarKind = .subscription
             default: $0.participation = .tentative
             }
         }
