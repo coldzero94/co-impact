@@ -90,8 +90,8 @@ Each card type answers exactly one question (P1).
 | Online meeting | "Where do I click, and when?" | Join meeting | Open linked documents |
 | In-person appointment | "When do I have to leave?" | Directions | Open linked documents, Call |
 | Hybrid (link + physical address) | "Where do I click, and when?" | Join meeting | Directions, Open linked documents |
-| Goal time (Proposed) | "When will I work on this goal this week?" | Block time | None |
-| Focus block (Proposed) | "Is it time to start, and on what?" | Start focus | None |
+| Goal time | "When will I work on this goal this week?" | Block time | None |
+| Focus block | "Is it time to start, and on what?" | Start focus | None |
 
 Later (not MVP): project deadline, trip. The calendar holds too little information for these, so most content would be inferred.
 
@@ -105,8 +105,8 @@ Actions are a closed set. The engine and the model can only pick from it. Each a
 | Directions | Open Apple Maps to the place (`MKMapItem`) | Event's structured location or geocoded address |
 | Open linked document | Open a non-meeting URL found in notes, labeled by host (e.g. "Open Figma") | URL in notes |
 | Call | `tel:` | Phone number in location or notes |
-| Block time (Proposed) | Save a calendar event titled with the goal, in a calendar that allows modifications; Undo for 5 seconds | Free slot computed from the calendar; goal set by the user |
-| Start focus (Proposed) | Start an in-app focus session with a Live Activity. It does not turn on an iOS Focus: no public API exists (ARCHITECTURE.md → Platform facts) | A focus block created by Block time |
+| Block time | Save a calendar event titled with the goal, in a calendar that allows modifications; Undo for 5 seconds | Free slot computed from the calendar; goal set by the user |
+| Start focus | Start an in-app focus session with a Live Activity. It does not turn on an iOS Focus: no public API exists (ARCHITECTURE.md → Platform facts) | A focus block created by Block time |
 
 Not actions: anything the app cannot execute, such as "prepare slides". Those may appear as AI next steps (labeled as suggestions), never as completable actions.
 
@@ -178,7 +178,7 @@ Goals are where work focus and new-year goals meet: "Ship the Q1 launch" and "Ru
 
 Deterministic, like event selection; AI never decides.
 
-- **Busy time:** any event on the user's own calendars, as cards are (D12; not subscribed calendars or Birthdays: agent on the owner's delegation, 2026-11-20), except all-day events, canceled events, events the user declined, and events marked free.
+- **Busy time:** any event Impact can read, subscribed calendars included, except all-day events, canceled events, events the user declined, and events marked free. Being busy is not needing a card (D12): a published work calendar, a timetable, or a flight feed holds real commitments, and a slot wrongly free would put a block over one, while a slot wrongly busy only moves later (agent on the owner's delegation, 2026-11-20).
 - **Free slot:** 60 minutes inside the goal's window, at least 10 minutes from any busy time, starting at least 1 hour from now and ending within the current week (weeks start on the locale's first weekday).
 - **Blocked sessions:** events Impact created for the goal this week that are still on the calendar.
 - A goal gets a card when it has fewer blocked sessions this week than its times per week **and** a free slot exists. The card proposes the earliest free slot; two sessions of one goal are never on the same day.

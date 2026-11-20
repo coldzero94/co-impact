@@ -59,10 +59,9 @@ extension ImpactEngine {
     ) -> GoalTimeCard? {
         guard !(lastNotNow.map { calendar.isDate($0, inSameDayAs: now) } ?? false),
               let week = calendar.dateInterval(of: .weekOfYear, for: now) else { return nil }
-        // The user's own commitments, as cards are (D12): not subscribed calendars or Birthdays.
-        let busy = events.filter {
-            $0.calendarKind == .regular && !$0.isAllDay && !$0.isCanceled && $0.participation != .declined && !$0.isFree
-        }
+        // Every calendar Impact reads, subscribed ones too: being busy is not needing a card (D12), and a slot wrongly
+        // free would put a block over a real commitment (PRODUCT.md → Goal-time rules v1).
+        let busy = events.filter { !$0.isAllDay && !$0.isCanceled && $0.participation != .declined && !$0.isFree }
             .map { $0.start ..< max($0.start, $0.end) }
         let earliest = now.addingTimeInterval(60 * 60)
         let waiting = goals.enumerated().compactMap { index, goal -> (Int, Int, GoalTimeCard)? in
